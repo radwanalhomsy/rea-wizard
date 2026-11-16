@@ -18,6 +18,10 @@ and prompt shapes.
   history, model/agent pickers, file attachments, and a health panel with
   `rea doctor`
 
+## Screenshot
+
+![REA Studio main window](docs/rea-studio-main-window.png)
+
 ## Requirements
 
 | Thing | Expected |
