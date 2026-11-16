@@ -1,0 +1,189 @@
+<!-- ============================================================ 12 TROUBLE -->
+<section>
+  <div class="chapno">Chapter 12</div>
+  <h1>Troubleshooting and limits</h1>
+
+  <p class="lead">Most failures are environment failures: a missing executable, a wrong Ghidra version, a port already in use, or a provider that is not installed. Work through the matching section before changing application settings.</p>
+
+  <h2>12.1 The server does not start</h2>
+  <p>The header chip stays on <code>starting…</code> or turns into <code>server error</code>.</p>
+  <table>
+    <thead><tr><th style="width:32%">Symptom</th><th>Check</th><th style="width:34%">Fix</th></tr></thead>
+    <tbody>
+      <tr><td>“OpenCode executable not found”</td><td><code>%APPDATA%\npm\node_modules\opencode-ai\bin\opencode.exe</code> exists.</td><td>Install or repair the OpenCode CLI. The app does not bundle it.</td></tr>
+      <tr><td>Server exits immediately</td><td>Run <code>opencode serve --port 4096 --hostname 127.0.0.1</code> in a terminal and read the error.</td><td>Fix the reported configuration problem, then restart the app.</td></tr>
+      <tr><td>Port 4096 is busy</td><td><code>Get-NetTCPConnection -LocalPort 4096 -State Listen</code></td><td>Close the other server, or stop the process that owns the port. The app reuses a healthy server but cannot bind a second one.</td></tr>
+      <tr><td>Server starts, then stops</td><td>Health → OpenCode server shows an exit message.</td><td>Check free memory and the OpenCode log. A killed server usually means the process was terminated externally.</td></tr>
+    </tbody>
+  </table>
+  <p>To see whether a server is already healthy, open <code>http://127.0.0.1:4096/app</code> in a browser. If it answers, REA Studio will reuse it rather than spawning a second process.</p>
+
+  <h2>12.2 MCP · rea is red or the tool count is zero</h2>
+  <ol>
+    <li>Run <code>rea mcp doctor</code> in the REA console and read the failure.</li>
+    <li>Run <code>rea setup --client opencode --yes</code> to rewrite the MCP entry, then restart the app.</li>
+    <li>Confirm the <code>mcp.rea.command</code> array in <code>opencode.jsonc</code> points at an existing Node executable and an existing <code>rea.mjs</code>.</li>
+    <li>Confirm <code>GHIDRA_INSTALL_DIR</code> and <code>JAVA_HOME</code> are set inside <code>mcp.rea.environment</code>.</li>
+    <li>Open <strong>REA → Tools</strong>. If the catalog loads but the Health row is red, the catalog file is present and the MCP process is the problem.</li>
+  </ol>
+  <div class="callout warn">
+    <span class="callout-title">Restart, do not reload</span>
+    <p>MCP servers are started by the OpenCode server. Reloading the window does not restart them. Close REA Studio completely (which stops the server it owns) and start it again.</p>
+  </div>
+
+  <h2>12.3 Ghidra and Java</h2>
+  <table>
+    <thead><tr><th style="width:34%">Message or symptom</th><th>Cause</th><th style="width:36%">Fix</th></tr></thead>
+    <tbody>
+      <tr><td>Ghidra version rejected</td><td>REA accepts 12.1.x only.</td><td>Install Ghidra 12.1.4 and point <code>GHIDRA_INSTALL_DIR</code> at that tree.</td></tr>
+      <tr><td>Decompiler not found</td><td>The installation is incomplete or the native decompiler is missing.</td><td>Re-extract the full Ghidra archive; do not copy only the JARs.</td></tr>
+      <tr><td>Java version error</td><td><code>JAVA_HOME</code> points at an old or JRE-only installation.</td><td>Install JDK 21+ and set <code>JAVA_HOME</code> to its root.</td></tr>
+      <tr><td>Works in the console, fails in the agent</td><td>The agent's MCP process has a different environment.</td><td>Put the variables in <code>mcp.rea.environment</code>, not only in your user environment.</td></tr>
+    </tbody>
+  </table>
+  <p>Run <strong>Health → Doctor → Run</strong> after any change. Doctor validates providers, variables and MCP startup, and prints a compact pass/fail list. It can take a minute.</p>
+
+  <h2>12.4 A tool seems to hang</h2>
+  <p>Some analyses are genuinely slow. A first <code>binary_overview</code> on <code>notepad.exe</code> has been measured at about 3.5 minutes, most of it the Windows resource analyser. Large firmware images and full decompilation runs take longer.</p>
+  <ul>
+    <li>Watch the elapsed time in <strong>Activity</strong>. A running tool with a growing timer is working.</li>
+    <li>Check whether the tool is waiting for a permission prompt above the composer.</li>
+    <li>Check the transcript for a partial result or an error the agent has not summarised yet.</li>
+    <li>Use <strong>Stop</strong> only when you are willing to lose the turn. The agent will need to restart the analysis.</li>
+    <li>For a console command, <strong>Cancel</strong> kills the child process and keeps the partial output.</li>
+  </ul>
+  <div class="callout">
+    <span class="callout-title">Timeouts are different in each surface</span>
+    <p>Agent tool calls are bounded by the tool and the model turn, not by the console timeout. Console commands default to 10 minutes; quick actions use shorter limits (Doctor 4 minutes, Capabilities 3 minutes, Setup 3 minutes, Manifest 3 minutes, Version 1 minute).</p>
+  </div>
+
+  <h2>12.5 Console command problems</h2>
+  <table>
+    <thead><tr><th style="width:32%">Symptom</th><th>Explanation</th></tr></thead>
+    <tbody>
+      <tr><td><code>exit 1</code> with valid JSON from <code>--schema</code></td><td>REA exits 1 for schema output. The app labels this <em>schema ready</em> and the JSON is valid. This is expected.</td></tr>
+      <tr><td>Arguments split incorrectly</td><td>The console tokenizer groups double- or single-quoted words and treats a backslash as an escape. Wrap paths with spaces in quotes.</td></tr>
+      <tr><td>PowerShell quoting differs</td><td>The app spawns Node directly with an argument array, so PowerShell's native-argument quoting rules do not apply inside the app. If you copy a command to PowerShell, quoting may need to change.</td></tr>
+      <tr><td>Command not found in the catalog</td><td>The catalog is cached for 10 minutes. Press the reload button in the console, or reopen the console after a REA upgrade.</td></tr>
+      <tr><td>Output truncated</td><td>Use <code>--token-limit</code>, <code>--token-offset</code> to page, or <code>--full-output</code> to see the envelope.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>12.6 Installer and startup problems</h2>
+  <table>
+    <thead><tr><th style="width:34%">Symptom</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td>SmartScreen blocks the MSI</td><td>The installer is unsigned. Choose <strong>More info → Run anyway</strong>, or sign the MSI in your own build pipeline.</td></tr>
+      <tr><td>“Another version is already installed”</td><td>Uninstall the old product first, then install the new MSI. Per-user installs do not always upgrade in place across major rebuilds.</td></tr>
+      <tr><td>App window is blank</td><td>Check that <code>resources\app\renderer\index.html</code> exists in the install directory. A partial install usually means an antivirus quarantine; reinstall.</td></tr>
+      <tr><td>App starts but no REA</td><td>The app is a front end. Install and configure REA separately, then restart.</td></tr>
+      <tr><td>Shortcuts missing</td><td>Reinstall, or create a shortcut to <code>REA Studio.exe</code> in the install directory.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>12.7 Known limits</h2>
+  <ul>
+    <li><strong>One server port.</strong> The app uses 4096. It can reuse a healthy server, but it cannot run two servers on that port.</li>
+    <li><strong>One workspace at a time.</strong> Sessions are listed per directory; switching the workspace changes the visible session set.</li>
+    <li><strong>No direct MCP calls from the UI.</strong> Tools run through the agent so that evidence, targets and cleanup stay in one session. The browser gives you schemas and ready-made requests instead.</li>
+    <li><strong>Fresh-process counts.</strong> The Providers tab, Health counts and every console command run in a new CLI process; live session evidence and open targets are reported by the agent.</li>
+    <li><strong>Evidence matching is strict.</strong> Only <code>ev_</code> plus 64 hex characters is tracked. Deliberately truncated IDs in a summary will not appear in the Evidence tab.</li>
+    <li><strong>Attachment limits.</strong> Text-like files up to 300 KB are inlined; binary files up to 12 MB are sent as file parts. Larger inputs must be reduced or referenced by path.</li>
+    <li><strong>Unsigned installer.</strong> Expect a SmartScreen warning unless you sign your build.</li>
+    <li><strong>Not a sandbox.</strong> The agent can run commands permitted by OpenCode and REA. Treat analysed artifacts as untrusted and work in a disposable environment when appropriate.</li>
+  </ul>
+
+  <h2>12.8 Diagnostic checklist</h2>
+  <ol>
+    <li>Health tab: every row green, including REA CLI and Workspace.</li>
+    <li>Doctor: <code>healthy: true</code>.</li>
+    <li>REA console: <code>--version</code> and <code>capabilities</code> both answer.</li>
+    <li>Tools browser: 255 tools listed.</li>
+    <li>Guidance tab: a search for <code>evidence</code> returns at least one section.</li>
+    <li>Composer: a trivial prompt (<em>reply with pong</em>) returns within a few seconds.</li>
+    <li>Activity: no target left open at the end of a task; <code>cleanup pending: no</code>.</li>
+  </ol>
+</section>
+
+<!-- ============================================================ 13 BUILD -->
+<section>
+  <div class="chapno">Chapter 13</div>
+  <h1>Building from source</h1>
+
+  <p class="lead">The application is a small Electron project with one runtime dependency. Building the installer is a single command once the toolchain is present.</p>
+
+  <h2>13.1 Source layout</h2>
+  <table>
+    <thead><tr><th style="width:34%">Path</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td><code>main.mjs</code></td><td>Main process: server lifecycle, SSE event stream, REA CLI bridge, file dialogs, settings, IPC handlers.</td></tr>
+      <tr><td><code>preload.cjs</code></td><td>Context-isolated bridge exposing <code>window.rea.*</code> to the renderer.</td></tr>
+      <tr><td><code>renderer/index.html</code></td><td>Window markup: header, rail, transcript, inspector, modals.</td></tr>
+      <tr><td><code>renderer/app.js</code></td><td>UI logic: cards, wizard, transcript rendering, console, tools browser, guidance, evidence, targets.</td></tr>
+      <tr><td><code>renderer/styles.css</code></td><td>Application theme.</td></tr>
+      <tr><td><code>manual/</code></td><td>Manual sources, print stylesheet, data files and build pipeline.</td></tr>
+      <tr><td><code>build/icon.ico</code></td><td>Application and installer icon.</td></tr>
+      <tr><td><code>release/</code></td><td>Generated MSI artifacts.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>13.2 Development run</h2>
+  <pre>cd D:\REA\rea-wizard
+npm install
+npm start          # normal run
+npm run dev        # same, with --dev passed to the app</pre>
+  <p>The app expects a working OpenCode and REA installation even in development. If port 4096 already serves a healthy instance, the dev app reuses it.</p>
+
+  <h2>13.3 Packaging the MSI</h2>
+  <pre>cd D:\REA\rea-wizard
+npm run dist</pre>
+  <p>The script runs:</p>
+  <pre>electron-builder --win msi --x64 --publish never</pre>
+  <table>
+    <thead><tr><th style="width:26%">Setting</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Output</td><td><code>release\REA-Studio-&lt;version&gt;-x64.msi</code></td></tr>
+      <tr><td>Architecture</td><td>x64 only</td></tr>
+      <tr><td>Install scope</td><td>Per-user (<code>perMachine: false</code>), no elevation</td></tr>
+      <tr><td>Shortcuts</td><td>Desktop and Start Menu</td></tr>
+      <tr><td>Run after finish</td><td>Enabled</td></tr>
+      <tr><td>Packing</td><td><code>asar: false</code> — files are readable under <code>resources\app\</code></td></tr>
+      <tr><td>Electron source</td><td><code>node_modules\electron\dist</code></td></tr>
+      <tr><td>Signing</td><td>None</td></tr>
+    </tbody>
+  </table>
+  <p>On a slow network, point electron-builder at a mirror for its helper binaries:</p>
+  <pre>$env:ELECTRON_BUILDER_BINARIES_MIRROR = "https://npmmirror.com/mirrors/electron-builder-binaries/"
+npm.cmd run dist</pre>
+  <p>WiX is cached in <code>%LOCALAPPDATA%\electron-builder\Cache</code>. Once it is present, rebuilds do not download it again.</p>
+  <div class="callout warn">
+    <span class="callout-title">PowerShell execution policy</span>
+    <p>If script execution is disabled, call <code>npm.cmd</code> or <code>npx.cmd</code> explicitly. Do not try to run <code>npm.ps1</code>.</p>
+  </div>
+
+  <h2>13.4 Version bump checklist</h2>
+  <ol>
+    <li>Update <code>version</code> in <code>package.json</code>.</li>
+    <li>Update the manual cover and chapter references if the version appears in text (the build injects <code>{{VERSION}}</code>).</li>
+    <li>Run <code>npm run dist</code>.</li>
+    <li>Install the MSI over the previous build and confirm the version in Apps &amp; features.</li>
+    <li>Run the diagnostic checklist in 12.8 against the installed app, not the dev tree.</li>
+    <li>Rebuild the manual so its version and appendices match the installed REA.</li>
+  </ol>
+
+  <h2>13.5 Building this manual</h2>
+  <p>The manual is HTML printed to PDF by Electron. Sources are the numbered parts in <code>manual\</code>, concatenated in order.</p>
+  <pre>cd D:\REA\rea-wizard
+npm run manual</pre>
+  <p>The build script performs four steps:</p>
+  <ol>
+    <li>Reads <code>manual\01-*.html</code> through <code>manual\08-*.html</code> in filename order.</li>
+    <li>Replaces <code>{{VERSION}}</code>, <code>{{DATE}}</code>, <code>{{REA_VERSION}}</code> and injects the generated appendices from <code>manual\data\*.json</code>.</li>
+    <li>Writes <code>manual\manual.html</code> with the stylesheet inlined.</li>
+    <li>Runs Electron with <code>manual\print.cjs</code> to print A4, with backgrounds, document outline and page-numbered footer, to <code>D:\REA\REA-Studio-Manual-&lt;version&gt;.pdf</code>.</li>
+  </ol>
+  <p>If <code>pypdf</code> is installed, a final pass (<code>manual\fix-outline.py</code>) repairs bookmark titles that Chromium duplicates when a heading starts a page. The PDF is complete without it; only the bookmark labels differ.</p>
+  <p>To refresh the appendix data after a REA upgrade, run the extractor against the new catalog and <code>rea --llms</code> output:</p>
+  <pre>node manual\extract-data.mjs &lt;llms.md&gt; &lt;mcp-catalog-full.json&gt; &lt;workflows.json&gt;</pre>
+  <p>Then rebuild the PDF. The data files are plain JSON and can be edited by hand if a command needs a clearer description.</p>
+</section>

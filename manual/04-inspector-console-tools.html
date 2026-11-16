@@ -1,0 +1,179 @@
+<!-- ============================================================ 7 INSPECTOR -->
+<section>
+  <div class="chapno">Chapter 7</div>
+  <h1>The inspector</h1>
+
+  <p class="lead">The right-hand panel is the evidence and environment view. It has five tabs and never interrupts the conversation.</p>
+
+  <h2>7.1 Activity</h2>
+  <p><strong>Open targets</strong> lists every artifact the agent has opened in this session, derived from tool inputs (path, target path, executable, document, capture and similar fields).</p>
+  <table>
+    <thead><tr><th style="width:26%">Control</th><th>Behavior</th></tr></thead>
+    <tbody>
+      <tr><td>Target row</td><td>Click to copy the full path.</td></tr>
+      <tr><td>✕ on a row</td><td>Sends a request to the agent: close that target, release analysis resources, confirm cleanup, delete nothing.</td></tr>
+      <tr><td>Close all</td><td>Asks the agent to close every open target and confirm <code>cleanup_pending</code> is false.</td></tr>
+    </tbody>
+  </table>
+  <p>When a close, cleanup, release or detach tool completes, the matching target is removed automatically (matched by exact path or by file name). If REA reports <code>cleanup_pending</code>, a red note appears above the list.</p>
+  <p><strong>Tool calls</strong> lists the most recent 80 REA operations with a status dot and elapsed time (milliseconds or seconds). A tool that has been running for minutes is still working; compare the elapsed value rather than assuming a hang.</p>
+
+  <h2>7.2 Evidence</h2>
+  <p>The Evidence tab collects every evidence identifier cited in the transcript. IDs are matched only at full length: <code>ev_</code> followed by exactly 64 hexadecimal characters (SHA-256). Truncated or partial IDs are ignored, so the list does not contain duplicates.</p>
+  <table>
+    <thead><tr><th style="width:24%">Control</th><th>Behavior</th></tr></thead>
+    <tbody>
+      <tr><td>Record row</td><td>Click to copy the ID. The row also shows where it was first seen and when.</td></tr>
+      <tr><td>Copy all</td><td>Copies every ID, one per line.</td></tr>
+      <tr><td>Export…</td><td>Pick a source bundle and an output file; runs <code>rea evidence-export &lt;source&gt; &lt;output&gt; --overwrite</code>.</td></tr>
+      <tr><td>Validate…</td><td>Pick a bundle; runs <code>rea evidence-import &lt;path&gt;</code>.</td></tr>
+      <tr><td>Inspect…</td><td>Pick a bundle; runs <code>rea inspect-evidence-bundle {"path":…}</code>.</td></tr>
+      <tr><td>Compare…</td><td>Pick left and right bundles; runs <code>rea compare &lt;left&gt; &lt;right&gt;</code>.</td></tr>
+    </tbody>
+  </table>
+  <p>Results open in the output pane below the list. Export, import and compare do not modify the conversation.</p>
+
+  <h2>7.3 Providers</h2>
+  <p>The Providers tab runs <code>rea capabilities --format json</code> and renders a capability matrix.</p>
+  <ul>
+    <li><strong>Summary</strong> — <em>N/M operations available</em>, plus open state, evidence records, unknown heads and cleanup pending.</li>
+    <li><strong>Provider rows</strong> — expand to show operation groups, availability, the reason or availability code when unavailable, and declared side effects.</li>
+    <li><strong>Fresh-process note</strong> — capability counts come from a new CLI process. Live MCP session state (evidence, open targets, cleanup) is held by the agent's MCP process and is reported in the transcript. A count of zero evidence here does not mean the investigation has no evidence.</li>
+  </ul>
+  <p><strong>Refresh</strong> forces a new capability run. Results are cached for one minute.</p>
+
+  <h2>7.4 Guidance</h2>
+  <p>The Guidance tab exposes the same installed playbooks the agent can read.</p>
+  <ol>
+    <li>Type a query (for example <code>frida</code>, <code>pcap</code>, <code>AgentEnv</code>) and press <strong>Search</strong>.</li>
+    <li>Results show the section heading, the guide path and a context excerpt.</li>
+    <li>Click a result to read the section with <code>rea guidance --action read</code>. The text opens below the list.</li>
+    <li><strong>Clear</strong> empties the query, results and reader.</li>
+  </ol>
+  <p>This is useful when you want the exact recommended sequence before writing a custom prompt.</p>
+
+  <h2>7.5 Health</h2>
+  <p>The Health tab checks the runtime and shows one row per component:</p>
+  <table>
+    <thead><tr><th style="width:24%">Row</th><th>Detail</th></tr></thead>
+    <tbody>
+      <tr><td>OpenCode server</td><td>URL, phase, version, and whether an existing server was reused.</td></tr>
+      <tr><td>MCP · rea</td><td>Connection status and tool count.</td></tr>
+      <tr><td>Ghidra</td><td>Installation path and whether the native decompiler is present.</td></tr>
+      <tr><td>Java</td><td><code>JAVA_HOME</code> and the resolved executable.</td></tr>
+      <tr><td>REA CLI</td><td>Version reported by <code>rea --version</code>.</td></tr>
+      <tr><td>Workspace</td><td>The directory the agent runs in.</td></tr>
+    </tbody>
+  </table>
+  <p><strong>Doctor → Run</strong> executes <code>rea doctor --client opencode --json</code> and prints a compact pass/fail list. Doctor can take a minute; it validates providers, environment variables and MCP startup.</p>
+</section>
+
+<!-- ============================================================ 8 CONSOLE -->
+<section>
+  <div class="chapno">Chapter 8</div>
+  <h1>The REA console</h1>
+
+  <p class="lead">The console runs the REA command line directly. It is deterministic, does not spend an agent turn, and is the right tool for setup, diagnostics, exports and one-off commands.</p>
+
+  <h2>8.1 Opening and the command catalog</h2>
+  <p>Click <strong>REA</strong> in the header. The left column lists 199 entries parsed from <code>rea --llms</code> plus the hidden <code>mcp</code>, <code>mcp add</code> and <code>mcp doctor</code> subcommands.</p>
+  <ul>
+    <li>Type in <strong>Search commands…</strong> to filter by command name or description.</li>
+    <li>Click a command to place it in the command box. The first <code>&lt;placeholder&gt;</code> is selected so you can type over it.</li>
+    <li>The subtitle shows the live REA version (for example <em>Direct CLI · REA {{REA_VERSION}}</em>).</li>
+  </ul>
+
+  <h2>8.2 Running a command</h2>
+  <ol>
+    <li>Type or paste the command after the implicit <code>rea</code> prefix, for example <code>analyze D:\samples\app.exe</code>.</li>
+    <li>Set any output options (8.3).</li>
+    <li>Press <kbd>Enter</kbd> or <strong>Run</strong>.</li>
+  </ol>
+  <p>Standard output and standard error stream into the output pane as the process runs. The status line reports <code>running</code>, <code>exit 0</code>, an exit code, <code>canceled</code> or <code>error</code>.</p>
+  <p>Commands are spawned as <code>node &lt;rea.mjs&gt; &lt;args&gt;</code> using the entry point from the OpenCode configuration, with the same Ghidra and Java environment the agent uses. Quoting follows the app's tokenizer: double or single quotes group words, and backslash escapes a quote.</p>
+
+  <h2>8.3 Output options</h2>
+  <table>
+    <thead><tr><th style="width:30%">Control</th><th>Flag</th><th style="width:34%">Use</th></tr></thead>
+    <tbody>
+      <tr><td>format</td><td><code>--format</code></td><td>json, md, toon, yaml or jsonl.</td></tr>
+      <tr><td>--token-limit</td><td><code>--token-limit n</code></td><td>Cap the output size.</td></tr>
+      <tr><td>--token-offset</td><td><code>--token-offset n</code></td><td>Skip the first n tokens; page through large output.</td></tr>
+      <tr><td>tokens</td><td><code>--token-count</code></td><td>Print only the token count.</td></tr>
+      <tr><td>full</td><td><code>--full-output</code></td><td>Show the complete output envelope instead of the trimmed view.</td></tr>
+      <tr><td>--filter-output</td><td><code>--filter-output keys</code></td><td>Keep only the listed key paths, for example <code>foo,bar.baz,a[0,3]</code>.</td></tr>
+      <tr><td>timings</td><td><code>--timings</code></td><td>Write measured timing to stderr.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8.4 Help, schema, cancel and history</h2>
+  <table>
+    <thead><tr><th style="width:20%">Button</th><th>Runs</th><th style="width:38%">When to use it</th></tr></thead>
+    <tbody>
+      <tr><td>Help</td><td><code>rea &lt;command&gt; --help</code></td><td>See usage, arguments and all options for the command in the box.</td></tr>
+      <tr><td>Schema</td><td><code>rea &lt;command&gt; --schema --format json</code></td><td>Get the machine-readable argument schema (useful for building JSON input).</td></tr>
+      <tr><td>Cancel</td><td>kills the running child</td><td>Stop a long command. Status becomes <code>canceled</code>; partial output is kept.</td></tr>
+      <tr><td>History…</td><td>last 50 commands</td><td>Pick a previous command to re-run or edit.</td></tr>
+      <tr><td>↑ / ↓</td><td>in the command box</td><td>Step through history without opening the dropdown.</td></tr>
+    </tbody>
+  </table>
+  <div class="callout tip">
+    <span class="callout-title">Schema is the fastest way to learn a command</span>
+    <p>Put the command name in the box, click <strong>Schema</strong>, and read the JSON. Required arguments, enums, patterns and defaults are all there, without leaving the app.</p>
+  </div>
+
+  <h2>8.5 Quick actions</h2>
+  <table>
+    <thead><tr><th style="width:20%">Action</th><th>Runs</th></tr></thead>
+    <tbody>
+      <tr><td>Doctor</td><td><code>rea doctor --client opencode --json</code></td></tr>
+      <tr><td>Capabilities</td><td><code>rea capabilities --format json</code> (also refreshes the Providers tab)</td></tr>
+      <tr><td>Setup</td><td><code>rea setup --client opencode --dry-run --yes</code></td></tr>
+      <tr><td>Update</td><td><code>rea update</code></td></tr>
+      <tr><td>MCP doctor</td><td><code>rea mcp doctor</code></td></tr>
+      <tr><td>Version</td><td><code>rea --version</code></td></tr>
+      <tr><td>Manifest</td><td><code>rea --llms-full</code> — every command, argument and tool in Markdown (about 180 KB)</td></tr>
+      <tr><td>Tools</td><td>Opens the MCP tools browser (chapter 9)</td></tr>
+      <tr><td>Guidance</td><td>Closes the console and opens the Guidance tab</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8.6 Copy and save</h2>
+  <p><strong>Copy</strong> puts the output pane on the clipboard. <strong>Save…</strong> opens a save dialog (default <code>rea-output.txt</code>) and writes exactly what is displayed, including stderr sections.</p>
+
+  <div class="callout warn">
+    <span class="callout-title">Console state is separate from the agent</span>
+    <p>Each console command is a fresh process. It does not see the agent's open targets or evidence records. Use the agent when you need session continuity; use the console for standalone commands and diagnostics.</p>
+  </div>
+</section>
+
+<!-- ============================================================ 9 TOOLS -->
+<section>
+  <div class="chapno">Chapter 9</div>
+  <h1>The MCP tools browser</h1>
+
+  <p class="lead">The agent has 255 REA tools. The tools browser makes that surface visible: names, descriptions and full input schemas, with a one-click path to run any of them through the agent.</p>
+
+  <h2>9.1 Opening the catalog</h2>
+  <p>Open <strong>REA → Tools</strong>. The subtitle reports the count and version, for example <em>255 tools exposed to the agent · REA {{REA_VERSION}}</em>.</p>
+  <ul>
+    <li><strong>Search</strong> filters by tool name, title or description.</li>
+    <li>Selecting a tool shows its description and pretty-printed JSON input schema, including properties, enums, patterns, required fields and examples.</li>
+    <li>Tools are listed alphabetically. Appendix B is the printable index.</li>
+  </ul>
+
+  <h2>9.2 Running a tool through the agent</h2>
+  <table>
+    <thead><tr><th style="width:24%">Button</th><th>Behavior</th></tr></thead>
+    <tbody>
+      <tr><td>Ask agent</td><td>Closes the browser and sends a prompt that names the tool, includes the schema's example arguments as JSON, and asks the agent to run it, explain the result and cite evidence.</td></tr>
+      <tr><td>Copy request</td><td>Copies the same prompt without sending it, so you can edit paths or arguments first.</td></tr>
+    </tbody>
+  </table>
+  <p>This is the bridge for the tools that have no same-named CLI command (for example session tools, analysis settings, build-computer operations and some comparison tools). The request is a normal agent turn, so the tool runs inside the agent's MCP session and shares its evidence and target state.</p>
+
+  <div class="callout">
+    <span class="callout-title">Why not call MCP tools directly?</span>
+    <p>A second MCP session would own a different evidence store, target set and cleanup state. Routing tool calls through the agent keeps one coherent investigation. The browser gives you the schema and the exact request without splitting that state.</p>
+  </div>
+</section>

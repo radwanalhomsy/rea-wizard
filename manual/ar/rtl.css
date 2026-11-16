@@ -1,0 +1,75 @@
+/* REA Studio manual — Arabic (RTL) overrides.
+   Layered on top of manual.css by `node manual/build.mjs --lang ar`.
+   Only direction, alignment and typography change; colours and layout metrics
+   stay in manual.css so both editions look like the same document. */
+
+html, body {
+  direction: rtl;
+  text-align: right;
+  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  line-height: 1.68;
+}
+
+h1, h2, h3, h4 { letter-spacing: 0; }
+h1 { font-size: 21pt; }
+h2 { font-size: 13.5pt; }
+h3 { font-size: 11.4pt; }
+
+p { margin-bottom: 2.8mm; }
+
+ul, ol { padding-left: 0; padding-right: 6.5mm; }
+li { margin-bottom: 1.4mm; }
+
+/* Latin identifiers, commands and diagrams keep their own direction so that
+   punctuation and paths are not reordered by the bidi algorithm. */
+code, kbd, pre, .mono {
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: left;
+}
+pre {
+  border-left: 1px solid var(--line);
+  border-right: 3px solid var(--accent);
+}
+
+/* tables */
+table { line-height: 1.55; }
+th, td { text-align: right; }
+table.cmds th, table.cmds td { text-align: left; }
+
+/* callouts mirror the accent bar to the right edge */
+.callout {
+  border-left: 1px solid var(--line);
+  border-right: 4px solid var(--accent);
+}
+.callout.tip { border-right-color: var(--ok); border-left-color: var(--line); }
+.callout.warn { border-right-color: var(--warn); border-left-color: var(--line); }
+.callout.bad { border-right-color: var(--bad); border-left-color: var(--line); }
+.callout-title { letter-spacing: 0; }
+
+/* table of contents */
+.toc { line-height: 1.45; }
+.toc li { margin-bottom: 1.3mm; }
+.toc .sub { margin-left: 0; margin-right: 9mm; font-size: 8.8pt; margin-bottom: 0.8mm; }
+.toc .appendix { margin-top: 3.5mm; }
+
+/* cover */
+.cover h1 { letter-spacing: 0; }
+.cover::after { right: auto; left: -40mm; }
+.cover .pill { margin: 0 0 2mm 2mm; }
+
+/* misc */
+.chapno { letter-spacing: 0; }
+.swatch { margin-right: 0; margin-left: 1mm; }
+
+/* slight vertical tightening for chapters that would otherwise leave a
+   one-line orphan page before the next chapter break */
+.tight p { margin-bottom: 2.3mm; }
+.tight li { margin-bottom: 1.1mm; }
+.tight table { margin-bottom: 3.4mm; }
+.tight th, .tight td { padding-top: 1.25mm; padding-bottom: 1.25mm; }
+
+/* Generated appendix indexes stay in English and read left-to-right, so they
+   keep matching the installed REA catalogue. */
+.en-index { direction: ltr; text-align: left; }
+.en-index th, .en-index td, .en-index .small { text-align: left; }

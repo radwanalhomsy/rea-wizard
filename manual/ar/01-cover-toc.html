@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<title>REA Studio — دليل المستخدم</title>
+<link rel="stylesheet" href="manual.css" />
+</head>
+<body>
+
+<!-- ============================================================ COVER -->
+<section class="cover">
+  <div class="cover-mark">R</div>
+  <h1>REA Studio</h1>
+  <p class="sub">دليل المستخدم والمسؤول لعميل سطح المكتب الموجّه الذي يشغّل وكيل OpenCode وعدّة أدوات REA لهندسة العكس.</p>
+
+  <div>
+    <span class="pill">Windows 10 / 11 · x64</span>
+    <span class="pill">REA {{REA_VERSION}}</span>
+    <span class="pill">255 أداة MCP</span>
+    <span class="pill">وكيل OpenCode</span>
+  </div>
+
+  <div class="meta" style="margin-top:16mm">
+    <div><strong>إصدار الوثيقة</strong> &nbsp; {{VERSION}}</div>
+    <div><strong>ينطبق على</strong> &nbsp; REA Studio {{VERSION}} · REA {{REA_VERSION}} · OpenCode 1.19+ · Ghidra 12.1.x</div>
+    <div><strong>التاريخ</strong> &nbsp; {{DATE}}</div>
+    <div><strong>شجرة المصدر</strong> &nbsp; D:\REA\rea-wizard</div>
+  </div>
+
+  <div class="foot">
+    يغطّي هذا الدليل التثبيت والاستخدام اليومي ووحدة تحكم REA وفهرس أدوات MCP ودورة حياة الأدلة والأهداف واستكشاف الأخطاء وبناء المثبّت من المصدر.
+  </div>
+</section>
+
+<!-- ============================================================ TOC -->
+<section class="toc">
+  <h1 class="nobreak">المحتويات</h1>
+
+  <ol>
+    <li><span class="t">المقدمة</span><span class="fill"></span><span class="a">1</span></li>
+    <li class="sub">ما هو REA Studio، ولمن هذا الدليل، والبنية، والجديد في 1.1.0</li>
+
+    <li><span class="t">المتطلبات والتثبيت</span><span class="fill"></span><span class="a">2</span></li>
+    <li class="sub">متطلبات النظام، تثبيت MSI، التثبيت الصامت، الترقية، إزالة التثبيت، أول تشغيل</li>
+
+    <li><span class="t">البدء السريع</span><span class="fill"></span><span class="a">3</span></li>
+    <li class="sub">جولة في النافذة، أول تحقيق، قراءة السجل، الأذونات</li>
+
+    <li><span class="t">شريط المهام</span><span class="fill"></span><span class="a">4</span></li>
+    <li class="sub">سير العمل الموجّه، المهام السريعة، بطاقات النطاقات</li>
+
+    <li><span class="t">المعالج</span><span class="fill"></span><span class="a">5</span></li>
+    <li class="sub">الهدف، الخيارات، المراجعة، سلوك الإطلاق</li>
+
+    <li><span class="t">المحرّر والجلسات</span><span class="fill"></span><span class="a">6</span></li>
+    <li class="sub">الكتابة، المرفقات، النموذج والوكيل، الإيقاف، إدارة الجلسات</li>
+
+    <li><span class="t">لوحة الفحص</span><span class="fill"></span><span class="a">7</span></li>
+    <li class="sub">النشاط والأهداف، الأدلة، المزوّدون، الإرشاد، الصحة وdoctor</li>
+
+    <li><span class="t">وحدة تحكم REA</span><span class="fill"></span><span class="a">8</span></li>
+    <li class="sub">فهرس الأوامر، الخيارات، المساعدة والمخطط، الإلغاء، السجل، الإجراءات السريعة</li>
+
+    <li><span class="t">متصفح أدوات MCP</span><span class="fill"></span><span class="a">9</span></li>
+    <li class="sub">تصفّح 255 أداة، والمخططات، و«اسأل الوكيل»، ونسخ الطلب</li>
+
+    <li><span class="t">الأدلة ودورة حياة الأهداف</span><span class="fill"></span><span class="a">10</span></li>
+    <li class="sub">معرّفات الأدلة، عمليات الحزم، الأهداف المفتوحة، التنظيف</li>
+
+    <li><span class="t">الإعدادات والملفات والاختصارات</span><span class="fill"></span><span class="a">11</span></li>
+    <li class="sub">settings.json، مساحة العمل، اختصارات لوحة المفاتيح، خريطة الملفات</li>
+
+    <li><span class="t">استكشاف الأخطاء والحدود</span><span class="fill"></span><span class="a">12</span></li>
+    <li class="sub">الخادم، MCP، Ghidra، التحليلات الطويلة، مشكلات المثبّت، الحدود المعروفة</li>
+
+    <li><span class="t">البناء من المصدر</span><span class="fill"></span><span class="a">13</span></li>
+    <li class="sub">تشغيل التطوير، حزم MSI، خط بناء الدليل</li>
+
+    <li class="appendix"><span class="t">الملحق أ — مرجع أوامر سطر الأوامر</span><span class="fill"></span><span class="a">A</span></li>
+    <li class="appendix"><span class="t">الملحق ب — فهرس أدوات MCP</span><span class="fill"></span><span class="a">B</span></li>
+    <li class="appendix"><span class="t">الملحق ج — وسائط سير العمل الموجّه</span><span class="fill"></span><span class="a">C</span></li>
+    <li class="appendix"><span class="t">الملحق د — المصطلحات</span><span class="fill"></span><span class="a">D</span></li>
+  </ol>
+
+  <div class="callout tip" style="margin-top:6mm">
+    <span class="callout-title">كيف تستخدم هذا الدليل</span>
+    <p>الفصول 1–3 قراءة إلزامية. الفصول 4–10 مرجع مهام يمكن فتحه عند الحاجة. الفصل 12 قائمة تحقّق لاستكشاف الأخطاء. الملحقان أ وب فهرسان كاملان لسطح REA المثبّت.</p>
+    <p>تُعرض أسماء الأزرار وعناصر الواجهة في هذا الدليل بالإنجليزية كما تظهر في التطبيق، لتتمكّن من العثور عليها دون التباس.</p>
+  </div>
+</section>

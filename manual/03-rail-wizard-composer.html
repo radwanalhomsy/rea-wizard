@@ -1,0 +1,156 @@
+<!-- ============================================================ 4 RAIL -->
+<section>
+  <div class="chapno">Chapter 4</div>
+  <h1>The task rail</h1>
+
+  <p class="lead">Every card opens the same three-step wizard, but each card carries its own fields and a prompt template that names the right REA tools. Cards are the fastest way to get a precise, reproducible request.</p>
+
+  <h2>4.1 REA guided workflows</h2>
+  <p>These six cards are generated from <code>rea guided-workflows</code> each time the app starts. The reload button (↻) refreshes them after a REA upgrade. Workflow prompts are rendered by REA itself, so the text follows the installed version.</p>
+  <table>
+    <thead><tr><th style="width:27%">Card</th><th>Purpose</th><th style="width:27%">Required arguments</th></tr></thead>
+    <tbody>
+      <tr><td>Investigate a feature</td><td>Trace a feature through artifact, symbol and function evidence while separating observations, inferences and residual unknowns.</td><td><code>feature</code></td></tr>
+      <tr><td>Compare app versions</td><td>Compare two shipped artifacts through complete inventory, without treating missing data as unchanged behavior.</td><td><code>left_target_path</code>, <code>right_target_path</code></td></tr>
+      <tr><td>Verify a reconstruction</td><td>Evaluate a finite reconstruction specification against retained evidence comparisons.</td><td><code>reconstruction_goal</code></td></tr>
+      <tr><td>Trace a crash</td><td>Correlate a crash symptom with static call/reference evidence and optional process capture.</td><td><code>crash_signal</code></td></tr>
+      <tr><td>Audit unknown residuals</td><td>Review open unknowns against evidence and authority without silently closing questions.</td><td><code>audit_scope</code></td></tr>
+      <tr><td>Prepare a process capture</td><td>Choose a command, inputs, observations and stopping conditions for a bounded capture.</td><td><code>behavior_question</code>, <code>executable</code>, <code>working_directory</code></td></tr>
+    </tbody>
+  </table>
+  <p>Optional arguments (documents, procedure addresses, provider IDs, evidence IDs, manifests) appear in the wizard as ordinary fields. Appendix C lists every argument and its description.</p>
+
+  <h2>4.2 Quick tasks</h2>
+  <table>
+    <thead><tr><th style="width:28%">Card</th><th>Inputs</th><th style="width:30%">What it asks the agent to do</th></tr></thead>
+    <tbody>
+      <tr><td>Triage a binary</td><td>Target file</td><td>Overview, architecture, imports, packing hints, most-called functions, entry-point decompilation.</td></tr>
+      <tr><td>Explain a function</td><td>Target file; function name or address</td><td>Decompile one procedure, explain purpose and branches, show callers and callees.</td></tr>
+      <tr><td>Find a behavior</td><td>Target file; behavior description</td><td>Locate every code path implementing the behavior, with strings and APIs.</td></tr>
+      <tr><td>Compare two builds</td><td>Old build; new build</td><td>Changed functions and security-relevant differences.</td></tr>
+      <tr><td>Inspect a .NET assembly</td><td>Managed assembly</td><td>Types, methods, interesting logic, P/Invoke boundaries.</td></tr>
+      <tr><td>Inspect an Android APK</td><td>APK / AAB / IPA</td><td>Components, permissions, network code.</td></tr>
+      <tr><td>Analyze JS / Electron</td><td>ASAR, bundle or folder; optional feature</td><td>Map features, locate one, compare source to bundle.</td></tr>
+      <tr><td>Inspect a web page</td><td>URL or capture file</td><td>Capture traffic, list endpoints and request shapes, connect them to bundle code.</td></tr>
+      <tr><td>Export evidence</td><td>Output file</td><td>Write the investigation to a portable bundle and list open unknowns.</td></tr>
+      <tr><td>Custom request</td><td>Free text</td><td>Sends exactly what you write, with the wizard's option clauses.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4.3 Domain cards</h2>
+  <table>
+    <thead><tr><th style="width:28%">Card</th><th>Inputs</th><th style="width:30%">Focus</th></tr></thead>
+    <tbody>
+      <tr><td>Firmware image</td><td>Firmware file; optional focus</td><td>Region mapping, extraction, filesystem, bootloader, embedded keys.</td></tr>
+      <tr><td>Apple binary / IPA</td><td>Mach-O, .app, IPA or dSYM; optional focus</td><td>Mach-O, signing, entitlements, plists, Objective-C/Swift dispatch.</td></tr>
+      <tr><td>Android device (adb)</td><td>Serial; action; optional package</td><td>Device facts, packages, screen, logcat, APK pull, app start.</td></tr>
+      <tr><td>Live debugging</td><td>Target; engine (GDB/Rizin/Frida/Cutter); command; optional script</td><td>Persistent debugger sessions, registers, stack, control flow.</td></tr>
+      <tr><td>Capture behavior</td><td>Executable/URL/capture; kind; behavior question</td><td>Bounded process, browser, Electron, desktop or native-UI capture.</td></tr>
+      <tr><td>Build an AgentEnv</td><td>Mode; source; task; output folder</td><td>Build, serve, compare manifests, or export a desktop app bundle.</td></tr>
+      <tr><td>Decompile everything</td><td>Target; output folder</td><td>Write every function to disk and summarise the inventory.</td></tr>
+      <tr><td>Extract an artifact</td><td>Archive/installer/image; output folder</td><td>Safe extraction with per-file provenance.</td></tr>
+      <tr><td>Audit release exposure</td><td>Shipped artifact</td><td>Symbols, debug companions, source maps, URLs, credential-adjacent strings.</td></tr>
+      <tr><td>Network capture</td><td>Capture file; optional focus</td><td>Flows, endpoints, protocols, cleartext secrets, beaconing.</td></tr>
+      <tr><td>Compare captures or artifacts</td><td>Left; right; kind; optional focus</td><td>Added, removed and modified behavior ranked by impact.</td></tr>
+      <tr><td>Reconstruction ledger</td><td>Target artifact; ledger output file</td><td>Obligations, coverage, residual unknowns.</td></tr>
+      <tr><td>Annotate &amp; map addresses</td><td>Target; address/procedure; new name; comment</td><td>Rename, comment, bookmark, address-to-file-offset mapping.</td></tr>
+      <tr><td>JEB decompile</td><td>APK/DEX/JAR/project; class/method/field; kind</td><td>Open a JEB project, locate a unit, decompile it.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <span class="callout-title">Cards are prompts, not scripts</span>
+    <p>A card produces a natural-language request naming the recommended tools. The agent may choose different tools when the target or environment calls for it. The reviewed prompt in step 3 is always editable.</p>
+  </div>
+</section>
+
+<!-- ============================================================ 5 WIZARD -->
+<section>
+  <div class="chapno">Chapter 5</div>
+  <h1>The wizard</h1>
+
+  <p class="lead">The wizard turns a card into a launchable request in three steps. Nothing is sent until you press <strong>Launch task</strong>.</p>
+
+  <div class="callout tip">
+    <span class="callout-title">One artifact per request</span>
+    <p>REA tools bind to an open target. Mixing several unrelated artifacts in one prompt makes evidence and cleanup harder to follow. Start a new session per artifact unless you are deliberately comparing two builds.</p>
+  </div>
+
+  <h2>5.1 Step 1 — Target</h2>
+  <ul>
+    <li>Fields are generated from the card (or from the workflow's argument list). Required fields are marked with <code>*</code>.</li>
+    <li><strong>File…</strong> opens a file picker; <strong>Folder…</strong> opens a directory picker. You can also paste an absolute path.</li>
+    <li>File and folder fields are validated as you type. A valid path shows <span class="ok">file ✓ · 123.4 KB</span> or <span class="ok">folder ✓</span>; an invalid one shows a red status.</li>
+    <li>Select fields (engine, action, kind, mode) offer a fixed list; the first option is the default.</li>
+    <li>Output fields default to a sensible name inside the current workspace (for example <code>D:\REA\decompiled</code>).</li>
+  </ul>
+  <p><strong>Next</strong> is blocked while a required field is empty or a path field does not resolve.</p>
+
+  <h2>5.2 Step 2 — Options</h2>
+  <table>
+    <thead><tr><th style="width:26%">Option</th><th>Values</th><th style="width:38%">Effect on the request</th></tr></thead>
+    <tbody>
+      <tr><td>Analysis engine</td><td>Auto · Ghidra 12.1.4 · No engine</td><td>Adds a provider clause: let REA choose, force Ghidra, or restrict to static metadata.</td></tr>
+      <tr><td>Depth</td><td>Summary first · Complete dossier</td><td>Summary favours a fast answer; complete asks for full inventories and decompilation of everything touched.</td></tr>
+      <tr><td>Output style</td><td>Concise · Detailed</td><td>Concise keeps large tool output out of the transcript; detailed allows tables, code and full inventories.</td></tr>
+      <tr><td>Session title</td><td>Free text</td><td>Names the new session. Empty falls back to <em>REA session</em>.</td></tr>
+      <tr><td>Extra instructions</td><td>Free text</td><td>Appended verbatim, for example “focus on the license check”.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5.3 Step 3 — Review</h2>
+  <p>The review page shows the exact prompt that will be sent, plus the workspace, engine and output style. The prompt is editable: you can remove a clause, add a path, or rewrite it completely. The edits are what get sent.</p>
+
+  <h2>5.4 Launch behavior</h2>
+  <ol>
+    <li><strong>Launch task</strong> creates a new session (title from step 2), resets the transcript, and sends the prompt.</li>
+    <li>The composer shows the active model and agent; <strong>Stop</strong> becomes available while the turn runs.</li>
+    <li>Tool activity, evidence and open targets populate the inspector as the agent works.</li>
+    <li>When the turn ends, the session remains open. Continue typing to ask follow-up questions in the same session, or press <strong>New session</strong> for a clean slate.</li>
+  </ol>
+</section>
+
+<!-- ============================================================ 6 COMPOSER -->
+<section>
+  <div class="chapno">Chapter 6</div>
+  <h1>Composer and sessions</h1>
+
+  <h2>6.1 Typing a request</h2>
+  <table>
+    <thead><tr><th style="width:26%">Action</th><th>How</th></tr></thead>
+    <tbody>
+      <tr><td>Send</td><td><kbd>Enter</kbd> or the <strong>Send</strong> button.</td></tr>
+      <tr><td>New line</td><td><kbd>Shift</kbd>+<kbd>Enter</kbd>.</td></tr>
+      <tr><td>Grow the box</td><td>Type; the textarea grows up to about eight lines.</td></tr>
+      <tr><td>Stop the agent</td><td><strong>Stop</strong> (replaces Send while a turn runs).</td></tr>
+    </tbody>
+  </table>
+  <p>The composer hint shows whether the app is ready or a turn is running; the right side shows the selected model and agent.</p>
+
+  <h2>6.2 Attachments</h2>
+  <p>Press <strong>＋</strong> to attach files. Chips appear above the box; remove one with <strong>✕</strong>.</p>
+  <table>
+    <thead><tr><th style="width:30%">Type</th><th>How it is sent</th><th style="width:26%">Limit</th></tr></thead>
+    <tbody>
+      <tr><td>Text-like files (source, logs, JSON, Markdown, scripts, manifests)</td><td>Inlined as text in the message, with a path header.</td><td>300 KB per file</td></tr>
+      <tr><td>Images, PDFs and other binary files</td><td>Sent as data-URL file parts the model can read.</td><td>12 MB per file</td></tr>
+      <tr><td>Very large or unreadable files</td><td>Rejected with a message; attach a smaller extract.</td><td>—</td></tr>
+    </tbody>
+  </table>
+  <p>Attachments are cleared after a successful send. They are not persisted in settings.</p>
+
+  <h2>6.3 Model and agent</h2>
+  <p>The two selectors in the header choose the model and agent for <em>new</em> prompts. The lists come from the OpenCode server (configured providers and agents). Choices are written to <code>settings.json</code> and restored on the next launch. A session keeps the model it started with; changing the selector affects the next prompt.</p>
+
+  <h2>6.4 Sessions</h2>
+  <p><strong>Sessions</strong> opens a list of every session in the current workspace, newest first.</p>
+  <table>
+    <thead><tr><th style="width:20%">Action</th><th>Behavior</th></tr></thead>
+    <tbody>
+      <tr><td>Open</td><td>Loads the session's messages, parts and tool cards into the transcript.</td></tr>
+      <tr><td>Rename</td><td>Edits the title inline. <kbd>Enter</kbd> saves, Cancel abandons. The header and rail update immediately.</td></tr>
+      <tr><td>Delete</td><td>First click arms the action; a second click within four seconds deletes. Deleting the current session clears the transcript and starts a clean chat.</td></tr>
+    </tbody>
+  </table>
+  <p><strong>New session</strong> in the header creates a fresh session without deleting the old one. <strong>Save</strong> writes the current transcript as Markdown, including tool status and outputs.</p>
+</section>

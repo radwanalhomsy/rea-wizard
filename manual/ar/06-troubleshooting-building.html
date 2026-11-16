@@ -1,0 +1,191 @@
+<!-- ============================================================ 12 TROUBLE -->
+<section class="tight">
+  <div class="chapno">الفصل 12</div>
+  <h1>استكشاف الأخطاء والحدود</h1>
+
+  <p class="lead">معظم الأعطال أعطال بيئة: ملف تنفيذي مفقود، أو إصدار Ghidra خاطئ، أو منفذ مستخدم بالفعل، أو مزوّد غير مثبّت. راجع القسم المطابق قبل تغيير إعدادات التطبيق.</p>
+
+  <h2>12.1 الخادم لا يبدأ</h2>
+  <p>تبقى شارة الشريط العلوي على <code>starting…</code> أو تتحوّل إلى <code>server error</code>.</p>
+  <table>
+    <thead><tr><th style="width:32%">العَرَض</th><th>الفحص</th><th style="width:34%">الإصلاح</th></tr></thead>
+    <tbody>
+      <tr><td>«OpenCode executable not found»</td><td>وجود <code>%APPDATA%\npm\node_modules\opencode-ai\bin\opencode.exe</code>.</td><td>ثبّت OpenCode CLI أو أصلحه. فالتطبيق لا يضمّنه.</td></tr>
+      <tr><td>الخادم يخرج فورًا</td><td>شغّل <code>opencode serve --port 4096 --hostname 127.0.0.1</code> في طرفية واقرأ الخطأ.</td><td>أصلح مشكلة الإعداد المُبلَّغ عنها، ثم أعد تشغيل التطبيق.</td></tr>
+      <tr><td>المنفذ 4096 مشغول</td><td><code>Get-NetTCPConnection -LocalPort 4096 -State Listen</code></td><td>أغلق الخادم الآخر، أو أوقف العملية التي تملك المنفذ. يعيد التطبيق استخدام خادم سليم لكنه لا يستطيع ربط خادم ثانٍ.</td></tr>
+      <tr><td>الخادم يبدأ ثم يتوقّف</td><td>Health ← OpenCode server يعرض رسالة خروج.</td><td>افحص الذاكرة المتاحة وسجل OpenCode. والخادم المقتول يعني عادةً أن العملية أُنهيت خارجيًا.</td></tr>
+    </tbody>
+  </table>
+  <p>لمعرفة ما إذا كان خادم سليم موجود بالفعل، افتح <code>http://127.0.0.1:4096/app</code> في متصفح. فإن استجاب، يعيد REA Studio استخدامه بدل إنشاء عملية ثانية.</p>
+
+  <h2>12.2 MCP · rea أحمر أو عدد الأدوات صفر</h2>
+  <ol>
+    <li>شغّل <code>rea mcp doctor</code> في وحدة تحكم REA واقرأ الفشل.</li>
+    <li>شغّل <code>rea setup --client opencode --yes</code> لإعادة كتابة مدخل MCP، ثم أعد تشغيل التطبيق.</li>
+    <li>تأكّد أن مصفوفة <code>mcp.rea.command</code> في <code>opencode.jsonc</code> تشير إلى ملف Node تنفيذي موجود وملف <code>rea.mjs</code> موجود.</li>
+    <li>تأكّد من ضبط <code>GHIDRA_INSTALL_DIR</code> و<code>JAVA_HOME</code> داخل <code>mcp.rea.environment</code>.</li>
+    <li>افتح <strong>REA → Tools</strong>. إذا حُمّل الفهرس لكن صف Health أحمر، فملف الفهرس موجود والمشكلة في عملية MCP.</li>
+  </ol>
+  <div class="callout warn">
+    <span class="callout-title">أعد التشغيل، لا تُعِد التحميل</span>
+    <p>خوادم MCP يبدأها خادم OpenCode. وإعادة تحميل النافذة لا تعيد تشغيلها. أغلق REA Studio تمامًا (وهو ما يوقف الخادم الذي يملكه) ثم ابدأه من جديد.</p>
+  </div>
+
+  <h2>12.3 Ghidra وJava</h2>
+  <table>
+    <thead><tr><th style="width:34%">الرسالة أو العَرَض</th><th>السبب</th><th style="width:36%">الإصلاح</th></tr></thead>
+    <tbody>
+      <tr><td>رفض إصدار Ghidra</td><td>يقبل REA الإصدار 12.1.x فقط.</td><td>ثبّت Ghidra 12.1.4 ووجّه <code>GHIDRA_INSTALL_DIR</code> إلى تلك الشجرة.</td></tr>
+      <tr><td>المفكّك غير موجود</td><td>التثبيت ناقص أو المفكّك الأصلي مفقود.</td><td>أعد استخراج أرشيف Ghidra الكامل؛ لا تنسخ ملفات JAR وحدها.</td></tr>
+      <tr><td>خطأ إصدار Java</td><td><code>JAVA_HOME</code> يشير إلى تثبيت قديم أو JRE فقط.</td><td>ثبّت JDK 21+ واضبط <code>JAVA_HOME</code> على جذره.</td></tr>
+      <tr><td>يعمل في وحدة التحكم ويفشل في الوكيل</td><td>لعملية MCP الخاصة بالوكيل بيئة مختلفة.</td><td>ضع المتغيّرات في <code>mcp.rea.environment</code>، لا في بيئة المستخدم فقط.</td></tr>
+    </tbody>
+  </table>
+  <p>شغّل <strong>Health → Doctor → Run</strong> بعد أي تغيير. يتحقّق Doctor من المزوّدين والمتغيّرات وبدء MCP، ويطبع قائمة نجاح/فشل موجزة. وقد يستغرق دقيقة.</p>
+
+  <h2>12.4 أداة تبدو معلّقة</h2>
+  <p>بعض التحليلات بطيئة فعلًا. فقد قِيس أول <code>binary_overview</code> على <code>notepad.exe</code> بنحو 3.5 دقائق، معظمها في محلّل موارد Windows. وصور البرامج الثابتة الكبيرة وعمليات التفكيك الكامل تستغرق وقتًا أطول.</p>
+  <ul>
+    <li>راقب الزمن المستغرق في <strong>Activity</strong>. الأداة التي تعمل ومؤقّتها يزداد هي أداة تعمل.</li>
+    <li>تحقّق مما إذا كانت الأداة تنتظر مطالبة إذن فوق المحرّر.</li>
+    <li>افحص السجل بحثًا عن نتيجة جزئية أو خطأ لم يلخّصه الوكيل بعد.</li>
+    <li>استخدم <strong>Stop</strong> فقط عندما تكون مستعدًا لخسارة الدور. وسيحتاج الوكيل إلى إعادة بدء التحليل.</li>
+    <li>لأمر في وحدة التحكم، <strong>Cancel</strong> يقتل العملية الفرعية ويحتفظ بالإخراج الجزئي.</li>
+  </ul>
+  <div class="callout">
+    <span class="callout-title">المهلات مختلفة في كل سطح</span>
+    <p>استدعاءات أدوات الوكيل محدودة بالأداة وبالدور، لا بمهلة وحدة التحكم. وأوامر وحدة التحكم مهّلتها الافتراضية 10 دقائق؛ وتستخدم الإجراءات السريعة حدودًا أقصر (Doctor 4 دقائق، وCapabilities 3 دقائق، وSetup 3 دقائق، وManifest 3 دقائق، وVersion دقيقة واحدة).</p>
+  </div>
+
+  <h2>12.5 مشكلات أوامر وحدة التحكم</h2>
+  <table>
+    <thead><tr><th style="width:32%">العَرَض</th><th>التفسير</th></tr></thead>
+    <tbody>
+      <tr><td><code>exit 1</code> مع JSON صالح من <code>--schema</code></td><td>يخرج REA بالرمز 1 عند إخراج المخطط. ويصنّف التطبيق ذلك <em>schema ready</em> وJSON صالح. وهذا متوقّع.</td></tr>
+      <tr><td>تقسيم الوسائط بشكل خاطئ</td><td>مُجزِّئ رموز وحدة التحكم يجمع الكلمات بين علامات اقتباس مزدوجة أو مفردة ويعامل الشرطة المائلة العكسية كمُهرِّب. ضع المسارات التي تحتوي مسافات بين علامات اقتباس.</td></tr>
+      <tr><td>اقتباس PowerShell مختلف</td><td>يشغّل التطبيق Node مباشرةً بمصفوفة وسائط، فلا تنطبق قواعد اقتباس الوسائط الأصلية في PowerShell داخل التطبيق. وإذا نسخت أمرًا إلى PowerShell، فقد يحتاج الاقتباس إلى تغيير.</td></tr>
+      <tr><td>الأمر غير موجود في الفهرس</td><td>يُخزَّن الفهرس مؤقتًا لمدة 10 دقائق. اضغط زر إعادة التحميل في وحدة التحكم، أو أعد فتحها بعد ترقية REA.</td></tr>
+      <tr><td>الإخراج مبتور</td><td>استخدم <code>--token-limit</code> و<code>--token-offset</code> للتصفّح، أو <code>--full-output</code> لرؤية الغلاف.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>12.6 مشكلات المثبّت وبدء التشغيل</h2>
+  <table>
+    <thead><tr><th style="width:34%">العَرَض</th><th>الإصلاح</th></tr></thead>
+    <tbody>
+      <tr><td>SmartScreen يحجب MSI</td><td>المثبّت غير موقّع. اختر <strong>More info → Run anyway</strong>، أو وقّع MSI في خط بناء خاص بك.</td></tr>
+      <tr><td>«Another version is already installed»</td><td>أزل المنتج القديم أولًا، ثم ثبّت MSI الجديد. فالتثبيتات لكل مستخدم لا تُرقّي دائمًا في المكان عبر إعادات بناء رئيسية.</td></tr>
+      <tr><td>نافذة التطبيق فارغة</td><td>تحقّق من وجود <code>resources\app\renderer\index.html</code> في مجلد التثبيت. والتثبيت الجزئي يعني عادةً حجرًا من برنامج مكافحة فيروسات؛ أعد التثبيت.</td></tr>
+      <tr><td>التطبيق يبدأ لكن REA غائب</td><td>التطبيق واجهة أمامية. ثبّت REA واعدّه بشكل منفصل، ثم أعد التشغيل.</td></tr>
+      <tr><td>الاختصارات مفقودة</td><td>أعد التثبيت، أو أنشئ اختصارًا إلى <code>REA Studio.exe</code> في مجلد التثبيت.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>12.7 الحدود المعروفة</h2>
+  <ul>
+    <li><strong>منفذ خادم واحد.</strong> يستخدم التطبيق 4096. ويمكنه إعادة استخدام خادم سليم، لكنه لا يستطيع تشغيل خادمين على ذلك المنفذ.</li>
+    <li><strong>مساحة عمل واحدة في كل مرة.</strong> تُسرد الجلسات لكل مجلد؛ وتغيير مساحة العمل يغيّر مجموعة الجلسات الظاهرة.</li>
+    <li><strong>لا استدعاءات MCP مباشرة من الواجهة.</strong> تعمل الأدوات عبر الوكيل لتبقى الأدلة والأهداف والتنظيف في جلسة واحدة. ويمنحك المتصفح المخططات والطلبات الجاهزة بدلًا من ذلك.</li>
+    <li><strong>أعداد من عمليات جديدة.</strong> تبويب Providers وأعداد Health وكل أمر في وحدة التحكم تعمل في عملية CLI جديدة؛ أما أدلة الجلسة الحيّة والأهداف المفتوحة فيبلّغ عنها الوكيل.</li>
+    <li><strong>مطابقة الأدلة صارمة.</strong> لا يُتتبَّع إلا <code>ev_</code> مع 64 حرفًا سداسيًا عشريًا. والمعرّفات المبتورة عمدًا في ملخّص لن تظهر في تبويب Evidence.</li>
+    <li><strong>حدود المرفقات.</strong> تُدرَج الملفات النصية حتى 300 KB؛ وتُرسَل الملفات الثنائية حتى 12 MB كأجزاء ملفات. والمدخلات الأكبر يجب تصغيرها أو الإشارة إليها بالمسار.</li>
+    <li><strong>مثبّت غير موقّع.</strong> توقّع تحذير SmartScreen إلا إذا وقّعت بناءك.</li>
+    <li><strong>ليس صندوقًا معزولًا.</strong> يمكن للوكيل تشغيل أوامر يسمح بها OpenCode وREA. عامل الآثار المحلّلة كغير موثوقة واعمل في بيئة قابلة للتخلّي عنها عند الاقتضاء.</li>
+  </ul>
+
+  <h2>12.8 قائمة التحقّق التشخيصية</h2>
+  <ol>
+    <li>تبويب Health: كل صف أخضر، بما في ذلك REA CLI وWorkspace.</li>
+    <li>Doctor: <code>healthy: true</code>.</li>
+    <li>وحدة تحكم REA: يستجيب <code>--version</code> و<code>capabilities</code> كلاهما.</li>
+    <li>متصفح الأدوات: 255 أداة مسرودة.</li>
+    <li>تبويب Guidance: البحث عن <code>evidence</code> يعيد مقطعًا واحدًا على الأقل.</li>
+    <li>المحرّر: طلب تافه (<em>reply with pong</em>) يعود خلال ثوانٍ قليلة.</li>
+    <li>Activity: لا هدف متروك مفتوحًا في نهاية المهمة؛ <code>cleanup pending: no</code>.</li>
+  </ol>
+</section>
+
+<!-- ============================================================ 13 BUILD -->
+<section>
+  <div class="chapno">الفصل 13</div>
+  <h1>البناء من المصدر</h1>
+
+  <p class="lead">التطبيق مشروع Electron صغير باعتماد واحد وقت التشغيل. وبناء المثبّت أمر واحد متى توفّرت سلسلة الأدوات.</p>
+
+  <h2>13.1 تخطيط المصدر</h2>
+  <table>
+    <thead><tr><th style="width:34%">المسار</th><th>الدور</th></tr></thead>
+    <tbody>
+      <tr><td><code>main.mjs</code></td><td>العملية الرئيسية: دورة حياة الخادم، وتدفّق أحداث SSE، وجسر REA CLI، ومربّعات الملفات، والإعدادات، ومعالجات IPC.</td></tr>
+      <tr><td><code>preload.cjs</code></td><td>جسر معزول السياق يعرّض <code>window.rea.*</code> لعملية العرض.</td></tr>
+      <tr><td><code>renderer/index.html</code></td><td>ترميز النافذة: الشريط العلوي، والشريط الجانبي، والسجل، ولوحة الفحص، والنوافذ المنبثقة.</td></tr>
+      <tr><td><code>renderer/app.js</code></td><td>منطق الواجهة: البطاقات، والمعالج، وعرض السجل، ووحدة التحكم، ومتصفح الأدوات، والإرشاد، والأدلة، والأهداف.</td></tr>
+      <tr><td><code>renderer/styles.css</code></td><td>سمة التطبيق.</td></tr>
+      <tr><td><code>manual/</code></td><td>مصادر الدليل، وورقة أنماط الطباعة، وملفات البيانات، وخط البناء.</td></tr>
+      <tr><td><code>build/icon.ico</code></td><td>أيقونة التطبيق والمثبّت.</td></tr>
+      <tr><td><code>release/</code></td><td>مخرجات MSI المولَّدة.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>13.2 تشغيل التطوير</h2>
+  <pre>cd D:\REA\rea-wizard
+npm install
+npm start          # normal run
+npm run dev        # same, with --dev passed to the app</pre>
+  <p>يتوقّع التطبيق تثبيتًا عاملًا لـ OpenCode وREA حتى في التطوير. وإذا كان المنفذ 4096 يخدم نسخة سليمة بالفعل، يعيد تطبيق التطوير استخدامها.</p>
+
+  <h2>13.3 حزم MSI</h2>
+  <pre>cd D:\REA\rea-wizard
+npm run dist</pre>
+  <p>يشغّل السكربت:</p>
+  <pre>electron-builder --win msi --x64 --publish never</pre>
+  <table>
+    <thead><tr><th style="width:26%">الإعداد</th><th>القيمة</th></tr></thead>
+    <tbody>
+      <tr><td>الإخراج</td><td><code>release\REA-Studio-&lt;version&gt;-x64.msi</code></td></tr>
+      <tr><td>المعمارية</td><td>x64 فقط</td></tr>
+      <tr><td>نطاق التثبيت</td><td>لكل مستخدم (<code>perMachine: false</code>)، بلا رفع صلاحيات</td></tr>
+      <tr><td>الاختصارات</td><td>سطح المكتب وقائمة ابدأ</td></tr>
+      <tr><td>التشغيل بعد الانتهاء</td><td>مُفعّل</td></tr>
+      <tr><td>التغليف</td><td><code>asar: false</code> — الملفات قابلة للقراءة تحت <code>resources\app\</code></td></tr>
+      <tr><td>مصدر Electron</td><td><code>node_modules\electron\dist</code></td></tr>
+      <tr><td>التوقيع</td><td>لا يوجد</td></tr>
+    </tbody>
+  </table>
+  <p>على شبكة بطيئة، وجّه electron-builder إلى مرآة لثنائياته المساعدة:</p>
+  <pre>$env:ELECTRON_BUILDER_BINARIES_MIRROR = "https://npmmirror.com/mirrors/electron-builder-binaries/"
+npm.cmd run dist</pre>
+  <p>يُخزَّن WiX مؤقتًا في <code>%LOCALAPPDATA%\electron-builder\Cache</code>. ومتى وُجد، لا تعيد إعادات البناء تنزيله.</p>
+  <div class="callout warn">
+    <span class="callout-title">سياسة تنفيذ PowerShell</span>
+    <p>إذا كان تنفيذ السكربتات معطّلًا، فاستدعِ <code>npm.cmd</code> أو <code>npx.cmd</code> صراحةً. لا تحاول تشغيل <code>npm.ps1</code>.</p>
+  </div>
+
+  <h2>13.4 قائمة تحقّق رفع الإصدار</h2>
+  <ol>
+    <li>حدّث <code>version</code> في <code>package.json</code>.</li>
+    <li>حدّث غلاف الدليل ومراجع الفصول إذا ظهر الإصدار في النص (فالبناء يحقن <code>{{VERSION}}</code>).</li>
+    <li>شغّل <code>npm run dist</code>.</li>
+    <li>ثبّت MSI فوق البناء السابق وتأكّد من الإصدار في «التطبيقات والميزات».</li>
+    <li>شغّل قائمة التحقّق التشخيصية في 12.8 على التطبيق المثبّت، لا على شجرة التطوير.</li>
+    <li>أعد بناء الدليل ليتطابق إصداره وملاحقه مع REA المثبّت.</li>
+  </ol>
+
+  <h2>13.5 بناء هذا الدليل</h2>
+  <p>الدليل HTML تطبعه Electron إلى PDF. ومصادره الأجزاء المرقّمة في <code>manual\</code>، وتُدمَج بالترتيب.</p>
+  <pre>cd D:\REA\rea-wizard
+npm run manual</pre>
+  <p>ينفّذ سكربت البناء أربع خطوات:</p>
+  <ol>
+    <li>يقرأ <code>manual\01-*.html</code> حتى <code>manual\07-*.html</code> بترتيب أسماء الملفات.</li>
+    <li>يستبدل <code>{{VERSION}}</code> و<code>{{DATE}}</code> و<code>{{REA_VERSION}}</code> ويحقن الملاحق المولَّدة من <code>manual\data\*.json</code>.</li>
+    <li>يكتب <code>manual\manual.html</code> مع ورقة الأنماط مضمّنة.</li>
+    <li>يشغّل Electron مع <code>manual\print.cjs</code> لطباعة A4، بخلفيات ومخطط مستند وتذييل بأرقام الصفحات، إلى <code>D:\REA\REA-Studio-Manual-&lt;version&gt;.pdf</code>.</li>
+  </ol>
+  <p>للبناء بالعربية، مرّر <code>--lang ar</code>؛ فيقرأ السكربت الأجزاء من <code>manual\ar\</code> ويضيف <code>rtl.css</code> ويكتب <code>REA-Studio-Manual-&lt;version&gt;-ar.pdf</code>:</p>
+  <pre>node manual\build.mjs --lang ar</pre>
+  <p>إذا كان <code>pypdf</code> مثبّتًا، فتمريرة أخيرة (<code>manual\fix-outline.py</code>) تصلح عناوين الإشارات المرجعية التي يكرّرها Chromium عندما يبدأ عنوان صفحةً جديدة. وملف PDF كامل بدونها؛ ولا تختلف إلا تسميات الإشارات المرجعية.</p>
+  <p>لتحديث بيانات الملاحق بعد ترقية REA، شغّل المستخرج على الفهرس الجديد ومخرجات <code>rea --llms</code>:</p>
+  <pre>node manual\extract-data.mjs &lt;llms.md&gt; &lt;mcp-catalog-full.json&gt; &lt;workflows.json&gt;</pre>
+  <p>ثم أعد بناء ملف PDF. وملفات البيانات JSON عادي ويمكن تحريرها يدويًا إذا احتاج أمر إلى وصف أوضح.</p>
+</section>

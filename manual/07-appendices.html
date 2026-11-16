@@ -1,0 +1,95 @@
+<!-- ============================================================ APPENDIX A -->
+<section>
+  <div class="chapno">Appendix A</div>
+  <h1>CLI command reference</h1>
+
+  <p class="lead">Every command the REA console offers, as reported by <code>rea --llms</code> for REA {{REA_VERSION}}, plus the hidden <code>mcp</code> group. Commands run as <code>rea &lt;command&gt; …</code>.</p>
+
+  <div class="callout">
+    <span class="callout-title">Reading the signatures</span>
+    <p>Angle brackets mark positional arguments. Square brackets mark optional ones. For the full argument schema of any command, type the command name in the console and press <strong>Schema</strong>; for usage text press <strong>Help</strong>.</p>
+  </div>
+
+  {{COMMANDS}}
+</section>
+
+<!-- ============================================================ APPENDIX B -->
+<section>
+  <div class="chapno">Appendix B</div>
+  <h1>MCP tool index</h1>
+
+  <p class="lead">The complete set of REA tools exposed to the agent in this release. Each entry is the tool name, its display title, and a one-line summary.</p>
+
+  <div class="callout tip">
+    <span class="callout-title">Schemas are in the app</span>
+    <p>Open <strong>REA → Tools</strong> to read the full JSON input schema for any tool, copy a ready-made agent request, or send one directly. This index is for orientation and printing.</p>
+  </div>
+
+  {{TOOLS}}
+</section>
+
+<!-- ============================================================ APPENDIX C -->
+<section>
+  <div class="chapno">Appendix C</div>
+  <h1>Guided workflow arguments</h1>
+
+  <p class="lead">REA renders each guided workflow prompt from its own argument definitions. These are the six workflows the rail loads at startup, with every argument and whether it is required.</p>
+
+  {{WORKFLOWS}}
+
+  <h2>C.7 How the rail builds the request</h2>
+  <ol>
+    <li>The rail calls <code>rea guided-workflows --format json</code> and keeps the argument list for each workflow.</li>
+    <li>The wizard collects values and asks REA to render the prompt (<code>rea guided-workflow-prompt</code> or the equivalent renderer).</li>
+    <li>If rendering is unavailable, the app falls back to a structured prompt containing the workflow description and a JSON object of the supplied arguments.</li>
+    <li>The reviewed prompt in step 3 is editable; whatever is in the box is what gets sent.</li>
+  </ol>
+</section>
+
+<!-- ============================================================ APPENDIX D -->
+<section>
+  <div class="chapno">Appendix D</div>
+  <h1>Glossary</h1>
+
+  <table>
+    <thead><tr><th style="width:26%">Term</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>Agent</td><td>The OpenCode LLM process that plans work, calls tools and writes the answer. Selected per prompt from the header.</td></tr>
+      <tr><td>AgentEnv</td><td>A portable environment bundle for a web application or Linux desktop app, built from a live instance or a capture and used for later analysis.</td></tr>
+      <tr><td>Artifact</td><td>A shipped file under analysis: executable, library, installer, archive, APK, Mach-O, firmware image, capture, bundle.</td></tr>
+      <tr><td>Bundle (evidence)</td><td>A canonical JSON document containing evidence records, manifests and unknown history. Importable and comparable by record identity.</td></tr>
+      <tr><td>Cleanup pending</td><td>A REA state flag meaning an engine still holds resources that must be released before exit.</td></tr>
+      <tr><td>Evidence</td><td>A durable, content-addressed record of an observed fact, identified by <code>ev_</code> plus a 64-character SHA-256 digest.</td></tr>
+      <tr><td>Ghidra</td><td>The native analysis engine. REA requires 12.1.x.</td></tr>
+      <tr><td>Guidance</td><td>Installed REA playbooks. Searchable in the Guidance tab and readable by the agent.</td></tr>
+      <tr><td>Manifest</td><td>An inventory of an artifact's components and their relationships, used for comparison and reconstruction.</td></tr>
+      <tr><td>MCP</td><td>Model Context Protocol. The stdio interface through which the agent calls REA's 255 tools.</td></tr>
+      <tr><td>Occurrence</td><td>A specific appearance of an artifact or component inside an inventory; used to focus comparisons without authorising extraction.</td></tr>
+      <tr><td>Procedure</td><td>A function or method in a native or managed binary, identified by name or address.</td></tr>
+      <tr><td>Provider</td><td>An analysis backend: Ghidra, IDA, Hopper, Cutter/Rizin, JEB, Frida, adb, Playwright and others. The capability matrix reports availability.</td></tr>
+      <tr><td>Reconstruction ledger</td><td>A deterministic, evidence-backed list of reconstruction obligations with coverage and residual unknowns.</td></tr>
+      <tr><td>Residual unknown</td><td>A question that the available evidence does not answer. Tracked explicitly so it is not silently closed.</td></tr>
+      <tr><td>Session</td><td>An OpenCode conversation scoped to a workspace. Holds messages, tool activity and the live evidence registry.</td></tr>
+      <tr><td>Target</td><td>An artifact currently open in an analysis engine, with resources held until closed.</td></tr>
+      <tr><td>Token limit / offset</td><td>Output controls for large results: cap the size, or page through it by skipping tokens.</td></tr>
+      <tr><td>Workflow</td><td>A REA-defined, multi-step investigation template with required and optional arguments.</td></tr>
+      <tr><td>Workspace</td><td>The directory the agent runs in and the scope for session listing and file dialogs.</td></tr>
+    </tbody>
+  </table>
+
+  <hr />
+
+  <h2>D.1 Document information</h2>
+  <div class="kv">
+    <div class="k">Document</div><div class="v">REA Studio — User Manual and Administrator Guide</div>
+    <div class="k">Document version</div><div class="v">{{VERSION}}</div>
+    <div class="k">Date</div><div class="v">{{DATE}}</div>
+    <div class="k">Application</div><div class="v">REA Studio {{VERSION}}</div>
+    <div class="k">REA</div><div class="v">{{REA_VERSION}}</div>
+    <div class="k">OpenCode</div><div class="v">1.19 or newer</div>
+    <div class="k">Ghidra</div><div class="v">12.1.x</div>
+    <div class="k">Source tree</div><div class="v">D:\REA\rea-wizard</div>
+  </div>
+
+  <p class="small">This manual describes the behaviour of the application as built from the source tree above. Tool names, command signatures and workflow arguments are generated from the installed REA release and may differ after an upgrade; rebuild the manual to refresh the appendices.</p>
+</section>

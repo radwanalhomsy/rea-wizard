@@ -1,0 +1,72 @@
+{
+  "name": "rea-wizard",
+  "productName": "REA Studio",
+  "version": "1.1.0",
+  "description": "Wizard-style desktop client for the OpenCode agent and the REA reverse-engineering toolkit",
+  "main": "main.mjs",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "dist": "electron-builder --win msi --x64 --publish never",
+    "manual": "node manual/build.mjs",
+    "manual:html": "node manual/build.mjs --html-only",
+    "manual:ar": "node manual/build.mjs --lang ar",
+    "manual:ar:html": "node manual/build.mjs --lang ar --html-only"
+  },
+  "keywords": [
+    "rea",
+    "reverse-engineering",
+    "opencode",
+    "ghidra"
+  ],
+  "author": "REA Studio",
+  "license": "ISC",
+  "dependencies": {
+    "@opencode-ai/sdk": "^1.19.5"
+  },
+  "devDependencies": {
+    "electron": "^45.3.1",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "studio.rea.app",
+    "productName": "REA Studio",
+    "copyright": "Copyright © 2026 REA Studio",
+    "asar": false,
+    "compression": "normal",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.mjs",
+      "preload.cjs",
+      "renderer/**/*",
+      "package.json"
+    ],
+    "electronDist": "node_modules/electron/dist",
+    "win": {
+      "target": [
+        {
+          "target": "msi",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "REA-Studio-${version}-x64.${ext}"
+    },
+    "msi": {
+      "oneClick": false,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "REA Studio",
+      "runAfterFinish": true,
+      "warningsAsErrors": false
+    }
+  }
+}

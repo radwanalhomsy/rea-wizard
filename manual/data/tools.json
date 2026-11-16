@@ -1,0 +1,1277 @@
+[
+  {
+    "name": "annotate_native_function",
+    "title": "Annotate Native Function",
+    "description": "Atomically rename one function and/or change entry comments, verify readback, and return its refreshed complete dossier. Ghidra resolves interior addresses to function entries; use procedure_address to select the entry explicitly. Edits change analysis metadata, never executable bytes; empty comment text clears it. Invalid edits roll back together. Ghidra checkpoint mode saves on normal close; ephemeral mode discards edits, including in CLI cleanup. Check binary_session for the mode. Windows P0 and providers without this capability are unsupported."
+  },
+  {
+    "name": "inspect_native_load_image",
+    "title": "Inspect Native Load Image",
+    "description": "Inspect provider source digests, loaded mappings, relocations, entries and register context without executing or changing the target. Independent snapshot checks support DOS MZ, selected COM, raw binaries and GameCube DOL; other formats retain observations with unsupported verification. Relocation symbols do not prove runtime binding. detail summary retains complete Evidence for inspect_analysis_view kind native-load-image, collection source_files/mappings/relocations/entry_points/entry_context/checks/sections. Null collections are unrecorded/inapplicable; payload bytes require explicit fields. Overlay and uninitialized coverage remain explicit."
+  },
+  {
+    "name": "inspect_native_data_type",
+    "title": "Inspect Native Data Type",
+    "description": "Inspect one recovered type by exact database category path or defined typed data address. Returns observed size, alignment, packing, fields, bitfields, enum values, and child type identities; source-level authority and flexible-tail semantics remain unknown unless substantiated."
+  },
+  {
+    "name": "inspect_native_instruction",
+    "title": "Inspect Native Instruction",
+    "description": "Inspect bytes, mnemonic, operand tokens, flow and typed incoming/outgoing references at one code/data address. Ghidra preserves the query and separately reports a containing listed instruction/data object; unlisted memory is not decoded. References do not establish runtime access, and token-only operands do not establish memory decomposition. Use inspect_native_data_type at a data object's start for layout, without inferring a selected field. Retained references use inspect_analysis_view kind native-instruction-references; null coverage is unavailable or unrecorded."
+  },
+  {
+    "name": "resolve_native_call_targets",
+    "title": "Resolve Native Call Targets",
+    "description": "Resolve one explicit static call site using typed provider call references. Preserves ambiguous targets as candidates and unresolved computed calls as unknown; does not execute code or traverse a call graph."
+  },
+  {
+    "name": "address_name",
+    "title": "Address Name",
+    "description": "Resolve the primary analyzed name at a code or data address. Headless providers require an explicit address; GUI providers may default to their current cursor. Null means the provider has no primary name at that address."
+  },
+  {
+    "name": "comment",
+    "title": "Comment",
+    "description": "Read the regular analysis comment at an explicit address, or the current cursor where supported. Returns null when absent; use set_comment to write one."
+  },
+  {
+    "name": "current_address",
+    "title": "Current Address",
+    "description": "Return Hopper's current cursor address for the selected document. Use only for interactive navigation state; prefer explicit addresses in reproducible investigations."
+  },
+  {
+    "name": "current_procedure",
+    "title": "Current Procedure",
+    "description": "Return the analyzed procedure containing Hopper's current cursor. This uses GUI cursor state and is not a procedure-name lookup."
+  },
+  {
+    "name": "current_document",
+    "title": "Current Document",
+    "description": "Return the document currently selected by REA's Hopper bridge."
+  },
+  {
+    "name": "goto_address",
+    "title": "Goto Address",
+    "description": "Move Hopper's GUI cursor to a mapped address and return the observed cursor address. Interior coordinates snap to the containing analyzed object's start. Unmapped destinations fail without moving the cursor. This changes navigation state but not analysis data; use explicit-address tools for headless workflows."
+  },
+  {
+    "name": "inline_comment",
+    "title": "Inline Comment",
+    "description": "Read the inline instruction comment at an explicit address, or the current cursor where supported. Returns null when absent; use set_inline_comment to write one."
+  },
+  {
+    "name": "list_bookmarks",
+    "title": "List Bookmarks",
+    "description": "List every bookmark in the selected Hopper document as address and name pairs; unnamed bookmarks retain a null name. Use bookmarks as analyst-authored navigation aids; this does not discover code references."
+  },
+  {
+    "name": "list_documents",
+    "title": "List Documents",
+    "description": "List provider program or document identities. Hopper may expose several documents; a Ghidra headless session contains exactly its one imported Program."
+  },
+  {
+    "name": "list_names",
+    "title": "List Names",
+    "description": "List every analyzed memory and external symbol as address/value pairs. Provider metadata distinguishes Ghidra primary, dynamic, external, type, and source facts when available. Select detail summary for counts and retained native-inventory pages; complete remains the default."
+  },
+  {
+    "name": "list_procedures",
+    "title": "List Procedures",
+    "description": "List every analyzed procedure as address/value pairs after provider analysis. Ghidra metadata distinguishes thunks and external functions; use returned addresses in later function operations. Select detail summary for counts and retained native-inventory pages; complete remains the default."
+  },
+  {
+    "name": "list_segments",
+    "title": "List Segments",
+    "description": "List segments or memory blocks using exclusive end addresses. Ghidra reports block permissions, address space, image base, initialization, and overlay facts; Hopper marks unavailable permissions explicitly."
+  },
+  {
+    "name": "list_strings",
+    "title": "List Strings",
+    "description": "List every provider-reported string object or candidate, or filter to one address, as address/value pairs with encoding, terminator status, and byte length when available. Hopper reads complete typed objects and retains its original display text as provider_value; long literals may span adjacent unterminated objects. Kuna scans mapped printable sequences of at least five characters, including unterminated fragments; references are not computed. Select detail summary for counts and retained native-inventory pages; complete remains the default."
+  },
+  {
+    "name": "next_address",
+    "title": "Next Address",
+    "description": "Return the next analyzed object address after an explicit address or current cursor. This is a navigation primitive, not instruction-flow or CFG analysis."
+  },
+  {
+    "name": "prev_address",
+    "title": "Prev Address",
+    "description": "Return the previous analyzed object start before an explicit address or current cursor. This is a navigation primitive and may fail at document boundaries; data objects and instructions remain distinct from control flow."
+  },
+  {
+    "name": "procedure_address",
+    "title": "Procedure Address",
+    "description": "Resolve an unambiguous procedure symbol name or provider-normalized address to its canonical entry address. External address spaces remain explicit. Select detail summary for selected facts and a context digest; native-observation and native-context views retain complete source access."
+  },
+  {
+    "name": "procedure_assembly",
+    "title": "Procedure Assembly",
+    "description": "Return assembly for one analyzed procedure identified by symbol or hexadecimal address. Use when pseudocode loses calling-convention or instruction-level detail; output is currently returned as one unpaginated string. Ghidra terminal-call assumptions that may cut the analyzed body are reported in Evidence limitations."
+  },
+  {
+    "name": "procedure_callees",
+    "title": "Procedure Callees",
+    "description": "Return the provider's resolved direct callees for one procedure identified by symbol or address. Unresolved indirect calls may be absent; use analyze_function and typed references to preserve available edge uncertainty. Ghidra terminal-call assumptions that may cut the analyzed body are reported in Evidence limitations. Select detail summary for selected facts and a context digest; native-observation and native-context views retain complete source access."
+  },
+  {
+    "name": "procedure_callers",
+    "title": "Procedure Callers",
+    "description": "Return the provider's resolved direct callers for one procedure identified by symbol or address. Results reflect completed static analysis and may omit unresolved indirect references. Ghidra terminal-call assumptions that may cut the analyzed body are reported in Evidence limitations. Select detail summary for selected facts and a context digest; native-observation and native-context views retain complete source access."
+  },
+  {
+    "name": "procedure_info",
+    "title": "Procedure Info",
+    "description": "Return provider metadata for one procedure identified by symbol or address: entrypoint, signature, locals, size, block count, and complete inclusive body ranges when observed. Extents reflect the provider's analyzed body; Ghidra terminal-call assumptions that may cut it are reported in Evidence limitations. Hopper locals preserve observed names and signed stack displacements; source types remain unknown. Body byte count and enclosing span remain distinct; unavailable extent is explicit."
+  },
+  {
+    "name": "read_function_instructions",
+    "title": "Read Function Instructions",
+    "description": "Return every raw instruction for one analyzed procedure. Instruction text and body extent are provider-specific. Ghidra terminal-call assumptions that may cut the analyzed body are reported in limitations."
+  },
+  {
+    "name": "search_bytes",
+    "title": "Search Bytes",
+    "description": "Find masked byte signatures in initialized analyzed memory. Hex byte pairs and ?? wildcards are supported; an optional equal-length hex mask selects bits. Bounds are inclusive. Without bounds, unloaded blocks and loaded overlays are skipped and listed separately; select an overlay address space with start or end to search it. Matches are ordered by provider address and may span adjacent eligible initialized blocks; gaps and excluded blocks end a contiguous range. A match’s segment and file offset describe its starting address. Coverage describes this page; reuse the same query with next_cursor to continue. Uninitialized blocks are listed separately. Ghidra only; Hopper is unavailable."
+  },
+  {
+    "name": "read_bytes",
+    "title": "Read Bytes",
+    "description": "Read analyzed bytes from one provider-normalized virtual address. Ghidra reads initialized memory, which can include loader fixups; these bytes can differ from the original file. The hexadecimal payload reports the exact returned length; incomplete reads remain explicit and unsupported provider APIs return typed capability unavailability."
+  },
+  {
+    "name": "address_to_file_offset",
+    "title": "Address To File Offset",
+    "description": "Map one provider-normalized virtual address to its original nonnegative file offset. The mapping is for that address; it does not imply a contiguous file range or that analyzed memory bytes equal file bytes. Hopper verifies the original bytes against the selected executable digest and translates FAT image-relative offsets using the loaded header. Results preserve the provider coordinate, image base, and source path. Unmapped addresses fail explicitly; changed or unavailable sources return typed errors retaining native mapping facts as partial evidence."
+  },
+  {
+    "name": "procedure_references",
+    "title": "Procedure References",
+    "description": "Return incoming or outgoing reference edges for one procedure. Ghidra preserves detailed reference flags; Hopper preserves native CallReference classifications and exact endpoints. Select detail summary to retain complete Evidence and page references or unresolved calls using inspect_analysis_view kind native-procedure-references. Page coverage describes retained observations, not complete discovery or proof the target ran."
+  },
+  {
+    "name": "procedure_pseudo_code",
+    "title": "Procedure Pseudo Code",
+    "description": "Decompile one analyzed procedure by symbol or provider-normalized address. Returns provider-specific pseudocode or null, never original source; raw_result.pseudocode_absence distinguishes reported provider-failure from not-in-export, otherwise the cause is unknown. Use procedure_assembly for instruction precision. detail summary retains text for inspect_analysis_view native/pseudocode pages without another decompile; complete is default. analysis: independent_fresh requests a separate attempt only when binary_session advertises independent_decompile; it may use different analysis context. Ghidra accepts file-offset:0x... or unique file offsets when a 0x selector resolves to no procedure; existing analysis addresses take precedence, and space-qualified addresses avoid that fallback. Its terminal-call assumptions may truncate the analyzed body, as limitations report."
+  },
+  {
+    "name": "resolve_containing_procedure",
+    "title": "Resolve Containing Procedure",
+    "description": "Resolve an arbitrary address, including an interior instruction or exact external entry, to its provider-analyzed containing procedure. A negative result distinguishes outside segments from not in a procedure and is never guessed from nearby symbols. Select detail summary for selected facts and a context digest; native-observation and native-context views retain complete source access."
+  },
+  {
+    "name": "search_procedures",
+    "title": "Search Procedures",
+    "description": "Find analyzed procedures by literal name (default) or regex, including accepted secondary names. Returns deterministic provider-inventory matches under primary names with matched_aliases and available thunk/external metadata. For Ghidra case-insensitive literal searches, raw_result retains unfiltered candidates; normalized_result holds matches. detail summary retains native-inventory pages. Regex uses Java Pattern in Ghidra and ECMAScript Unicode in Kuna, IDA and Hopper; binary_session and errors report effective limits and recovery."
+  },
+  {
+    "name": "search_strings",
+    "title": "Search Strings",
+    "description": "Find provider-reported strings by literal text (default) or regex. Complete results cover that inventory, not all artifact text; packed/undefined strings or independently matched fragments may be missing. Ghidra search_bytes finds known encoded bytes without establishing string identity/use; xrefs inspects references at a known address. Kuna scans mapped sequences of at least five characters without references or read_bytes. Hopper preserves decoded typed objects, display text and decoding unknowns. For Ghidra case-insensitive literal searches, raw_result holds candidates; normalized_result holds matches. detail summary retains native-inventory pages. Regex uses Java Pattern in Ghidra and ECMAScript Unicode elsewhere; binary_session/errors report limits."
+  },
+  {
+    "name": "set_address_name",
+    "title": "Set Address Name",
+    "description": "Assign an analyst name to one mapped hexadecimal address and report whether the native edit succeeded and exact readback matched. Hopper rejects symbol names exceeding 1024 UTF-16 code units before mutation, and rejects names owned by another address; use set_addresses_names to explicitly move or swap labels among selected addresses. This mutates analysis metadata."
+  },
+  {
+    "name": "set_addresses_names",
+    "title": "Set Addresses Names",
+    "description": "Assign analyst names to multiple mapped addresses in one call and return per-address edit/readback success booleans. Hopper validates mapped destinations, native string representations, its 1024 UTF-16 code-unit symbol-name limit, and unique destinations/names before applying edits; its labels may move or swap only among explicitly selected addresses, and unselected label owners remain unchanged. Ghidra rejects any address whose name another selected address also requests or holds in that namespace; others still apply, with reasons in raw_result.failures. This mutates analysis metadata; verify failures individually."
+  },
+  {
+    "name": "set_bookmark",
+    "title": "Set Bookmark",
+    "description": "Create or update a bookmark at a mapped hexadecimal address and report readback success. Omit name to preserve an existing name or create an unnamed bookmark; an empty string clears the bookmark name. This mutates navigation metadata; bookmarks are analyst-authored navigation aids, not binary evidence."
+  },
+  {
+    "name": "set_comment",
+    "title": "Set Comment",
+    "description": "Write a regular analysis comment at a hexadecimal address and return whether readback matched. An empty comment clears it. This mutates the Hopper document; use comments to record evidence IDs or reasoning."
+  },
+  {
+    "name": "set_inline_comment",
+    "title": "Set Inline Comment",
+    "description": "Write an inline instruction comment at a hexadecimal address and return whether readback matched. An empty comment clears it; Hopper may flatten newlines, producing false on exact readback. This mutates analysis metadata."
+  },
+  {
+    "name": "unset_bookmark",
+    "title": "Unset Bookmark",
+    "description": "Remove the bookmark at a mapped hexadecimal address and return whether it is absent. Hopper also permits removing an existing legacy bookmark outside mapped memory. This mutates navigation metadata and does not alter binary bytes."
+  },
+  {
+    "name": "xrefs",
+    "title": "Xrefs",
+    "description": "Return analyzed references to a code or data address. Hopper may default to its current cursor; headless providers such as Ghidra require an explicit address. Kuna also accepts names in its own inventory, including data names; an unlisted name may still exist in the target. Use to connect strings, globals, selectors, and functions; bare addresses are untyped and indirect references may be incomplete. Page a retained result with inspect_analysis_view and native-observation; use native-context for source caveats. Use inspect_native_instruction at the target address for typed incoming references where supported."
+  },
+  {
+    "name": "trace_native_values",
+    "title": "Trace Native Values",
+    "description": "Trace static value dependencies across resolved calls from one native procedure: high-p-code def-use, constants, operators, memory/branch operations and derived argument/return bindings. Alias effects, missing bindings, persistent state and RNG roles remain unknown. Caller-selected budgets bound traversal and retained facts; nodes are paged. A Ghidra per-function timeout does not bound the traversal: allow startup and every attempted function, or reduce max_functions."
+  },
+  {
+    "name": "inspect_native_dispatch_metadata",
+    "title": "Inspect Native Dispatch Metadata",
+    "description": "Inspect analyzed Objective-C class/method and Swift mangled symbols, with optional exact Objective-C import-pointer binding facts from the selected Mach-O slice. Returns decoded names up to max_records, provider/profile identity, target digest when available, facet coverage and per-record Evidence. Symbol observations do not establish runtime layouts, conformances or witness/class tables. The selected provider owns name discovery. max_input_bytes bounds the whole-file Mach-O read; unresolved bindings remain partial or unsupported."
+  },
+  {
+    "name": "get_objc_classes",
+    "title": "Get Objc Classes",
+    "description": "Find Objective-C class labels, optionally by literal substring. Labels remain separate unless exact selected-image pointer-fixup Evidence establishes the same imported class binding, including library, ordinal, weak status and addend. Missing binding proof remains unknown, partial or unsupported."
+  },
+  {
+    "name": "get_objc_protocols",
+    "title": "Get Objc Protocols",
+    "description": "Discover and deduplicate Objective-C and Swift protocol labels."
+  },
+  {
+    "name": "batch_decompile",
+    "title": "Batch Decompile",
+    "description": "Decompile an explicit list of procedure symbols/addresses in input order, with one provider read active per batch. Returns per-item pseudocode, unavailable or error outcomes and aggregate counts; input selectors and observed canonical procedure identities remain separate. Null pseudocode is unavailable, without an inferred capability or retry reason; failed counts include unavailable items. detail summary retains the batch for inspect_analysis_view item/body pages; complete includes every body. Per-function limits do not bound the whole batch."
+  },
+  {
+    "name": "decompile_all",
+    "title": "Decompile All",
+    "description": "Export pseudocode for all or selected analyzed functions to a directory; returns a manifest/index, with bodies kept in files. Existing output requires resume with matching target, provider, profile and layout; verified files are skipped and conflicts preserved. External functions produce no file. Item failures do not stop others; cancellation keeps written files. retry_failed: independent_fresh retries only provider-reported function failures when supported, retaining each attempt and its limitations; independent attempts may use different analysis context. layout dwarf falls back to address filenames when compilation-unit paths are unavailable. Select limit/resume to fit the whole client deadline; per-function limits do not bound the export."
+  },
+  {
+    "name": "get_call_graph",
+    "title": "Get Call Graph",
+    "description": "Traverse the provider-observed caller or callee graph from one symbol/address, returning canonical-address nodes with per-node outcomes. Use trace_call_path for a shortest path to a goal, or build_call_path to compose existing function dossiers without provider reads. Indirect calls may be unresolved; this is not a whole-program CFG. detail summary retains the complete graph for native-observation pages and native-context caveats."
+  },
+  {
+    "name": "analyze_swift_types",
+    "title": "Analyze Swift Types",
+    "description": "Classify analyzed Swift procedure names into classes, structs, enums, protocols and extensions using manglings or same-address symbol aliases. Returns deduplicated procedure-name counts, not unique source types; provider names, mangled_names and unresolved classifications remain available. Category and case-sensitive literal pattern filters do not suppress unclassified rows. Example: {category: \"structs\", pattern: \"Pair\"}."
+  },
+  {
+    "name": "find_xrefs_to_name",
+    "title": "Find Xrefs To Name",
+    "description": "Find references to an exact analyzed symbol name: resolves the name, then returns its address and referencing addresses. name_not_found means lookup is unresolved, not that a reference search found none or the target lacks the symbol. References are address-only; use inspect_native_instruction for typed incoming references where supported. Kuna lacks the required general name inventory; xrefs can resolve names its inventory knows."
+  },
+  {
+    "name": "binary_overview",
+    "title": "Binary Overview",
+    "description": "Summarize the bound document, complete provider-inventory procedure/string row counts, and segments when supported. Counts do not establish discovery of every function/string and are not comparable across providers. Omitted segments mean unavailable coverage. image_base is returned only when observed segments agree. Use search_procedures, list_procedures or analyze_function directly when the procedure is already known."
+  },
+  {
+    "name": "analyze_function",
+    "title": "Analyze Function",
+    "description": "Inspect one native function by symbol or provider-returned address. Default summary returns identity, pseudocode size, facet counts and value-flow availability while retaining the complete dossier. Read selected facts with inspect_analysis_view using normalized_result.parent_evidence_id; detail complete returns everything inline. Facets include pseudocode, assembly, body ranges, comments, calls, references, strings/names, CFG and native API observations. Extents reflect provider analysis; limitations report unknown ranges and possible Ghidra terminal-call truncation."
+  },
+  {
+    "name": "inspect_native_api",
+    "title": "Inspect Native Api",
+    "description": "Inspect recovered parameter/return boundary types and jump-table dispatch for one native function selected by symbol or address. Returns confidence, supporting Evidence, case/data/target mappings, unsupported facets and residual unknowns. Null case values are unresolved, never known defaults. Use analyze_function for the broader function dossier."
+  },
+  {
+    "name": "trace_feature",
+    "title": "Trace Feature",
+    "description": "Search procedure/string inventories for the complete literal query, then query xrefs at matched start addresses. Interior-byte references are not searched; empty results or truncated: false never establish no references. Containment refusals preserve an unavailable owner, and reference kinds remain unknown. For typed incoming procedure references use procedure_references, comparing target addresses for exact-entry matches. detail summary retains matches/references/unknowns for inspect_analysis_view kind native-feature-trace."
+  },
+  {
+    "name": "trace_call_path",
+    "title": "Trace Call Path",
+    "description": "Resolve start and optional goal symbols or addresses, then trace direct callers or callees. Returns observed edges and a shortest path within the provider-observed graph. search_scope distinguishes the observed-graph result from whether discovery is established; a missing goal is unknown when relationship reads or discovery are incomplete. Unresolved indirect calls remain unknown."
+  },
+  {
+    "name": "trace_native_ui_action",
+    "title": "Trace Native Ui Action",
+    "description": "Trace one unique compiled UI action, object ID, native symbol or exact function address through authored connections, encoded or symbolized Objective-C handlers, and bounded static call references. Typed direct and resolved indirect calls, ambiguous candidates, inferred untyped provider callees, and targetless sites remain distinct. Runtime reachability is unknown; use trace_native_values for recovered value dependencies."
+  },
+  {
+    "name": "observe_native_ui",
+    "title": "Observe Native Ui",
+    "description": "Observe one already-running native app window by PID/window ID, bound to the active Mach-O target. Returns a bounded accessibility tree and window screenshot; permission denial does not broaden capture or launch the target. native_ui_deadline_ms sets this call's deadline independently of output and wait-step limits. Use capture_native_ui_scenario to interact."
+  },
+  {
+    "name": "capture_native_ui_scenario",
+    "title": "Capture Native Ui Scenario",
+    "description": "Interact with one exact native app window through selected-element press, scroll, AXValue text entry and bounded waits. Returns ordered before/after captures and per-step failures. Actions may change app data, network activity and persistent state; REA leaves that state in place. native_ui_deadline_ms controls the scenario deadline, independently of output allowance and wait-step caps. Use observe_native_ui for observation only."
+  },
+  {
+    "name": "observe_native_calls",
+    "title": "Observe Native Calls",
+    "description": "Launch the active Mach-O under LLDB and record selected function/Objective-C method entries; the owned process is killed at max_events or duration_ms. Target execution uses the caller's permissions and may write files, show UI or use network. Hits auto-continue; REA evaluates no expressions and attaches to no other process. Returns addresses, thread/module/symbol, raw argument registers, selector/receiver facts, optional frames, stdout/stderr and limitations. Hardened-runtime targets need get-task-allow. Set capture_limits before launch; later changes cannot recover omitted observations."
+  },
+  {
+    "name": "inspect_macho",
+    "title": "Inspect Macho",
+    "description": "Inspect Mach-O slices, load commands, linkage, build metadata, segments/sections and permissions without launching Hopper. Returns command provenance and explicit coverage. detail summary retains complete Evidence for inspect_analysis_view kind macho rather than delivering large symbol lists inline. native_command_timeout_ms bounds each Xcode command, independently of output admission."
+  },
+  {
+    "name": "inspect_signature",
+    "title": "Inspect Signature",
+    "description": "Inspect the selected Mach-O slice's signing identity, hashes, authorities, requirement, entitlements and hardened-runtime state from a digest-verified snapshot. Other slices are checked for unsigned state with separate metadata coverage. Returns command provenance; native_command_timeout_ms bounds each codesign command independently of output admission."
+  },
+  {
+    "name": "inspect_plist",
+    "title": "Inspect Plist",
+    "description": "Parse Info.plist from an open binary or bundle-resource session, or select path within that session. Use open_binary or open_bundle_resources first; path alone does not open one. Returns normalized JSON. native_command_timeout_ms bounds each file/plutil command, not fixed input/decode/nesting allowances. XML also requires plutil validation and may be refused at a shallower depth; errors name the applicable limit."
+  },
+  {
+    "name": "list_architectures",
+    "title": "List Architectures",
+    "description": "List thin/universal Mach-O slices with file offsets, sizes, alignment, coverage and native-tool provenance. native_command_timeout_ms bounds lipo, independently of output admission."
+  },
+  {
+    "name": "demangle_swift",
+    "title": "Demangle Swift",
+    "description": "Demangle an ordered list of single-line Swift symbols without Hopper. Returns demangled, unchanged or invalid for every input; invalid entries do not discard valid companions. native_command_timeout_ms bounds swift-demangle, independently of output admission."
+  },
+  {
+    "name": "inspect_with_objdump",
+    "title": "Inspect With Objdump",
+    "description": "Inspect a local artifact with caller-selected objdump and GNU-style arguments; the executable implementation/version is unverified. operation disassemble optionally scopes to symbol; omission selects all code sections. operation architectures needs no path and captures -i output without establishing artifact support. Returns authoritative stdout/stderr and artifact SHA-256, with lossy UTF-8 and truncation explicit; there is no stable normalized disassembly format. DWARF debug links are off unless follow_debug_links true; external file identities remain unbound. DEBUGINFOD_URLS is cleared to prevent debuginfod requests. Default complete returns Evidence; summary retains it and returns one command observation for later inspect_analysis_view/export via parent_evidence_id. command_timeout_ms bounds each phase; max_output_bytes independently bounds combined output (16 MiB default). Both apply next call without restart; truncation termination leaves completion unknown, and raising output does not raise client receive limits."
+  },
+  {
+    "name": "execute_rizin_command",
+    "title": "Execute Rizin Command",
+    "description": "Run one caller-selected Rizin command on a local artifact. Commands/plugins can execute code, mutate files, access network and read outside the artifact; those external inputs are not Evidence-bound. Suppresses user settings/scripts but retains plugins. Raw stdout/stderr is authoritative, JSON is command-specific, and UTF-8 loss/truncation is explicit; output-limit termination leaves completion unknown. For raw images, asm_arch/asm_bits/asm_cpu select decoding and base_address maps offset 0; base_address also passes -n to skip loaders even on ELF, without REA confirming either. An admitted command retires shared binary analysis: close Ghidra explicitly first, then open_binary after effects settle. command_timeout_ms is per-phase and max_output_bytes bounds combined output (16 MiB default); both apply next call without restart and do not raise client receive limits or persistent debugger deadlines."
+  },
+  {
+    "name": "list_cutter_sessions",
+    "title": "List Cutter Sessions",
+    "description": "Find live REA bridge sessions in Cutter and return document identity and bridge-directory security status. Examines at most 256 descriptors with up to eight concurrent probes; excess capacity returns bridge_directory_capacity_exceeded, not an empty session list. The fixed discovery budget is separate from REA_BRIDGE_MAX_REQUEST_BYTES and cannot be raised at runtime."
+  },
+  {
+    "name": "cutter_command",
+    "title": "Cutter Command",
+    "description": "Run one arbitrary Rizin command in a selected Cutter session; it may persist edits or execute plugin effects. Reports completion uncertainty as Evidence; do not retry automatically. An admitted command retires shared binary analysis: close active Ghidra explicitly first, then reopen with open_binary after command effects settle. Supply session_id and expected_generation from discovery. REA_BRIDGE_MAX_REQUEST_BYTES bounds authenticated request/response payloads excluding LF (default 16777216, range 7464..536870887); mismatched client/Cutter budgets refuse dispatch. An out-of-band Cutter without this setting uses the default."
+  },
+  {
+    "name": "start_gdb_session",
+    "title": "Start Gdb Session",
+    "description": "Start a persistent caller-supplied GDB session and return its session ID. Linux only; detaching a live inferior during close requires a verified durable output TTY. Startup suppresses init files and auto-loading, preferring MI3. Optional inferior_tty selects a verified terminal for later inferior runs; keep it available after GDB exits so close can detach a live inferior safely. The session belongs to this REA server process."
+  },
+  {
+    "name": "gdb_console",
+    "title": "Gdb Console",
+    "description": "Run one unrestricted command in a persistent GDB session; commands can run shell, change target state, access files and network. Returns ordered MI/console/target/log Evidence. A timeout retains collected records with completion_status unknown and stops the owned debugger; closing does not imply target termination. Default complete preserves full Evidence; summary retains it and omits duplicate stream/raw mirrors for inspect_analysis_view summary queries. In a shared server this command retires active binary analysis: close Ghidra explicitly first, then reopen the binary after command effects settle."
+  },
+  {
+    "name": "gdb_session_status",
+    "title": "Gdb Session Status",
+    "description": "Return the observed lifecycle state and bounded recent MI records and process diagnostics for one persistent REA GDB session; truncation and invalid-UTF-8 fields report discarded or lossy data."
+  },
+  {
+    "name": "close_gdb_session",
+    "title": "Close Gdb Session",
+    "description": "Close the owned GDB process after verifying the inferior state. When one live thread group has a verified durable output TTY, REA automatically detaches it, which may resume target execution; otherwise close reports that a disposition is required. REA never kills attached or remote targets as part of debugger cleanup. In a shared MCP server, this admitted close retires any active binary-analysis session; after target effects have settled, call open_binary before further analysis. Close an active Ghidra session explicitly first."
+  },
+  {
+    "name": "start_rizin_debug_session",
+    "title": "Start Rizin Debug Session",
+    "description": "Start a persistent Rizin debugger for one selected target/backend. Linux and a caller-selected TTY for inferior stdin/stdout/stderr are required; the target may use that terminal after detach. Startup suppresses user settings/scripts while retaining plugins. Detach requires verified output sinks, no target access to the debugger command stream, and dbg.exitkills=false. Capabilities depend on the installed backend. This shared-server operation retires binary analysis: close Ghidra explicitly first, then reopen the binary after effects settle."
+  },
+  {
+    "name": "rizin_debug_command",
+    "title": "Rizin Debug Command",
+    "description": "Run one unrestricted command in a persistent Rizin debugger; it can access target state, plugins, shell, files and network. Returns raw/interleaved session output as Evidence. Output/frame limits stop the owned debugger and retain partial output with output_truncated and unknown completion. Prequeued unsolicited frames refuse the call because correlation is ambiguous. This shared-server operation retires binary analysis: close Ghidra explicitly first, then reopen the binary after effects settle."
+  },
+  {
+    "name": "rizin_debug_session_status",
+    "title": "Rizin Debug Session Status",
+    "description": "Return observed lifecycle state and bounded recent NUL-framed output and process diagnostics for one Rizin debugger session; truncation fields report discarded data, and output_invalid_utf8 reports whether invalid UTF-8 has been observed in session frame bytes; recent output may contain replacement characters."
+  },
+  {
+    "name": "close_rizin_debug_session",
+    "title": "Close Rizin Debug Session",
+    "description": "Close the REA-owned Rizin debugger only after verifying no inferior remains or detaching one with a verified caller-selected TTY output sink. A detached target may continue running, read from and write to that TTY; target state is otherwise reported as unknown. REA never signals an inferior based on PID or path. In a shared MCP server, this admitted close retires any active binary-analysis session; after target effects have settled, call open_binary before further analysis. Close an active Ghidra session explicitly first."
+  },
+  {
+    "name": "inspect_byte_entropy",
+    "title": "Inspect Byte Entropy",
+    "description": "Inspect Shannon byte entropy for one explicit local file offline, without execution, extraction or external tools. Returns file-wide SHA-256 and entropy, fixed-block entropy for an optional offset/length window, and adjacent high (>=7.2) and low (<=1.0) runs with exact file offsets. Block size is a power of two from 256 to 65536 (default 4096). Complete output can become very large because it includes one row per selected block, and summary detail still retains that full list. Use a shorter length or a larger block_size; the selected window is limited to 32,768 output blocks. Entropy cannot distinguish compression from encryption. Summary detail returns file entropy plus the ten longest runs; retrieve parent Evidence for the full series. The entire file is read even for a window."
+  },
+  {
+    "name": "inspect_binary_layout",
+    "title": "Inspect Binary Layout",
+    "description": "Inspect static ELF section/segment, symbol, relocation, linkage and mitigation facts with artifact SHA-256 Evidence, without launching the image. Linux x64 requires caller-supplied pwntools 4.15.0/pyelftools 0.33/Unicorn 2.1.2; supports ELF64 x86-64/little-endian AArch64 and ELF32 i386/little-endian ARM/little- or big-endian MIPS. Unicorn may emulate PLT instructions for derived maps. Runtime addresses/paths and complete relocation/GOT/PLT discovery remain unknown; RELR per-word locations/addends can be unknown. detail summary retains full Evidence for layout section/symbol/mitigation/linkage views. pwntools_timeout_ms bounds each command independently of producer_limits and inherited OS limits. Unsupported, malformed or oversized inputs fail without partial success."
+  },
+  {
+    "name": "inspect_pe_resources",
+    "title": "Inspect Pe Resources",
+    "description": "Inspect a local PE32/PE32+ resource tree without execution: type/name/language identities, empty branches, UTF-16 names, payload RVA/file ranges/digests and static group-icon candidates. Language fallback, image decoding and actual UI loading remain unknown. Malformed/ambiguous mappings, non-identical overlaps or exhausted budgets fail without partial success. No Windows SDK or disassembler required."
+  },
+  {
+    "name": "inspect_native_exports",
+    "title": "Inspect Native Exports",
+    "description": "Inspect PE/ELF exports without execution or an analysis engine; use inspect_macho for Mach-O. Returns named/ordinal/forwarded PE exports or defined ELF dynamic symbols with binding/type/version, preserving aliases, hidden versions and raw-name qualifications. Unreadable entries are partial; unavailable ELF section metadata can make enumeration unsupported. An empty complete inventory means no declared exports. detail summary retains full Evidence for inspect_analysis_view kind native-exports, collection exports/issues, with exact names/indices, fields and paging; source_index is parent-scoped."
+  },
+  {
+    "name": "inspect_devicetree",
+    "title": "Inspect Devicetree",
+    "description": "Inspect an explicit local flattened devicetree blob (FDT v16/v17) without execution or external tools. Returns validated header, memory reservations, full node/property tree with bounded raw hex, derived standard strings, cells and parent-sized reg tuples, aliases and selected single-cell phandle references with unresolved targets. Binding-specific arrays, overlays and runtime hardware remain unknown. Malformed structure or exhausted named budgets fails without partial success. Complete detail returns all Evidence inline; summary retains it for inspect_analysis_view kind devicetree, collections nodes, properties (requires exact path), reservations and references, with offset/limit pagination."
+  },
+  {
+    "name": "inspect_elf_notes",
+    "title": "Inspect Elf Notes",
+    "description": "Inspect one explicit local ELF32/ELF64 image's PT_NOTE program headers and SHT_NOTE sections without executing it or opening a disassembler. Returns note-table file ranges, owners, types, descriptor SHA-256 and hex previews, plus GNU build-id, ABI-tag and gold-version fields, Linux CORE process, mapping, signal, and auxv notes, and Android .note.android.ident API-level and NDK version/build fields when those descriptors match. A missing table is observed absence of those declarations, not proof the image never carried notes in another container. Reads a stable regular file; malformed ELF headers, truncated notes and exhausted budgets return no partial success. Portable on supported Node hosts; no debug package or catalog is required."
+  },
+  {
+    "name": "inspect_native_initializers",
+    "title": "Inspect Native Initializers",
+    "description": "List declared initializer/finalizer functions in a local ELF32/64 or selected Mach-O slice without execution. Returns paged slots and resolved target addresses/file offsets, sections, exact symbols and resolution basis from dynamic tags, constructor sections, relocations and fixups. Unestablished slots remain unresolved, never treated as stored zero targets. Missing declarations do not prove no code runs before main."
+  },
+  {
+    "name": "inspect_elf_unwind_ranges",
+    "title": "Inspect Elf Unwind Ranges",
+    "description": "Inspect ELF32/64 .eh_frame and .eh_frame_hdr for paged FDE function ranges, associated CIE facts, LSDA/personality pointers, symbol matches and search-table agreement. No execution or disassembler. Missing unwind declarations do not prove no functions; truncated records remain incomplete. .debug_frame is detected but not decoded, CFA instructions are not evaluated, and indirect EH pointers are not dereferenced. Malformed headers or exhausted CIE/FDE budgets fail without partial success."
+  },
+  {
+    "name": "inspect_apple_ips",
+    "title": "Inspect Apple Ips",
+    "description": "Inspect a local Apple .ips crash report for process, exception/termination, thread, image and lossless register facts with deterministic classification. Crash parsing supports bug_type string 309; other types, including 288 stackshots, return no crash result. join_path derives static addresses only when image UUID and architecture match a Mach-O slice; it does not symbolicate or read dSYMs. Missing/truncated bodies fail without partial success. No target execution, atos, disassembler or Xcode required."
+  },
+  {
+    "name": "inspect_kernel_module",
+    "title": "Inspect Kernel Module",
+    "description": "Inspect an uncompressed local ELF32/64 ET_REL Linux kernel module for ordered .modinfo entries, symbol CRCs, module/export/init/exit section facts and appended signature ranges/digests. No execution, struct module decoding or certificate validation. Missing known sections describe this image only. gzip/xz/zstd require external decompression; extract_artifact does not decode those module containers. Malformed headers or exhausted entry budgets fail without partial success. Portable on supported Node hosts."
+  },
+  {
+    "name": "inspect_kernel_build_config",
+    "title": "Inspect Kernel Build Config",
+    "description": "Inspect a local Linux kernel image (vmlinux, raw arm64 Image, x86 bzImage/zImage or configs.ko) for the version/builder/compiler banner and embedded CONFIG_IKCONFIG. Returns config digest/count and paged, optionally exact-name-filtered CONFIG_* values. Only validated marker-framed gzip config is accepted; a literal marker is insufficient. Supported gzip bzImage payloads are searched; other compressed payloads require external decompression. Truncation is incomplete, not absence; budget exhaustion fails without partial success. No target execution or external tools."
+  },
+  {
+    "name": "inspect_pe_load_config",
+    "title": "Inspect Pe Load Config",
+    "description": "Inspect PE32/PE32+ TLS callbacks and sized load configuration without executing the image. Returns callback VA/RVA/file offsets and sections, security cookie, SafeSEH (PE32), CFG flags and table pointers/counts, EH continuation and XFG fields. Flag-derived mitigation claims are labeled inferred. Absent directories are null; malformed structures and exhausted budgets fail without partial success. Reads a stable local regular file without a disassembler."
+  },
+  {
+    "name": "audit_release_exposure",
+    "title": "Audit Release Exposure",
+    "description": "Report what static analysis of a shipped application artifact recovers. Accepts one local .app bundle, installation directory, ASAR, or executable. Each check has a stable id, a status, the observation behind it, and fixed remediation text. Unknown and unassessed checks stay in the report. This does not establish that an application is secure. Reads the selected artifact. When the selection is a file, the parent directory is listed for sibling .pdb, .dSYM, .debug, and .map debug companions."
+  },
+  {
+    "name": "inspect_binary_hardening",
+    "title": "Inspect Binary Hardening",
+    "description": "Inspect static hardening declarations in a local ELF, PE or Mach-O, including every universal slice. Reports PIE/ASLR, NX, RELRO, stack-protector/FORTIFY signs, control-flow flags and stripped state with supporting header/import facts. Missing signs may be unknown, especially for static/stripped images. Signature presence does not establish validity; use inspect_signature for Mach-O hardened runtime. No target execution or exploitability claim. Malformed headers/budgets may fail; limited symbol/property-note reads retain header facts and mark affected rows unknown."
+  },
+  {
+    "name": "inspect_pe_certificates",
+    "title": "Inspect Pe Certificates",
+    "description": "Inspect a local PE32/PE32+ certificate directory without executing it or verifying signatures. Returns WIN_CERTIFICATE ranges/types/digests and structurally decoded PKCS#7 signer, algorithm and X.509 identity fields when present. Missing directory does not establish globally unsigned status. Authenticode digest coverage, trust chains and timestamp validity remain unobserved. Malformed/truncated structures and unsupported PKCS#7 signed-data shapes fail without partial success. No Windows SDK or disassembler required."
+  },
+  {
+    "name": "inspect_pe_imports",
+    "title": "Inspect Pe Imports",
+    "description": "Inspect local PE32/PE32+ standard and delay-load imports without execution. Returns DLL/named/ordinal imports, ILT/IAT RVAs, descriptors and a pefile-compatible standard-table import hash only when its row sequence is complete and comparable. Missing declarations do not establish no API use; loaded IAT, bound snapshots and forward resolution remain unknown. Unreadable names/thunks or missing tables yield partial coverage; malformed headers or exhausted budgets fail. No Windows SDK or disassembler required."
+  },
+  {
+    "name": "inspect_windows_shortcut",
+    "title": "Inspect Windows Shortcut",
+    "description": "Inspect a local Windows Shell Link (.lnk) without resolving or executing its target, COM, or network access. Returns header/time/display facts, target-ID/link-info paths, arguments, working directory/icon and ExtraData observations, with raw hashes for unknown structures. Tracker and behavioral observations are derived. Malformed structures, odd Unicode lengths or exhausted budgets return typed failures or explicitly partial coverage with the failing offset. No Windows SDK required."
+  },
+  {
+    "name": "inspect_recorded_crash",
+    "title": "Inspect Recorded Crash",
+    "description": "Inspect a saved Linux ELF64 little-endian amd64/AArch64 core without launching its target or attaching to a live PID. Returns recorded segments, raw notes/ranges, thread registers and SIGINFO as digest-bound Evidence. Historical PIDs do not establish current identity; note coverage and signal/thread joins remain unknown. Optional caller-configured GDB/pwndbg adds core-only mapping candidates from the same snapshot; zero flags mean unknown permissions. Linux x64 requires the documented pwntools profile, with optional pwndbg 2026.09.15. No implicit executable/library pairing, command language or installation. pwntools_timeout_ms and producer_limits control independent per-command budgets; malformed or oversized input fails without partial success."
+  },
+  {
+    "name": "inspect_artifact",
+    "title": "Inspect Artifact",
+    "description": "Inventory the active archive, app package, firmware container or supported packaged executable without running it. Returns nested content-addressed inventory Evidence with integrity observations, unexplored branches and next probes. Default complete returns the full graph; detail summary retains it for inspect_analysis_view kind inventory using parent_evidence_id, exact paths/IDs, fields and paging. Summary changes delivery, not inventory coverage. Bun/Node SEA/Deno carriers expose stored modules/assets and recorded metadata; opaque bytecode and npm snapshots are not decoded. Local Evidence can include environment-file values and certificate bytes. Classic iNES adds file-region/reconstruction facts, not mapper execution. Integrity mismatches fail unless record-and-continue explicitly retains untrusted contradictions. Supported macOS DMGs are mounted read-only. Use extract_artifact to materialize regular contents; DMGs instead need a caller-managed read-only mount."
+  },
+  {
+    "name": "extract_artifact",
+    "title": "Extract Artifact",
+    "description": "Write all or selected regular files from the active supported archive to an absent absolute output_root, or a fresh temporary directory if omitted. Use exact inventory occurrence_ids to select files. Returns IDs and actual output paths; successful files persist. Nested archives are copied, not recursively unpacked. Never overwrites; rejects traversal/symlink escapes and verifies cleanup. Full-input integrity checks still apply: mismatches fail unless record-and-continue retains explicitly untrusted contradictions. DMG extraction is unavailable; use a caller-managed read-only mount on macOS."
+  },
+  {
+    "name": "decode_interface_builder",
+    "title": "Decode Interface Builder",
+    "description": "Decode compiled storyboard and nib archives inside the active Apple app bundle, including keyed property lists and NIBArchive object tables, into a bounded object, hierarchy, and connection graph. This is static archive parsing; unrecognized archive classes and unresolved code handlers remain explicit unknowns. A full app graph is often several megabytes; detail summary retains it and returns documents with node, edge and coverage counts, then page rows, optionally one document's, with inspect_analysis_view kind interface-builder."
+  },
+  {
+    "name": "inspect_keyed_archive",
+    "title": "Inspect Keyed Archive",
+    "description": "Inspect one Foundation NSKeyedArchiver plist in the active app bundle as original object-table nodes, class descriptors, named roots, and UID edges. Preserves shared and cyclic references without instantiating classes. The path is relative to the bundle; root selection and object pagination preserve original identities."
+  },
+  {
+    "name": "inspect_asset_catalog",
+    "title": "Inspect Asset Catalog",
+    "description": "Inspect compiled Assets.car metadata in an active Apple app bundle. Returns stable paginated catalog and rendition records with raw assetutil metadata and catalog digests; rendition bytes are not extracted."
+  },
+  {
+    "name": "trace_dylib_resolution",
+    "title": "Trace Dylib Resolution",
+    "description": "Trace how dyld would resolve each Mach-O dylib load for the active Mach-O, or for every executable in the active .app bundle (the main app, XPC services, extensions, login items, helpers). Expands @executable_path, @loader_path, and @rpath through each process's LC_RPATH stack in dependents-first load order, and reports every candidate path with its outcome, the resolved image and digest, weak, re-export, upward, and lazy-load flags, including LC_LAZY_LOAD_DYLIB_INFO linkedit payloads, and derived findings such as unresolved required loads or absent earlier @rpath candidates. Pure header parsing: nothing is executed, and absolute or system paths outside the analyzed root stay undetermined. Select roots or one architecture to narrow large bundles."
+  },
+  {
+    "name": "inspect_desktop_application",
+    "title": "Inspect Desktop Application",
+    "description": "Identify runtime candidates and next probes in a local desktop app directory from bounded listings, headers and metadata. Recognizes .NET, Unity Mono/IL2CPP, Unreal, Godot, GameMaker and Electron; returns supporting paths and range hashes. Default summary retains complete Evidence for inspect_analysis_view kind desktop-application; detail complete returns retained facts inline. Identity covers examined ranges, not every file byte. Coverage and unavailable probes remain explicit. No target execution, extraction, network or target changes."
+  },
+  {
+    "name": "inspect_model_artifact",
+    "title": "Inspect Model Artifact",
+    "description": "Inspect GGUF v2/v3 or safetensors metadata and tensor declarations without loading weights or running inference. Default hash header commits only a prefix: full-file SHA-256 and Evidence subject remain unknown; hash full streams every byte for file identity. Tensor shapes/IDs/offsets are observed; textual types and totals are derived, with ambiguous layouts retaining unknown byte lengths. Metadata arrays are eight-element previews; scalar metadata is complete. Default summary retains complete Evidence; detail complete returns all declarations inline. Optional view selects metadata/tensors/types. To page retained tensors, use inspect_analysis_view with source:{kind:\"retained-evidence\",evidence_id:\"<parent_evidence_id>\"} and view:{kind:\"model-artifact\",collection:\"tensors\",offset:0,limit:32}. No payload inspection, quality claim, network, model runtime or pickle deserialization; one inspection at a time with explicit resource refusals."
+  },
+  {
+    "name": "inspect_gpu_code_objects",
+    "title": "Inspect Gpu Code Objects",
+    "description": "Inspect CUDA/HIP code objects in local ELF/PE, fatbins, CUBIN, PTX or Clang HIP bundles without GPU tools or target execution. Default inventory hashes the full file; analysis kernels decodes selected object_ids/targets, with object_ids requiring the inventory expected_sha256. IDs are positional within that digest. Returns distinct PTX/CUBIN/AMDGPU kernel declarations, encoded/decoded provenance and explicit partial/unknown coverage; unsupported compression retains encoded locations. Default summary retains complete Evidence. Optional view selects targets/objects/kernels or PTX text; inspect_analysis_view kind gpu-code-objects pages retained facts without reopening (PTX offsets are UTF-16 units). No SASS disassembly, host-launch correlation or network; decoded-work/retention limits remain independent of selection."
+  },
+  {
+    "name": "inspect_evm_interface",
+    "title": "Inspect Evm Interface",
+    "description": "Infer interface candidates from explicit local flat EVM bytecode using bundled EVMole 0.9.3/WASM; select raw or hex encoding. Linux x64 profile; EOF-style EF00 containers are unsupported. Returns selectors, offsets, arguments and mutability candidates, not verified deployment or runtime behavior. Bytecode kind, hardfork and discovery completeness stay unknown. Default complete includes bytecode/full Evidence; detail summary retains it for inspect_analysis_view kind evm, facets functions/bytecode_hex/stdout/stderr, via parent_evidence_id. timeout_ms and producer_limits are independent of each other and worker heap; tighter inherited limits still apply. No target execution, chain/RPC access, signature lookup, wallet action or broadcast."
+  },
+  {
+    "name": "inspect_go_binary",
+    "title": "Inspect Go Binary",
+    "description": "Read embedded Go compiler, module, dependency/replacement and build-setting metadata from a local ELF, PE or selected Mach-O slice without running it or requiring Go. include_string_literals: true adds inferred static UTF-8 literals; runtime use and dependency completeness remain unknown. Missing build info does not prove the image is not Go. Default complete returns artifact SHA-256, source ranges and original metadata; detail summary retains it for inspect_analysis_view kind go, collections dependencies/settings/string_literals, with parent_evidence_id. Slice ranges remain offsets in the original universal file. No function/type/source recovery. Increase only the reported per-call budget and retry the same artifact; it does not raise parser or MCP delivery limits. Malformed/unsupported inputs fail explicitly."
+  },
+  {
+    "name": "inspect_il2cpp_metadata",
+    "title": "Inspect Il2cpp Metadata",
+    "description": "Inspect Unity IL2CPP metadata versions 24/27/29/31/39, optionally linking a selected 64-bit little-endian Mach-O/PE/ELF binary without execution. Returns metadata tables and derived native method links; shared addresses retain every method, zero slots mean no-body, and unknown ownership/relocations stay unknown. Default summary retains complete Evidence for inspect_analysis_view kind il2cpp-metadata using parent_evidence_id, named collections, original indices, fields and pages. Unrequested native counts are null; version27 names may be unknown. generic_instances adds supported static registration-table matches for versions 27/29/31. Executable-byte fallback is inferred and does not verify instruction boundaries. Full detail remains available; static agreement proves neither same-build pairing nor runtime behavior. Resource/unsupported-layout failures name their reasons."
+  },
+  {
+    "name": "inspect_rust_binary",
+    "title": "Inspect Rust Binary",
+    "description": "Read the embedded cargo-auditable crate dependencies of a local ELF, PE or selected Mach-O slice without running it or requiring Rust. Returns artifact identity, source ranges, ordered packages and dependency edges. Missing metadata does not prove no dependencies; a rustc commit from an observed source path is inferred. Default complete returns the report; detail summary retains it for inspect_analysis_view kind rust, collections packages/edges, via parent_evidence_id. Optional view selects a page in this call and cannot accompany explicit complete detail. Original row indices and every matching version survive selection; select dependencies explicitly for package dependency vectors. Runtime dependencies remain unknown; malformed or oversized inputs fail rather than return partial success."
+  },
+  {
+    "name": "inspect_python_pyc",
+    "title": "Inspect Python Pyc",
+    "description": "Inspect local CPython 3.7–3.13 .pyc headers and nested code objects without executing bytecode, invoking Python or recovering source. Returns pinned version/header fields, names, constant summaries and bytecode lengths/digests; nested_code links code constants, not runtime calls. Default complete returns full Evidence; detail summary retains it for inspect_analysis_view kind python-pyc, collection code_objects, with exact names/indices/fields and paging. source_index preserves same-name alternatives. Unsupported layouts, truncation and exhausted budgets fail without partial success. Recognized 3.14/3.15 headers receive a version/flags-qualified refusal, not decoded code objects. A header does not prove matching .py source exists."
+  },
+  {
+    "name": "inspect_erlang_beam",
+    "title": "Inspect Erlang Beam",
+    "description": "Inspect an Erlang BEAM IFF file without executing bytecode or requiring Erlang. Returns chunk byte ranges/digests, atoms, exports/imports/lambdas and Code header. Default complete returns full Evidence; detail summary retains it, and an optional beam view selects collection rows in the first call. Reuse inspect_analysis_view kind beam for atoms/exports/imports/lambdas/chunks, exact names/indices/fields and paging. source_index scopes rows to parent/collection, preserving every arity; original atom/lambda indices remain distinct. Missing tables/counts stay null, not empty; runtime absence is unknown. Malformed/truncated input or exhausted budgets fail without partial success."
+  },
+  {
+    "name": "inspect_v8_code_cache",
+    "title": "Inspect V8 Code Cache",
+    "description": "Inspect a local bytenode .jsc or compatible V8 code-cache container as static bytes, without V8, bytenode, child processes or decompilation. Returns artifact identity, header words with confirmed/inferred roles, producer family, recorded source length, payload identity and printable sequences with file ranges. Only pinned header/magic and exact payload-length layouts are admitted; unknown or malformed layouts fail, not partial-parse. Most header roles are version-dependent inferences, not a fixed ABI. Payload strings are byte patterns, not parsed heap objects; missing literals do not prove absence. The payload is not source: logic recovery needs a separate version-pinned decompiler. Resource refusals remain explicit."
+  },
+  {
+    "name": "compare_wasm_interfaces",
+    "title": "Compare Wasm Interfaces",
+    "description": "Compare typed core WASM import/export names, kinds and exact signatures from two authenticated inspect_wasm_artifact Evidence records. Select imports, exports or both explicitly. MCP references resolve in the current session; CLI references use an explicitly selected --evidence-bundle. max_interface_bytes selects this comparison's independent representation allowance (default 32MiB); raising it cannot restore omitted producer facts. Duplicate names, unsupported types and missing historical interface facets remain unknown. Preserve original module digests and every occurrence; no source acquisition, module execution or runtime-compatibility inference."
+  },
+  {
+    "name": "inspect_wasm_artifact",
+    "title": "Inspect Wasm Artifact",
+    "description": "Validate and inspect local WASM with caller-supplied WABT 1.0.42, without executing it or fetching dependencies. Returns artifact SHA-256, sections, import/export WAT forms and decoded WAT; custom-section interpretation warnings do not invalidate the core module. Default complete returns full Evidence; detail summary retains it for inspect_analysis_view kind wasm using normalized_result.parent_evidence_id, with import/export rows or UTF-16 WAT pages. Delivery does not change analysis. Optional JavaScript glue associations preserve ambiguous candidates. Configure absolute REA_WABT_BIN_DIRECTORY. Per-call command_timeout_ms, input/tool/output, interface-precision and auxiliary-path budgets are independent; reported limit errors identify the control to adjust. No installation or original-source claim."
+  },
+  {
+    "name": "inspect_apk_signature",
+    "title": "Inspect Apk Signature",
+    "description": "Inspect declared APK v1/v2/v3/v3.1 signers, certificate fingerprints, digests, SDK ranges, rotation lineage and source stamp without executing Android code. Returns exact file SHA-256; identities include scheme/source ordinal and certificates retain DER digests. Default summary retains complete Evidence; optional view selects signers/digests/lineage by IDs/schemes/fields and pages. Reuse inspect_analysis_view kind apk-signature after removing the source. Matching content digests do not verify signatures or authenticity; lineage trust and v1 entry coverage remain unverified. No device, network or SDK; malformed structures and resource refusals are explicit."
+  },
+  {
+    "name": "inspect_sqlite_database",
+    "title": "Inspect Sqlite Database",
+    "description": "Inspect a local SQLite snapshot and sibling WAL without modifying them. Returns their SHA-256 and schema inventory; select an exact ordinary table and columns for rows (default 20), or schema_scope database for expanded schema. row_offset pages a stated rowid/primary-key order only while database/WAL digests match; fully shadowed rowid aliases have unspecified order and cannot page. Values preserve 64-bit integers, text bytes and blobs with explicit truncation. Requires Node.js 24.x >=24.15 or 26+ with DatabaseSync.limits. worker_timeout_ms bounds worker startup/query/reply work, not snapshot acquisition, cleanup or host delivery; independent safety budgets remain. Supply a quiescent snapshot; no atomic live-snapshot claim. No arbitrary SQL, WHERE/ORDER BY, views/virtual tables, extensions, repair or encryption. Two inspections may run per provider; occupied capacity is retryable. Temporary-copy/worker bounds do not cap overall native heap."
+  },
+  {
+    "name": "inspect_packet_capture",
+    "title": "Inspect Packet Capture",
+    "description": "Extract caller-selected TShark fields from a saved packet capture, with display filters, decode-as rules and pass mode preserved. Returns frame numbers, repeated values, coverage and diagnostics; use inspect_pcap_capture for a prepared endpoint/DNS/TLS/HTTP summary. Defaults to 50 matching frames; match_offset/match_limit page output and null requests all remaining. packet_limit counts input packets before filtering; output paging does not shorten dissection or reassembly. Requires Linux, prlimit and TShark 4.x on PATH or absolute REA_TSHARK_COMMAND. No live capture/device communication; no matches does not prove absence of traffic."
+  },
+  {
+    "name": "inspect_packet_fields",
+    "title": "Inspect Packet Fields",
+    "description": "Find protocols or field definitions registered in installed TShark 4.x. kind defaults to protocols; use fields with an optional exact protocol abbreviation, then pass selected names to inspect_packet_capture. query is a case-insensitive literal substring. Returns definitions, duplicate registrations, source lines, tool identity and coverage; offset/limit pages matches (default 50; null means all remaining). Requires Linux, prlimit and TShark on PATH or absolute REA_TSHARK_COMMAND. Each call rereads the glossary. No capture/target is needed; registrations describe capabilities, not observed traffic."
+  },
+  {
+    "name": "decode_signal_recording",
+    "title": "Decode Signal Recording",
+    "description": "Decode a saved logic/signal recording with an explicitly selected sigrok decoder stack, channels and options. Returns literal text, sample ranges, diagnostics, source/tool identity and coverage. line_offset/line_limit page display lines (default 50; null means all remaining), not annotations or samples; paging does not shorten decoding. Requires Linux, sigrok-cli 0.7.2 through absolute REA_SIGROK_COMMAND, and prlimit. No acquisition or device communication. Empty output does not prove absent traffic."
+  },
+  {
+    "name": "inspect_signal_decoders",
+    "title": "Inspect Signal Decoders",
+    "description": "List installed sigrok decoder IDs/names, or supply an exact decoder ID to inspect its channel/option help. Use returned IDs/options with decode_signal_recording. query matches a case-insensitive literal substring; offset/limit pages matches (default 50; null means all remaining). Returns original help lines, coverage and current tool identity. Requires Linux, REA_SIGROK_COMMAND and prlimit. Each call probes again; decoder modules are trusted but not fully fingerprinted. No recording, target, hardware scan or acquisition."
+  },
+  {
+    "name": "inspect_managed_artifact",
+    "title": "Inspect Managed Artifact",
+    "description": "Inspect PE/CLI identity, classification and metadata inventories from an explicit path or selected managed target without loading or executing code. Default complete returns all producer facts; detail summary retains them and returns identity, assembly/MVID, frameworks, coverage and counts. Page references/resources/attributes with inspect_analysis_view kind managed and normalized_result.parent_evidence_id. Counts cover returned rows; partial, malformed and unavailable metadata stay explicit. Tokens are build-local. Use inspect_managed_members for methods, signatures and CIL anchors."
+  },
+  {
+    "name": "inspect_managed_members",
+    "title": "Inspect Managed Members",
+    "description": "Inspect PE/CLI types, members, signatures, CIL hashes/instruction tuples, exception regions, static calls, field accesses and loaded #US strings without executing code. type_names selects exact declaring types and their body literals; assembly-wide member_refs/exported_types are still included. Tokens remain local to artifact SHA-256/MVID; tuple hashes do not resolve them or fully commit control flow. Default complete returns collections; detail summary retains them for inspect_analysis_view kind managed-members using parent_evidence_id. Page types/exported_types/fields/methods/member_refs/call_edges/field_accesses/user_strings; exact names/declaring_types and fields narrow supported rows. Omit body to avoid IL anchors. Unmatched names and incomplete coverage stay explicit."
+  },
+  {
+    "name": "inspect_managed_native_boundaries",
+    "title": "Inspect Managed Native Boundaries",
+    "description": "Inspect PE/CLI ModuleRef, ImplMap/PInvoke declarations, CLI native-header indicators, and non-IL method implementation flags without loading or executing target code. Results are managed declarations and degraded native-boundary observations, not verified native exports or addresses."
+  },
+  {
+    "name": "compare_managed_members",
+    "title": "Compare Managed Members",
+    "description": "Compare two authenticated inspect_managed_members Evidence records, inline or retained, using unique exact type/name/signature/CIL or decoded structural matches. Names alone never establish correspondence; undecoded signatures, unresolved declaring types and ambiguous candidates remain unknown rather than added/removed. Structural cross-name matching cannot consume a member whose own type/name counterpart remains unpaired. Matched methods compare aligned call-site shapes and observed target names; unaligned or missing facts stay unknown. Tokens remain local to each artifact SHA-256/MVID; tuple hashes do not remap them. Static call names do not prove overload identity or runtime dispatch."
+  },
+  {
+    "name": "verify_managed_native_boundaries",
+    "title": "Verify Managed Native Boundaries",
+    "description": "Verify managed P/Invoke/native-boundary declarations against authenticated native export or function Evidence, with inline or exact retained sources, without executing managed code or translating managed metadata tokens into native addresses. The workflow preserves declaration-only, verified, inferred, contradicted, and unresolved states; a name candidate with missing managed or native module identity remains unresolved with its candidate evidence retained."
+  },
+  {
+    "name": "import_managed_reconstruction",
+    "title": "Import Managed Reconstruction",
+    "description": "Import decompiler-produced managed reconstruction against authenticated inspect_managed_members Evidence supplied inline or by exact retained reference. The workflow locks each method to artifact SHA-256, MVID, metadata token, signature hash, and the limited decoded-IL tuple hash, records the decompiler identity and options, and marks C# or pseudocode as analyst inference rather than canonical byte observation."
+  },
+  {
+    "name": "project_managed_application_graph",
+    "title": "Project Managed Application Graph",
+    "description": "Project authenticated managed artifact, member, and native-boundary Evidence, supplied inline or by exact retained reference, into the provider-neutral application graph without executing managed code, loading assemblies, or translating managed metadata tokens to native addresses. The graph preserves managed static observations as managed-specific nodes linked to source Evidence, with in-module calls and field-access edges; other call and field-access sites are counted in limitations."
+  },
+  {
+    "name": "inspect_firmware_regions",
+    "title": "Inspect Firmware Regions",
+    "description": "Inspect signature candidates in a local firmware file with Binwalk 3.1.x (verified with 3.1.0). Returns offsets, reported lengths, descriptions and raw confidence values. Length validation and runtime addresses remain unknown. No extraction or target execution. Linux, caller-supplied tool, util-linux prlimit and procps ps required; 128 MiB input limit, one worker. Adjust analysis_timeout_ms for the analysis wall-clock budget (default 120000); fixed per-process limits are unchanged."
+  },
+  {
+    "name": "extract_firmware",
+    "title": "Extract Firmware",
+    "description": "Extract selected local firmware bytes with Unblob 26.6.x (verified with 26.6.4) into an absent output directory. Returns verified child paths/digests, derivations, uncovered ranges, unknown chunks and extraction_gaps with continuation_id recovery instructions. Linux, format-specific extractors, prlimit and procps ps are required. Preserves the sandbox and publishes only regular files; no mounts or extracted-code execution. Select a returned native file with open_binary for analysis. Decompressed offsets are not original-file addresses."
+  },
+  {
+    "name": "inspect_android_package",
+    "title": "Inspect Android Package",
+    "description": "Inspect APK package/SDK/permission declarations, decoded manifest, static components and class/resource counts without executing it or verifying signatures. Requires caller-supplied JADX MCP JAR and JDK. Default complete returns full Evidence; detail summary retains it and omits manifest text/raw duplicates. With summary, view kind android selects facet components (exact filters, fields, paging), component-summary or manifest (UTF-16 text pages); complete detail rejects view. Use normalized_result.parent_evidence_id with inspect_analysis_view for later views. Component source_index identifies the original declaration, and declaration_coverage preserves unknowns."
+  },
+  {
+    "name": "inspect_android_jni_bindings",
+    "title": "Inspect Android Jni Bindings",
+    "description": "Link an APK's DEX native declarations to Java_* exports and static JNINativeMethod candidates by ABI and exact library occurrence, without executing it or loading libraries. Returns digests, relation IDs, slot/relocation provenance and explicit partial/unknown coverage; a candidate match does not prove uniqueness or runtime registration. Declaration filters and ABI/library filters narrow results; RegisterNatives attribution uses the full declaration inventory first. Default summary retains complete Evidence. Optional view kind android-jni selects bindings/declarations/candidates/libraries, fields and pages; use inspect_analysis_view with parent_evidence_id for later pages. Empty selections match none. Requires caller-supplied JADX MCP JAR and JDK."
+  },
+  {
+    "name": "search_android_classes",
+    "title": "Search Android Classes",
+    "description": "Search complete top-level decompiler class-name rows in an explicit local APK by case-sensitive substring. Empty query inventories all rows. Repeated names remain repeated and appear in duplicate_names; the provider accepts only class names for lookup, so these rows do not identify which same-name class node a later lookup selects. Retains artifact and engine identity; no APK execution."
+  },
+  {
+    "name": "inspect_android_class",
+    "title": "Inspect Android Class",
+    "description": "Inspect one exact Android class's methods, fields, inner classes, DEX prototypes and encoded static final values without generating source. Select an overload_index from these results for inspect_android_method; indices are artifact/engine-session scoped and prototypes are not complete raw method IDs. Optional mapping_path adds verified R8/ProGuard names separately; observed names remain primary. detail summary retains complete Evidence and returns normalized symbols without duplicate raw calls; complete remains the default."
+  },
+  {
+    "name": "inspect_android_method",
+    "title": "Inspect Android Method",
+    "description": "Decompile one Android method, with explicit overload_index when names collide and smali fallback when needed. Reports DEX prototype, representation, fallback markers and source truncation; display signatures may be aliases. Optional mapping_path annotates R8/ProGuard names without replacing observed names. detail summary retains complete Evidence and returns the selected body without duplicate class metadata; complete remains the default. Use inspect_android_class to choose the overload."
+  },
+  {
+    "name": "trace_android_references",
+    "title": "Trace Android References",
+    "description": "Trace incoming static using nodes to an exact Android class or selected method overload. A method target may be an external class directly named by DEX invokes: target_definition external and reference_scope direct_dex_invokes identify this narrower inventory, without inventing a class definition or body. Ambiguous external requests list observed DEX prototypes; select overload_index explicitly. For APK-defined targets use inspect_android_class. The total counts containing nodes, not individual invokes. External callers include source_selector for inspect_android_method. Source lines and the containing node dex_offset remain unknown. direct_invokes carries exact DEX code-unit offsets when available; direct_invokes_exhaustive false marks byte-bounded partial instruction evidence, and null means unknown. No reflection, JNI or runtime dispatch is inferred."
+  },
+  {
+    "name": "inspect_pcap_client",
+    "title": "Inspect Pcap Client",
+    "description": "Inspect the caller-selected tshark and capinfos binaries: selected commands, selection sources, and versions. Both tools must be usable. Reads no capture file. REA never installs the Wireshark suite; select binaries with REA_TSHARK_COMMAND and REA_CAPINFOS_COMMAND (absolute) or from PATH."
+  },
+  {
+    "name": "inspect_pcap_capture",
+    "title": "Inspect Pcap Capture",
+    "description": "Summarize a saved pcap/pcapng snapshot: exact packet count, SHA-256, IP endpoints, DNS questions/addresses, TLS SNI, protocols and HTTP URIs. Use inspect_packet_capture for caller-selected TShark fields or display filters. Default complete returns full Evidence; detail summary retains it for inspect_analysis_view kind pcap. Unknown DNS attribution and excluded credentials stay explicit. Requires caller-supplied capinfos/tshark and Linux prlimit or Windows Job Objects; never captures live traffic."
+  },
+  {
+    "name": "identify_flutter_build",
+    "title": "Identify Flutter Build",
+    "description": "Identify a Flutter app's build facts by pure parsing: observed Dart snapshot hashes from lib/<abi>/libapp.so, per-ABI library digests, the engine library's GNU build-id, and any labeled Dart version or toolchain strings libflutter.so carries. Complete snapshot coverage currently expects two independent headers in the legacy split VM/isolate profile; unified and other layouts can yield partial build facts. The snapshot hash maps to a Dart SDK release through an external dataset; REA performs no lookup. No engine, no execution, no external tools."
+  },
+  {
+    "name": "inspect_dart_aot",
+    "title": "Inspect Dart Aot",
+    "description": "Inspect one APK ABI's legacy split VM/isolate Dart AOT snapshot without executing it. Structural coverage supports Dart 2.14 FullAOT kind 3; unified snapshot layouts are unsupported. Returns snapshot exports/headers/hash and bounded package:/dart:/identifier-like byte-pattern strings, not deserialized classes/functions. pool_policy.contains selects strings before collection; other pool budgets do not raise APK/ELF/response limits. Default complete returns all facts; detail summary retains them for inspect_analysis_view kind dart-aot, collections package_uris/dart_uris/class_like_tokens, using parent_evidence_id and row paging. Counts are lower bounds and page exhaustion never proves complete pool coverage."
+  },
+  {
+    "name": "list_frida_devices",
+    "title": "List Frida Devices",
+    "description": "List Frida devices currently available to this host, optionally connecting to the caller-selected remote Frida endpoint. Remote authentication options are used for this call only and are never returned or recorded."
+  },
+  {
+    "name": "list_frida_processes",
+    "title": "List Frida Processes",
+    "description": "List processes observed on a selected Frida device or caller-supplied remote endpoint. A remote connection is closed after discovery; authentication values are never returned or recorded."
+  },
+  {
+    "name": "start_frida_session",
+    "title": "Start Frida Session",
+    "description": "Attach Frida to one selected process or spawn one selected target. Spawned targets remain paused until resume_frida_session, allowing scripts to load before execution. Closing a session detaches instrumentation; it does not kill the target."
+  },
+  {
+    "name": "load_frida_script",
+    "title": "Load Frida Script",
+    "description": "Load caller-supplied JavaScript into a Frida session. Scripts can read or change target memory and behavior and can access the target process's capabilities. Messages and script errors are returned inline as Evidence; source content is not persisted."
+  },
+  {
+    "name": "resume_frida_session",
+    "title": "Resume Frida Session",
+    "description": "Resume the process created by a paused Frida spawn session. Attached processes are already running and cannot be resumed through this operation."
+  },
+  {
+    "name": "unload_frida_script",
+    "title": "Unload Frida Script",
+    "description": "Unload one caller-selected Frida script from a live session. This removes that script's instrumentation from the target."
+  },
+  {
+    "name": "frida_session_status",
+    "title": "Frida Session Status",
+    "description": "Read observed Frida session state on each call. Default detail=complete returns queued script messages and capture truncation. detail=summary retains the complete observation in this session and returns identity, state, scripts, retained message count and truncation without payloads. Export the complete parent with export_evidence_bundle; retained summaries are historical and never refresh live state."
+  },
+  {
+    "name": "close_frida_session",
+    "title": "Close Frida Session",
+    "description": "Unload session scripts and attempt to detach REA's Frida session. Then resume a still-paused spawned process if script cleanup or session detach confirms instrumentation was released. Cleanup failures are reported. REA never kills the target; its final state is reported as unknown."
+  },
+  {
+    "name": "instrument_with_frida",
+    "title": "Instrument With Frida",
+    "description": "Run caller-authored Frida JavaScript against a selected process for one observation window, then detach. Scripts can read/change target memory and behavior and use the process's capabilities. CLI and MCP share this ephemeral workflow; use start_frida_session/load_frida_script for a persistent session. Remote authentication is call-local and excluded from Evidence. Detachment does not establish target termination."
+  },
+  {
+    "name": "inspect_apktool_client",
+    "title": "Inspect Apktool Client",
+    "description": "Inspect the caller-selected apktool launcher: resolved command, selection source, and version. Decodes nothing. REA never installs Apktool or Java; select a launcher with REA_APKTOOL_COMMAND (absolute) or apktool on PATH."
+  },
+  {
+    "name": "decode_android_resources",
+    "title": "Decode Android Resources",
+    "description": "Decode APK resources with apktool d --no-src: readable manifest, version/SDK facts, string resources/locales and decoded file count. Uses a temporary workspace removed after projection; smali/source recovery belongs to JADX. Strings default to 2000 valid entries per table; use string_offset/string_limit and table.page.next_offset for later pages, checking target.sha256 across calls. Per-call string budgets can be raised without restart. decode_timeout_ms controls decoding (default 600000 ms), independently of output capture and version probes."
+  },
+  {
+    "name": "inspect_jeb_client",
+    "title": "Inspect Jeb Client",
+    "description": "Inspect the running JEB client serving MCP: engine version, GUI or headless mode, and startup time. Does not open a target. Requires a caller-started JEB client reachable at REA_JEB_MCP_URL (default http://127.0.0.1:8425/mcp); REA never installs or launches JEB."
+  },
+  {
+    "name": "open_jeb_project",
+    "title": "Open Jeb Project",
+    "description": "Open or create a JEB project from an artifact file or existing .jdb2 database on the engine host. Returns the project's input-file digests and top-level units. The engine analyzes the target itself; REA does not read the file or execute it. Fails when a project is already open."
+  },
+  {
+    "name": "list_jeb_units",
+    "title": "List Jeb Units",
+    "description": "List project units by stable unit path and type, with optional wildcard filter, parent restriction, and pagination. The engine caps pages at 100 units; a full page reports partial coverage because more units may exist. Read-only."
+  },
+  {
+    "name": "decompile_jeb_item",
+    "title": "Decompile Jeb Item",
+    "description": "Decompile one type or method to engine pseudo-code using its decompiler (Dalvik, Java, or native). item_address comes from the engine's code item listing; unit_path defaults to the engine's first code unit and stays unknown when omitted. Read-only with respect to the target file."
+  },
+  {
+    "name": "inspect_adb_client",
+    "title": "Inspect Adb Client",
+    "description": "Inspect the caller-selected adb client: resolved binary, version, and install path. Never contacts devices and never starts the adb server. REA never installs platform tools; select a binary with REA_ADB_PATH (absolute) or adb on PATH."
+  },
+  {
+    "name": "list_adb_devices",
+    "title": "List Adb Devices",
+    "description": "List attached devices exactly as `adb devices -l` reports them: serial, state, transport, model metadata, and an inferred emulator/physical kind with its evidence basis. Emulators and USB or network devices appear alike; REA neither starts nor manages them. transport_id_text preserves exact full-range transport identity; transport_id is its safe numeric projection or null. May start the local adb server on first use."
+  },
+  {
+    "name": "inspect_adb_device",
+    "title": "Inspect Adb Device",
+    "description": "Inspect one device's build identity through a fixed `getprop` whitelist: Android and SDK versions, security patch, fingerprint, product identity, CPU ABIs, and debuggable flag, plus the observed emulator indicator ro.kernel.qemu. Present properties retain empty values; omitted keys were not reported. Read-only with respect to the device."
+  },
+  {
+    "name": "list_adb_packages",
+    "title": "List Adb Packages",
+    "description": "List installed packages on one device with each base APK's device path, optionally scoped to third-party or system packages. Paths are device filesystem paths, not host-local. Read-only."
+  },
+  {
+    "name": "pull_adb_package",
+    "title": "Pull Adb Package",
+    "description": "Pull one installed package's complete APK set (base plus every split, as `pm path` reports) from the device into a caller-selected output directory, creating a package-named subdirectory that must not already exist. Every pulled file is digested with SHA-256; partial pulls keep successful artifacts and per-file failure reasons. The device keeps the originals."
+  },
+  {
+    "name": "read_adb_logcat",
+    "title": "Read Adb Logcat",
+    "description": "Read a bounded dump of the device log (`logcat -d -t`) for one buffer, optionally restricted to a process id. No streaming, no clearing; the newest lines are kept when the count cap trims. Read-only."
+  },
+  {
+    "name": "inspect_adb_package",
+    "title": "Inspect Adb Package",
+    "description": "Inspect installed-package versions, install times, installer, user id, flags, and requested-permission count through read-only `dumpsys package`. Malformed numeric declarations are retained in bounded numeric_issues and make coverage partial; version_code stays exact text. Unknown sections are not inferred."
+  },
+  {
+    "name": "pull_adb_file",
+    "title": "Pull Adb File",
+    "description": "Pull one absolute device path (a database, shared-preferences XML, or any readable file) into a caller-selected output directory, digesting it with SHA-256. The local copy must not already exist. Read-only with respect to the device."
+  },
+  {
+    "name": "push_adb_file",
+    "title": "Push Adb File",
+    "description": "Push one local file to an absolute device path. If the destination is an existing directory, adb places the file inside it under the local basename and the result reports that file path. A device-mutating tool: checks for an existing destination file before transfer and refuses it unless overwrite is explicitly requested; this check is not atomic and another process can create the path before adb writes. The private staged copy remains non-writable and preserves source executable bits. When the device provides sha256sum, the transfer is verified by comparing it with the local digest."
+  },
+  {
+    "name": "capture_adb_screen",
+    "title": "Capture Adb Screen",
+    "description": "Capture one frame of the device screen as a PNG (`screencap -p` through exec-out, no device-side file) into a caller-selected output directory, digesting it and reporting its dimensions. No recording or interaction."
+  },
+  {
+    "name": "list_adb_processes",
+    "title": "List Adb Processes",
+    "description": "List running processes exactly as `ps -A` reports them: user, pid, ppid, rss, state, and name. Useful for pairing with instrumentation lanes. Read-only."
+  },
+  {
+    "name": "list_adb_directory",
+    "title": "List Adb Directory",
+    "description": "List the immediate children of one absolute device directory, including hidden entries: names, kinds, permissions, owner, group, sizes, dates, and symlink targets. Names and targets preserve embedded newlines. Recognizes the standard errors for absent paths and denied reads. Read-only."
+  },
+  {
+    "name": "list_adb_features",
+    "title": "List Adb Features",
+    "description": "List the device's declared hardware and software features (`pm list features`) for device fingerprinting. Read-only."
+  },
+  {
+    "name": "list_adb_services",
+    "title": "List Adb Services",
+    "description": "List the device's binder services with their interfaces (`service list`). Read-only."
+  },
+  {
+    "name": "inspect_adb_display",
+    "title": "Inspect Adb Display",
+    "description": "Read physical and override size/density from `wm size` and `wm density`. Malformed numeric declarations are retained in numeric_issues with partial coverage; optional values remain null. Required physical-size failures retain partial display facts. Read-only."
+  },
+  {
+    "name": "inspect_adb_window",
+    "title": "Inspect Adb Window",
+    "description": "Report the window manager's focus declarations with display context, original lines and explicit summary status. Reads `dumpsys window windows`, falling back to `displays` only when no focus field is declared. Singular fields are unknown for multiple contexts or repeated declarations; inspect focus_contexts for every observation. Read-only; no interaction occurs."
+  },
+  {
+    "name": "read_adb_setting",
+    "title": "Read Adb Setting",
+    "description": "Read one settings value (`settings get`) from the system, secure, or global namespace. Absent keys report the device's own null observation. Read-only; writing settings is not exposed."
+  },
+  {
+    "name": "collect_adb_bugreport",
+    "title": "Collect Adb Bugreport",
+    "description": "Collect one device-generated bugreport archive (`adb bugreport`) into a caller-selected output directory, digesting the zip. The archive contains the device's own dumpstate, dumpsys, and logcat report; collection can take minutes. Read-only with respect to configuration."
+  },
+  {
+    "name": "resolve_adb_packages",
+    "title": "Resolve Adb Packages",
+    "description": "Find installed packages by case-insensitive package-name substring and return each base APK device path. Pass an exact returned name to pull_adb_package to retrieve its base and split APKs. Read-only."
+  },
+  {
+    "name": "install_adb_package",
+    "title": "Install Adb Package",
+    "description": "Install one local APK on the device (`adb install [-r]`), recording the APK's host digest and byte size. A device-mutating tool: `replace_requested` records whether `-r` was selected; `replaced` is null because install success does not establish prior package state. The device's own Success/Failure verdict is preserved with its reason."
+  },
+  {
+    "name": "uninstall_adb_package",
+    "title": "Uninstall Adb Package",
+    "description": "Request package removal for user 0 (`adb shell pm uninstall --user 0`) without data retention. A device-mutating tool; absent packages report the device's own refusal reason."
+  },
+  {
+    "name": "start_adb_app",
+    "title": "Start Adb App",
+    "description": "Start one installed app's resolved launcher activity with `am start -W -n`. A device-mutating tool for dynamic analysis. The full wait report determines success; failures retain launch-attempt facts and raw output. Pair with `read_adb_logcat` (pid filter) and `list_adb_processes` to observe the app, and `stop_adb_app` to end the run."
+  },
+  {
+    "name": "start_adb_activity",
+    "title": "Start Adb Activity",
+    "description": "Start an intent with `am start -W`: one action, optional data URI, optional explicit component, and up to 16 typed extras (string, boolean, int, long, float). A device-mutating tool; the full wait report determines success, with failed-attempt facts and raw output retained."
+  },
+  {
+    "name": "stop_adb_app",
+    "title": "Stop Adb App",
+    "description": "Force-stop every process of one package (`am force-stop`), ending a dynamic-analysis run. A device-mutating tool; it succeeds whether or not the package had running processes."
+  },
+  {
+    "name": "list_browser_targets",
+    "title": "List Browser Targets",
+    "description": "List pages exposed by one loopback Chrome DevTools Protocol endpoint, optionally filtered by exact origin. Returns target IDs and URLs; query values and fragments are preserved, with URL userinfo credentials removed. Use a returned target ID with inspect_web_page. discovery_timeout_ms controls discovery; command_timeout_ms does not apply. Browser-socket endpoints remain shared by the active browser provider until it closes or target-session cleanup is unconfirmed; cancellation/deadline on a clean socket releases only this call’s lease."
+  },
+  {
+    "name": "inspect_web_page",
+    "title": "Inspect Web Page",
+    "description": "Passively inspect one selected page target through CDP without evaluating JavaScript, navigating, clicking, closing, or mutating the page. If no origin filter is supplied, capture is scoped to the target's current origin. Returns DOM structure, accessibility, scripts, resources, attach-window network and console metadata, workers, and redacted storage inventory as Evidence."
+  },
+  {
+    "name": "analyze_web_bundle",
+    "title": "Analyze Web Bundle",
+    "description": "Recover a static chunk graph, route/endpoint candidates, vendor fingerprints and page-declared WebMCP metadata from JavaScript on one selected CDP page. May fetch source maps only from the target origin or explicitly selected origins; application JavaScript is not executed. detail summary retains complete Evidence; view {kind: \"web-bundle\", collection: \"endpoints\"} selects endpoint rows, and javascript-routes views select route patterns/occurrences/sources/unknowns. Read later pages with inspect_analysis_view. Static candidates do not establish runtime reachability or a complete route set."
+  },
+  {
+    "name": "observe_web_session",
+    "title": "Observe Web Session",
+    "description": "Arm a CDP observation window of the requested duration while the user operates the page. By default it follows the selected target's current origin; an explicit origin list controls which origins may be retained. Records navigation, redirect, lifecycle, and failure events."
+  },
+  {
+    "name": "discover_webmcp_tools",
+    "title": "Discover Webmcp Tools",
+    "description": "Passively inventory every page-registered WebMCP tool and its complete structural input-schema summary using the experimental CDP WebMCP domain. Metadata is page-declared-untrusted; REA never registers or invokes discovered tools."
+  },
+  {
+    "name": "compare_web_captures",
+    "title": "Compare Web Captures",
+    "description": "Compare two passive page inspections or two recorded browser scenarios. For passive captures, pass before/after with each complete inspect_web_page normalized_result in inspection and optional complete discover_webmcp_tools normalized_result in webmcp. For scenarios, pass complete normalized_result objects as before_scenario/after_scenario; use exactly one input group. Returns artifact differences and alignment failures. Scenario steps align by exact IDs; optional literal normalization is recorded. HTTP requests and ordered WebSocket streams are compared without inventing stable identities for same-URL connections. Missing or truncated Evidence never proves equality."
+  },
+  {
+    "name": "capture_web_screenshot",
+    "title": "Capture Web Screenshot",
+    "description": "Capture the current visible viewport of one configured page as an inline, content-addressed PNG artifact. The operation never scrolls, navigates, or evaluates page JavaScript."
+  },
+  {
+    "name": "compare_web_screenshots",
+    "title": "Compare Web Screenshots",
+    "description": "Compare two self-verifying PNG screenshot artifacts with local pixel metrics. Returns exact changed-pixel ratios and channel deltas without OCR or external services."
+  },
+  {
+    "name": "capture_browser_scenario",
+    "title": "Capture Browser Scenario",
+    "description": "Drive a browser scenario when passive observation cannot exercise the app. Launch the selected executable or connect to a loopback CDP target; actions can change application state and make network requests. Supply browser, start_url and actions, e.g. {browser:{mode:\"launch\",executable_path:\"/opt/chromium/chrome\"},start_url:{url:\"https://app.example.test/\"},actions:[{step_id:\"settle\",action:\"wait_for_timeout\",duration_ms:250}]}. Empty storage and a URL-only final capture are defaults. Request actions use page fetch on the start origin; capture.network independently opts into request_body, response_body and header_values. Credentials and declared secrets are redacted. capture.limits controls retained event/content budgets; omissions identify affected events/transactions. Actions wait for completion or cancellation; per-action timeout_ms bounds a step. Default complete delivery returns Evidence inline. detail summary retains it and returns step outcomes, final/first-unsuccessful accessibility, and counts; inspect_analysis_view kind browser-scenario pages steps, events, transactions and UTF-16 text. Use inspect_web_page for observation without actions."
+  },
+  {
+    "name": "observe_web_execution",
+    "title": "Observe Web Execution",
+    "description": "Instrument one selected CDP page for a finite, externally driven precise coverage window. Resets execution counters and prevents optimized execution until stopped. Returns complete nested UTF-16 ranges/counts, independently hashed script text and request initiator associations by session script ID. Does not navigate, click, evaluate selected code or close the externally owned page. Navigation ends document-scoped collection; workers and UI causality remain outside this claim. Emits an actual armed progress notification before external actions."
+  },
+  {
+    "name": "inspect_web_event_listeners",
+    "title": "Inspect Web Event Listeners",
+    "description": "Inspect listeners registered directly on the first main-document CSS match in one selected CDP page. Returns event flags, native callback locations, source ownership and exact script text/digests inline. Does not dispatch events, evaluate JavaScript or invoke handlers. Delegated ancestor/framework listeners and execution history remain unknown. Releases REA's object group and transport, preserving the external page."
+  },
+  {
+    "name": "inspect_web_network_capture",
+    "title": "Inspect Web Network Capture",
+    "description": "Inspect a saved local HAR 1.2, mitmproxy, Fiddler SAZ or supported aioquic qlog capture without contacting recorded URLs. Returns source-linked records, preserved producer fields, precise numbers, exposed bytes and explicit coverage/limitations; transport credentials and explicitly marked sensitive values are excluded. Use inspect_web_page for a live CDP page. Preserve capture_path exactly as supplied; it names a path on the REA host, not a path to rebase onto the client workspace. Select format; record_ordinals selects records after full decoding and also decodes recognized protobuf/gRPC bodies. Optional protobuf selects body_pointers, framing and a local FileDescriptorSet/message_type; native gRPC and gRPC-web remain distinct, ambiguous readings stay candidates and compressed payloads stay unknown. Default complete delivery is inline. detail summary retains Evidence for inspect_analysis_view kind capture (preview/complete), protobuf (bodies/frames/fields), or qlog; large text/schema values require explicit fields. Qlog supports aioquic 1.5.0 JSON qlog 0.3 and reports STREAM interval unions/endpoint loss declarations, not recovered bodies or proved network loss. SAZ preserves encoded bytes without replay/HAR conversion; encrypted archives are unsupported. Mitmproxy requires caller-supplied mitmdump 12.2.3 on Linux. Malformed or oversized captures return no partial success; browser transaction attribution and HAR text’s original bytes remain unknown."
+  },
+  {
+    "name": "inspect_electron_fuses",
+    "title": "Inspect Electron Fuses",
+    "description": "Inspect packaged Electron fuse bytes in one local macOS app bundle, Electron Framework binary, Windows PE executable, or Linux ELF executable. Returns the artifact digest, per-slice wire version, fuse index, version-1 name, state, and raw byte, plus derived implications for Inspector flags, ELECTRON_RUN_AS_NODE, embedded ASAR integrity, and app.asar-only loading. A missing sentinel is unknown fuse state. Reads artifact bytes only and does not modify the selected file or open a runtime target."
+  },
+  {
+    "name": "list_electron_targets",
+    "title": "List Electron Targets",
+    "description": "List every Electron file:// page target from a selected loopback CDP endpoint. Local file paths are canonicalized after symlink resolution. Selecting an endpoint exposes every eligible target and its local path metadata."
+  },
+  {
+    "name": "inspect_electron_page",
+    "title": "Inspect Electron Page",
+    "description": "Passively inspect one Electron file page by supplying its loopback CDP endpoint and target ID. The provider rechecks that the target currently exists at that endpoint and is a local file page. Returns frames, DOM structure, resource paths, and scripts without evaluating renderer JavaScript or invoking Electron APIs. The selected endpoint exposes every local file page and its metadata to this tool."
+  },
+  {
+    "name": "analyze_javascript_application",
+    "title": "Analyze Javascript Application",
+    "description": "Build a static application graph from a local ASAR or extracted JavaScript app without executing it. Supply input_path, e.g. {input_path:\"/apps/client\",source_paths:[\"main.js\"],detail:\"summary\"}. Copy source_paths exactly from the inventory, not host-absolute paths inferred from input_path. Returns nodes, edges, semantic relations, integrity contradictions, coverage and unknowns. source_paths limits source analysis to exact inventoried paths without narrowing inventory or artifact identity; dependencies are not implicitly analyzed and unselected sources remain unknown. detail summary reduces delivery, retaining complete Evidence for inspect_analysis_view; it does not reduce analysis. With summary detail, view {kind:\"javascript-routes\",collection:\"routes\",offset:0,limit:64} selects static route patterns; static routes do not prove reachability or the complete route set. Integrity mismatches fail by default; record-and-continue retains untrusted observed bytes and partial coverage. analysis_timeout_ms is a per-source provider budget. A host-only timeout needs a longer client deadline, not that budget; do not repeat unchanged work or assume it stopped. If configuration cannot be edited, report the host setting (Codex: mcp_servers.<server>.tool_timeout_sec, seconds)."
+  },
+  {
+    "name": "reconcile_javascript_runtime",
+    "title": "Reconcile Javascript Runtime",
+    "description": "Reconcile verified static JavaScript application graphs with existing passive web/Electron CDP, passive V8 Inspector, or provider-owned active Electron Evidence. Active Electron captures contribute an explicitly partial target-only runtime record; they never invent renderer scripts, frames, workers, or execution claims. Exact captured-source digests take priority over caller-declared file/URL mappings; target, frame, script, and worker ambiguity remains explicit, and source-map authority stays separate."
+  },
+  {
+    "name": "capture_electron_scenario",
+    "title": "Capture Electron Scenario",
+    "description": "Launch and exercise an owned Electron app when passive CDP/Inspector observation cannot answer the question. REA owns startup/teardown; selected click/wait, renderer reload/crash and synthetic open-url/second-instance actions change runtime behavior. Returns correlated window/WebContents/process/preload/session/navigation/shell/IPC observations without payload values, plus action targets and coverage/truncation. Actions wait for completion or cancellation; a missing click target can remain pending. External shell, navigation, permission, download, popup, updater and OS-integration effects are blocked and recorded. Cleanup failures retain observations with explicit uncertainty. Use inspect_electron_page or observe_javascript_runtime for passive observation."
+  },
+  {
+    "name": "list_javascript_runtime_targets",
+    "title": "List Javascript Runtime Targets",
+    "description": "List every eligible Node/Electron V8 Inspector target from an explicit literal-loopback endpoint. Node discovery file locations that cannot be verified are preserved as unresolved reported URLs; they do not prove filesystem identity. Listing does not attach to targets."
+  },
+  {
+    "name": "observe_javascript_runtime",
+    "title": "Observe Javascript Runtime",
+    "description": "Passively observe loaded-script and execution-context metadata on one loopback Node/Electron V8 Inspector target, selected by inspector_endpoint and target_id. Presence/attachability and file locations are rechecked; verified file paths stay separate from reported URLs, including distinct query/fragment identities. Parse failures are counted separately from malformed events. REA does not read source, evaluate, pause/resume or instrument execution; imports, EventEmitter activity and Electron IPC remain unknown. Use reconcile_javascript_runtime with static application Evidence. The selected endpoint exposes every target it serves to this tool."
+  },
+  {
+    "name": "inspect_analysis_settings",
+    "title": "Inspect Analysis Settings",
+    "description": "Inspect REA's editable runtime admission sizes, deadlines and worker heaps, their bounds, launch values and application points. No active target is required. Filters intersect. If an error already names a setting and its bounds, update_analysis_settings can be called directly. Explicit per-call arguments override runtime defaults. Active worker values are not observed by this configuration view."
+  },
+  {
+    "name": "update_analysis_settings",
+    "title": "Update Analysis Settings",
+    "description": "Atomically set or reset editable runtime defaults for new work. Changes survive target close/open but disappear on REA restart; reset restores launch configuration. Follow an error's named setting/bounds directly, then retry after work and cleanup settle; no inspection is needed when they are supplied. Does not change active work, edit files, restart providers, raise client limits or override explicit per-call arguments."
+  },
+  {
+    "name": "inspect_analysis_view",
+    "title": "Inspect Analysis View",
+    "description": "Read summaries, selected facts, or pages from completed Evidence without rerunning analysis. Use the producing tool’s retained-view handoff for compatible selectors; the examples here are not exhaustive. Copy normalized_result.parent_evidence_id from a summary into source: {kind: \"retained-evidence\", evidence_id: \"<parent_evidence_id>\"}. Other sources are {kind: \"inline\", evidence: <complete Evidence>} or {kind: \"evidence-file\", path: \"<absolute JSON path>\", evidence_id?: \"<record ID>\"}; select an ID for a multi-record bundle. For native pseudocode use {source: {kind: \"retained-evidence\", evidence_id: \"<parent_evidence_id>\"}, view: {kind: \"native\", facet: \"pseudocode\", offset: 0, limit: 128}}; procedure_pseudo_code parents support this text facet, while other native function facets require analyze_function. Common views: {kind: \"summary\"} has no facet; {kind: \"inventory\", collection: \"occurrences\", logical_paths: [\"package.json\"], offset: 0, limit: 64} selects artifact paths; {kind: \"capture\", detail: \"preview\", offset: 0, limit: 20} pages saved network records; {kind: \"managed-members\", collection: \"methods\", offset: 0, limit: 64} pages managed members. Use the producer’s named kind for other families; compact schemas may omit nested shapes, so do not invent selectors. Text offsets/limits use UTF-16 code units; row pages count the selected retained collection. Preserve parent identity, null/unavailable values, source coverage, limitations and unknowns; exhausting pages does not prove complete discovery, runtime use or absence. Smaller pages can resolve delivery limits without repeating analysis; complete parent Evidence remains available for export."
+  },
+  {
+    "name": "export_web_scripts",
+    "title": "Export Web Scripts",
+    "description": "Export JavaScript bytes already retained in one local inspect_web_page or capture_browser_scenario JSON capture (normalized result or complete Evidence). Writes scripts and a digest-verified manifest into an absent absolute output_directory. Returns all source URLs, script or transaction/event references, unavailable states, and an analysis_input for analyze_javascript_application when any bytes were exported. Include script sources in inspect_web_page or select capture.network.response_body in scenarios. No refetch or execution. Safe unambiguous URL layouts preserve relative module paths; versions, query variants, inline scripts, and path collisions are isolated with explicit resolution limitations."
+  },
+  {
+    "name": "trace_web_module_imports",
+    "title": "Trace Web Module Imports",
+    "description": "Resolve native ES imports/re-exports from one script in a local export_web_scripts manifest. Verifies the selected source digest/size and returns source positions, resolved URLs/errors and every matching captured candidate. URL query/fragment identities remain distinct; computed imports, bundler IDs and execution remain unknown. Supply importer_url when inline/document-base context is unknown and an import_map when needed. Literal resolution requires absolute REA_BROWSER_EXECUTABLE: caller-supplied Chromium runs only a trusted REA resolver stub with page requests fulfilled locally or blocked, without captured app execution or asset refetch. The native deadline is 20 seconds; cleanup may extend it."
+  },
+  {
+    "name": "trace_web_source_location",
+    "title": "Trace Web Source Location",
+    "description": "Map one generated position in an exported script through a caller-paired local source map, verifying manifest/script/map byte identities. Returns all equal-position matches, original positions, resolved source URLs and embedded sourcesContent; pairing does not prove deployment authenticity or execution. Lines are one-based, columns zero-based UTF-16; lookup uses the greatest generated position <= requested across lines. Regular maps and inline indexed sections only; external section URLs are unsupported. No network or application execution; decoding uses an owned codec process. Complete delivery is default. detail summary retains Evidence; view {kind:\"source-location\",collection:\"matches\",offset:0,limit:64} pages match metadata. source-text additionally requires match_index and pages UTF-16 text. inspect_analysis_view reuses the retained parent; export_evidence_bundle preserves it. source_map_limits changes byte/record/heap admission per call; decode_timeout_ms is separate. Refusals name the exhausted control; cleanup may outlast the deadline."
+  },
+  {
+    "name": "recover_javascript_sources",
+    "title": "Recover Javascript Sources",
+    "description": "Recover readable modules from local UTF-8 JavaScript bundles into an absent output_directory, without executing application code. Requires caller-supplied Wakaru ^1.13.0 (verified 1.14.0), Linux x64 and util-linux prlimit. additional_paths includes related chunks, preserving each input’s snapshot/provenance. Returns original/derived digests, extraction ranges, source maps, warnings and analysis_input for analyze_javascript_application. Splitting may fall back to one module; original names and runtime equivalence remain unknown. One worker has a fixed 120-second deadline and bounded input/output/report admission; limit failures are explicit and roll back output."
+  },
+  {
+    "name": "search_guidance",
+    "title": "Search Guidance",
+    "description": "Find installed REA workflow guidance by query words. Returns ranked sections, pages and locators for read_guidance_section; every non-generic word must match, with direct section matches ranked before matches spread across children. Reads documentation only, without accessing a target or provider."
+  },
+  {
+    "name": "read_guidance_section",
+    "title": "Read Guidance Section",
+    "description": "Retrieve a section selected by search_guidance from the installed REA guidance bundle. Reports stale locators and unavailable bundles explicitly. Returns documentation, not target observations or Evidence."
+  },
+  {
+    "name": "guided_workflows",
+    "title": "Guided Workflows",
+    "description": "List or render REA's existing guided workflows. Rendering returns guidance only; it does not inspect targets, start analysis, or change session state."
+  },
+  {
+    "name": "trace_application_feature",
+    "title": "Trace Application Feature",
+    "description": "Trace a typed literal seed through every reachable part of an authenticated JavaScript Application Graph supplied as inline Evidence or exact same-session retained references. Original static, native, passive-runtime, inferred, and unknown authorities remain distinct; native addon handoffs never open a provider or execute the application. An optional view returns selected facts and retains the complete trace."
+  },
+  {
+    "name": "trace_javascript_semantics",
+    "title": "Trace Javascript Semantics",
+    "description": "Trace static JavaScript data-flow, direct call/return, and closure relations from inline application Evidence or an exact same-session retained reference. Dynamic or unsupported semantics remain explicit unknowns; static reachability never claims runtime execution."
+  },
+  {
+    "name": "compare_application_versions",
+    "title": "Compare Application Versions",
+    "description": "Compare two authenticated JavaScript Application Graph versions, supplied inline or by exact retained reference. Returns added, removed, changed, ambiguous and unknown entities with the full changed_from graph. Pairing uses unique exact digest, source-map, structural or semantic-key tiers; no fuzzy or module-ordinal pairing."
+  },
+  {
+    "name": "compare_static_and_observed_endpoints",
+    "title": "Compare Static And Observed Endpoints",
+    "description": "Compare static JavaScript endpoints with requests recorded in HAR Evidence, supplied inline or retained; acquires no files, targets or URLs. Returns exact or inferred template pairings and explicit unknowns; root-relative targets need a declared origin. Not-observed requires an exercised origin, all parent records retained and none excluded; it never means hidden, unused or inaccessible. Default summary retains the full comparison for inspect_analysis_view kind endpoint-comparison (static-endpoints, observed-groups, matches); a selected view overrides detail, and detail complete returns all facts. Copies no query strings, fragments, headers or bodies. Sensitive-declaration parents are refused; the 96 MiB representation budget covers source admission and derived state."
+  },
+  {
+    "name": "inspect_api_contract",
+    "title": "Inspect Api Contract",
+    "description": "Inspect declared APIs in local OpenAPI JSON or GraphQL SDL without a session, network requests or target execution. OpenAPI 3.0/3.1/3.2 returns inline method/path operations with source pointers; references remain unresolved. format:\"graphql-sdl\" returns types/fields and optional operations_path bindings, preserving aliases, fragment/spread owners and unknowns without expanding fragments or claiming full operation validation. Default summary retains Evidence; view overrides detail. For HTTP rows use view {kind:\"api-contract\",collection:\"operations\",methods:[\"GET\"],limit:20}; GraphQL uses view {kind:\"graphql-contract\",collection:\"references\",limit:20}. inspect_analysis_view pages the same retained facts. Source declaration coverage stays separate from page exhaustion; paging does not increase parser allowances. Introspection, runtime behavior and contract comparison are outside scope."
+  },
+  {
+    "name": "inspect_ntfs_journal",
+    "title": "Inspect Ntfs Journal",
+    "description": "Inspect USN V2/V3/V4 records from a local acquired NTFS journal with a caller-paired MFT from the same volume. Reads at most 64 MiB per file. Returns source-order events, explicit coverage rows, both SHA-256 identities, and nextFileOffset for another page using the same inputs. V2 MFT references include sequence numbers; opaque V3/V4 IDs remain unresolved. MFT inventory counts are inline by default; select mft_record_limit for up to 32 detailed records, including identity-checked extension attributes and explicit link coverage. V4 returns at most 16 extent samples per event with explicit omissions. History completeness remains unknown. Other journal versions and unverifiable references remain explicit. Reads only the selected acquisition files."
+  },
+  {
+    "name": "inspect_playwright_trace",
+    "title": "Inspect Playwright Trace",
+    "description": "Inspect a local Playwright v10 trace ZIP offline, without browser replay or requests to recorded URLs. Returns action boundaries, console/network facts, screenshot/body references and archive/member/line provenance; no cross-stream total order or complete-capture claim. Context options, most action arguments/results, DOM and resource bytes are not analyzed; credentials use HAR/URL projection. Default summary retains supported Evidence. Use view {kind:\"playwright-trace\",collection:\"events\",kinds:[\"network\"],limit:10}, or streams/members/diagnostics pages. Text previews cover 256 UTF-16 units; event-text with exact event_id reads further chunks, and fields [\"text\"] selects full text. Paging does not raise parsing allowances; one archive import is admitted per decoder while retained views remain independent."
+  },
+  {
+    "name": "compare_source_to_bundle",
+    "title": "Compare Source To Bundle",
+    "description": "Map committed historical source to an authenticated JavaScript Application Graph. Supply HistoricalSourceGraph inline or as {kind:\"file\",path:\"/absolute/source.json\"}, and graph Evidence inline or retained. Uses explicit digest, source-map and path signals to classify unchanged, modified, removed, split, merged, duplicated or unknown; incomplete coverage and ambiguous weak matches never establish absence or force pairing. Candidate signals are opt-in. Omitted view returns the full report; view {kind:\"summary\"} or {kind:\"source-to-bundle\",collection:\"mappings\"} retains it for later inspect_analysis_view pages. Filters intersect, empty filters select none, and page coverage never upgrades source coverage."
+  },
+  {
+    "name": "compare_javascript_export_shapes",
+    "title": "Compare Javascript Export Shapes",
+    "description": "Compare static return-property shapes for one exact module/export on each authenticated JavaScript Application Graph, inline or retained. Variants pair only by reciprocal unique literal discriminants. Returns JSON Pointer changes while keeping property presence separate from value resolution: complete property coverage can establish an addition/removal even when values are unresolved. Dynamic values, incomplete coverage and unpaired variants stay unknown. Does not execute JavaScript; runtime behavior needs a separate probe."
+  },
+  {
+    "name": "build_reconstruction_obligation_ledger",
+    "title": "Build Reconstruction Obligation Ledger",
+    "description": "Build a deterministic reconstruction-obligation ledger from an authenticated Evidence bundle, reviewed obligations and an explicit reconstruction manifest. Returns the complete ledger, closure digest and typed diagnostics. Duplicate owners, missing cases or parser/type, weak verifier authority, unenumerated claims, contradictions, dependencies and residual unknowns fail closed; static candidates remain candidates."
+  },
+  {
+    "name": "evaluate_reconstruction_coverage",
+    "title": "Evaluate Reconstruction Coverage",
+    "description": "Check evidence-backed reconstruction coverage for one named boundary. Missing ownership or inventory is partial; stale, weak, truncated, skipped, unresolved or conflicting verifier proof is unknown. Contradictions, failed proof, missing owners and authority-routing failures fail closed."
+  },
+  {
+    "name": "export_environment_bundle",
+    "title": "Export Environment Bundle",
+    "description": "Write an agent environment bundle from capture_browser_scenario Evidence or HAR inspect_web_network_capture Evidence to an absent absolute output_directory whose parent exists. Copies complete capture Evidence, including recorded bodies, and derives replay/state read tools and served/withheld writes with coverage and next-recording hints. Preview the same coverage with inspect_analysis_view kind environment-coverage. dry_run reports without writing but still validates the destination. Uses default template rules, reads only selected Evidence and optional package_tarball, and writes only that directory; no network access. The bundle README explains agentenv use. Destination refusals name this tool; other failures name their export stage."
+  },
+  {
+    "name": "project_android_application_graph",
+    "title": "Project Android Application Graph",
+    "description": "Build a static Android application inventory from the authenticated nested inventory Evidence returned by inspect_artifact for an APK. Returns component paths/hashes, runtime-family hints and path-based bridge hypotheses. Does not decode DEX, execute the APK or establish runtime calls."
+  },
+  {
+    "name": "project_apple_application_graph",
+    "title": "Project Apple Application Graph",
+    "description": "Build a static Apple application inventory from the authenticated nested inventory Evidence returned by inspect_artifact for an IPA, .app directory, ZIP or DMG. Returns application roots, nested-bundle roles, launchd plists, component paths/hashes, runtime hints and bridge hypotheses. Roles follow path conventions; plist/CMS semantics and runtime calls are not established."
+  },
+  {
+    "name": "project_harmony_application_graph",
+    "title": "Project Harmony Application Graph",
+    "description": "Build a static HarmonyOS inventory from the authenticated nested inventory Evidence returned by inspect_artifact for a HAP, HSP or App Pack. Returns packaging hints, component paths/hashes, child packages, runtime hints, unclassified components and path-based N-API bridge hypotheses. Does not decode Ark bytecode, parse manifest semantics or establish runtime calls."
+  },
+  {
+    "name": "start_build_computer",
+    "title": "Start Build Computer",
+    "description": "Start a local agentenv computer, installing/downloading app packages as needed; returns computer_id and a first screenshot. Requires Docker and REA_AGENT_ENV_COMMAND. Request sources install from Ubuntu, apt repositories or a .deb URL and add REA from REA_BUILD_COMPUTER_REA_ARCHIVE in a build-only layer. The app starts later: use start_build_capture, or its Applications > Other menu entry when no capture is active. Set source.electron to apply the export launch policy, adding --no-sandbox unless present because the container lacks Chromium user namespaces. Bundle-folder sources run their existing smoke task unchanged. Initial image builds and concurrent agentenv state updates can take minutes. screenshot selects initial region/format/quality. The computer stays reachable until close_build_computer or server shutdown; if failed-start teardown is unconfirmed, use the error's computer_id to retry close_build_computer."
+  },
+  {
+    "name": "act_on_build_computer",
+    "title": "Act On Build Computer",
+    "description": "Act on a running build computer with screenshot, click, drag, scroll, type, type_secret, key, wait, reset; actions can change app state. Returns driver content/images and structured results, with each action logged. Points use the latest frame's pixels (take a screenshot first), or space norm on 0..norm_scale; count 2 double-clicks, drag path has 2..50 points, and keys names one W3C chord (ctrl+s is translated). Region screenshots crop the latest frame rather than recapture; use a full screenshot or wait with screenshot true first. After opening a menu/window, wait for its screenshot instead of taking the action's immediate one. type_secret reads the user-created handle file at $XDG_CONFIG_HOME/rea/build-secrets/<handle>, or ~/.config/rea/build-secrets/<handle> into a focused masked field: only the handle is recorded and no screenshot is taken, but later screenshots can expose unmasked fields. reset restores seed data through data/reset and relaunches; screenshot_error after reset does not undo it. Other actions forward the driver's arguments unchanged; refusals such as stale frames retain its message. Actions, capture steps and checks run sequentially per computer; different computers run independently."
+  },
+  {
+    "name": "start_build_capture",
+    "title": "Start Build Capture",
+    "description": "Launch the app under capture on a request-built computer and return its open-window screenshot. Downloads package lists as the computer user to identify sources; do not open the app from its menu first. Early exit reports code, stderr tail and capture details. Documents are recognized from file names/~/ paths in window titles; supply state_paths when titles name something else. Save the seed through the app, mark_build_checkpoint seed, make and save the requested change, mark end, then stop_build_capture."
+  },
+  {
+    "name": "mark_build_checkpoint",
+    "title": "Mark Build Checkpoint",
+    "description": "Checkpoint the running capture under a unique name; returns acknowledged counts and up to 10 changed files. Files named by window titles rank first, then state_paths/open files, with caches last. Mark seed after saving the seed and end after saving the first change. For later tasks, build on the preceding change and mark end-<task name>; mark near-<task name> after saving a near miss that must fail one task check. Duplicate names are refused."
+  },
+  {
+    "name": "stop_build_capture",
+    "title": "Stop Build Capture",
+    "description": "Close the captured app and finish its capture. Returns checkpoints, package/sources, limitations and a draft between seed and end when both exist and no declared secret was used. later_drafts contains one draft per later end-<task name>, relative to the preceding end checkpoint. Drafts list owned-path changes, supported before/after structured values, suggested checks and optional unchanged-state guards. Notes explain missing/thin drafts and recovery: add unrecognized documents to state_paths, or make a change saved in a readable file rather than only dconf. After secret use, automatic drafting is withheld; write the tasks manually. Otherwise write each task from its draft in the user's words and pass the tasks to export_build_environment."
+  },
+  {
+    "name": "export_build_environment",
+    "title": "Export Build Environment",
+    "description": "Export the stopped capture and given tasks as an agentenv app bundle, seeded at seed. Each task uses its selected end checkpoint (end by default) and its captured near-<task name> when present. The bundle's eval lists every task; verified files are copied to a new/empty host directory. Refuses publication if names or contents contain declared secrets, including UTF-16/hex/base64/URL/gzip forms; errors identify handles and files. Files under the owned paths that changed between the pre-sign-in and post-sign-in checkpoints, and those named in withhold, are withheld from the seed as sign-in or licence state: each becomes a secret setting the deploy takes from an environment variable as the file's bytes in base64, the README says how to fill it, a check may not name it, and REA keeps its bytes as the secret withheld_files names by handle, for start_build_computer's settings when witnessing; a file larger than 48 KiB cannot be withheld. With seed_sign_in, they are seeded instead, which needs a seed_sign_in consent from record_build_consent; every recorded consent ships as consent.json. A check already passing on the seed or a near miss passing every check refuses the whole export, naming the task and reason. Witness each task on a fresh computer with start_build_computer and check_build_task."
+  },
+  {
+    "name": "check_build_task",
+    "title": "Check Build Task",
+    "description": "Evaluate saved-state task checks or run a screen_judge through its configured model endpoint on a running exported app. Returns per-check results, settling status and optional witness state. Reads data/get after files settle using exported verifier semantics; screen_judge captures the screen and uses the agentenv runner with three votes per question. Reads every 0.5 s, waits for 3 s of stable bytes, and bounds observation at 15 s; unsettled results use the last completed read, with read_cut for interrupted reads. Witness stages run in order: seed (supply directory to begin recording) must fail a check, after_edit must pass all, near_miss must fail one, and after_reset must restore every seed result. Use the task prompt alone for the edit. Seed rejects exported task/verifier mismatches. Unreadable or truncated views are undecided, not witnessed failures; an undecidable stage is refused for retry. A failed stage or after_reset ends recording and writes witness.json plus recording segments to directory."
+  },
+  {
+    "name": "measure_build_task",
+    "title": "Measure Build Task",
+    "description": "Measure how hard an exported bundle's task is for a model: run it in fresh agentenv computers on this host, each solve the bundle's own steps with the agent deployed as the solver on the model, 3 times, then 2 more unless they passed none or all, and keep it in the band when it passes 1 to 3 of 5. A solve that did not finish is run again, at most twice, and not counted. Before each solve REA stops if the largest cost so far would take the total past budget_usd; a solve's cost is known only when it ends, so the first always runs, and a solve that reports no cost stops the measure. The solver calls the model endpoint agentenv reads where REA starts: LITELLM_BASE_URL and LITELLM_API_KEY, or [model] in .agentenv/config.toml; REA holds no model client and never reads the key. It writes difficulty.json at the bundle's root, each measured task's record by name, and a Measured difficulty section in its README, and returns the record: the band, passes, finished solves (k), turns, cost, failures per check and each solve. Solves run one at a time and take minutes each; REA reports progress meanwhile."
+  },
+  {
+    "name": "record_build_consent",
+    "title": "Record Build Consent",
+    "description": "Record a consent the person gave, in their own words, after you asked them: kind licence when they accepted a licence the app or its installer shows, which you then accept on their behalf, or seed_sign_in when they allowed the bundle to hold their sign-in or licence state. Never record one they did not give. The consent is kept with the computer; the export writes every one into the bundle's consent.json, and seeds withheld state only with a seed_sign_in consent."
+  },
+  {
+    "name": "close_build_computer",
+    "title": "Close Build Computer",
+    "description": "Tear down a build computer and discard its state, cancelling its active call and refusing queued calls. Tries agentenv first, then REA_DOCKER_COMMAND on only that sandbox's named/labelled containers. Unconfirmed teardown reports remaining resources and retains the computer for another close attempt."
+  },
+  {
+    "name": "open_bundle_resources",
+    "title": "Open Bundle Resources",
+    "description": "Open a local app bundle for read-only plist, Interface Builder, asset catalog, and keyed archive inspection without resolving or inventing its executable identity. This switches the shared session to a resource-only lane; executable analysis is unavailable until another target is opened."
+  },
+  {
+    "name": "open_binary",
+    "title": "Open Binary",
+    "description": "Open a validated local artifact or analysis database and bind its analysis provider. Switching target/provider can discard ephemeral Ghidra edits even if the later open fails; retained investigation Evidence does not restore them. Reopening the same target/profile retains the engine and edits. provider_id selects a provider or deterministic auto routing, with no failure fallback. Omitted format uses headers; format dos-com admits 1..65280 headerless bytes, while raw-binary requires architecture and entry_point and maps file offset 0 there. Optional snapshots must match target, provider and analysis profile; close/reopen before importing into a mutated engine. For Ghidra cross-process edits, set a private absolute REA_GHIDRA_CHECKPOINT_DIR at startup (stock ELF/PE/Mach-O on Linux/macOS); normal opens/closes restore/save metadata. Failed opens report selection_at_failure and target/provider at completion; use binary_session for current state. close_binary releases engine resources; reset_investigation clears retained records."
+  },
+  {
+    "name": "close_binary",
+    "title": "Close Binary",
+    "description": "Release the active engine and owned resources while retaining investigation Evidence and complete Unknown history in memory. Drains earlier requests and queues later ones. If cleanup fails, keep this connection and retry close_binary without snapshot_path after the reported condition settles. Optional snapshot_path saves a target-bound snapshot first; resource-only sessions have no snapshot binding, existing files require overwrite, and failed saves keep the engine open. Metadata edits prevent immutable snapshot saves until recreation. Ghidra checkpoint mode saves metadata on normal close and retains the Program for retry if saving fails. Closing does not persist investigation records: export_evidence_bundle to save them, or reset_investigation to clear them."
+  },
+  {
+    "name": "reset_investigation",
+    "title": "Reset Investigation",
+    "description": "Discard retained Evidence and Unknown revision history, including engine replay/source bindings, while keeping a healthy active engine open. Drains earlier work and queues later requests. Optional save_path atomically syncs and publishes a complete bundle first; import_evidence_bundle restores its IDs/history. Cancellation, failed save or incomplete cleanup preserves records; any already-published checkpoint is reported. Without save_path, records are lost. binary_session reports the representation budget; no automatic persistence or eviction occurs."
+  },
+  {
+    "name": "binary_session",
+    "title": "Binary Session",
+    "description": "Inspect current target, provider capabilities, analysis and server identity without starting analysis. Default summary reports Ghidra checkpoint/ephemeral mode in capabilities[].shared_limitations; detail complete adds diagnostics, candidate capabilities and tool flags. Set refresh_candidates true to recheck provider readiness without changing the active engine. analysis_provider_candidates_observed distinguishes fresh observations from selection-time facts. open_binary with provider_id can replace the engine and discard ephemeral edits; reopening without it reuses the route. release_verification is optional reported-version evidence, not executable authentication. omitted_fields names facts left out of summary."
+  },
+  {
+    "name": "export_evidence_bundle",
+    "title": "Export Evidence Bundle",
+    "description": "Atomically write the session's deterministic Evidence bundle to the requested local path. Existing files require overwrite: true; records and manifests use canonical byte-stable ordering."
+  },
+  {
+    "name": "import_evidence_bundle",
+    "title": "Import Evidence Bundle",
+    "description": "Read the JSON bundle at the supplied local path, validate every Evidence ID and canonical manifest, then atomically merge it. Imported content is data only and is never executed. Import restores registry entries present in the bundle; questions embedded in Evidence do not automatically become Unknown registry entries."
+  },
+  {
+    "name": "get_evidence_bundle",
+    "title": "Get Evidence Bundle",
+    "description": "Read retained Evidence and tracked questions without rerunning providers. Default complete returns an importable canonical bundle. detail summary lists record metadata; records pages complete records with unchanged IDs and missing direct evidence_links, but is not an importable bundle. detail links inspects retained/missing links without payloads; traversal retained-closure follows retained links and defaults to missing rows. Summary/records/links filters accept Evidence ID, operation, target SHA-256, analysis-profile digest or canonical procedure address. Metadata keeps retention distinct from truncated/unavailable source coverage. Use a discovered evidence_id with a compatible inspect_analysis_view to read selected facts."
+  },
+  {
+    "name": "capture_process_scenario",
+    "title": "Capture Process Scenario",
+    "description": "Run a caller-selected command under a PTY and return process capture Evidence and unknowns. It runs with the user's permissions, can change files or use network, and is not a sandbox. dry_run validates and returns a rea.process-scenario-plan without launching. Command names use inherited PATH; cwd defaults to the caller's and environment overrides augment inheritance. Filesystem observation is opt-in through filesystem_observation_paths. Terminal size must satisfy columns × (rows + scrollback) <= 1,000,000 on every resize; dimensions are never clamped and this limit has no override. Environment keys reject =/NUL and REA_PROCESS_RUN_ID is reserved. With positive finalization_ms, timeout/idle sends identity-checked SIGTERM, observes until the interval ends, then sends SIGKILL once; exit.finalization records attempts and observed exit. Cancellation still ends the run immediately."
+  },
+  {
+    "name": "compare_process_captures",
+    "title": "Compare Process Captures",
+    "description": "Compare compatible process captures, inline or by {kind:\"retained-evidence\",evidence_id}, across terminal, interaction, lifecycle, process, filesystem, command-shim, HTTP and WebSocket observations. Optional trace_spec checks explicit partial-order or finite-trace assertions, including selected timing. Observer timing alone does not establish changed behavior; timestamps or sorting never establish concurrency. Missing, journal-free or truncated observations never establish equivalence."
+  },
+  {
+    "name": "compare_artifacts",
+    "title": "Compare Artifacts",
+    "description": "Compare complete artifact inventories by occurrence path, content identity, metadata and graph relations; root . identifies the outer container separately. Accepts complete inline Evidence, {kind:\"retained-evidence\",evidence_id} for inspect_artifact/nested inventory/retained summary, or {kind:\"evidence-file\",path:\"/absolute/bundle.json\"} with optional evidence_id. Summaries resolve to their complete parent in that session/source bundle; summary facts alone are insufficient. Returns every delta inline with both source identities; coverage gaps remain truncated or unknown, never equivalence. Includes FIT and legacy uImage components."
+  },
+  {
+    "name": "compare_functions",
+    "title": "Compare Functions",
+    "description": "Compare two explicit analyze_function Evidence records or exact retained session references across identity, exact provider text, calls, references, strings, and address-normalized CFG topology. The same authenticated Evidence record or compatible same-artifact entry coordinates establish correspondence independently of symbol origin; metadata and text changes remain separate. Missing or provider-incompatible facets remain truncated or unknown; every conclusion cites both Evidence sets."
+  },
+  {
+    "name": "match_native_functions",
+    "title": "Match Native Functions",
+    "description": "Pair two retained list_procedures inventories by unique exact symbols, then unique identical observed bytes. Optional same-context name/body/byte/dossier Evidence adds static facts; compatible CFG/call/string fingerprints propose unresolved groups only. Duplicate candidates stay unresolved, and only_left/right means unpaired within inputs, not proven addition/removal. Default summary retains the full matching for function-matches pages; complete returns every group. byte-sources identifies selected read_bytes Evidence: intersect IDs with function evidence_links. Dossier pairs supply retained-reference compare_functions inputs."
+  },
+  {
+    "name": "compare_bundles",
+    "title": "Compare Bundles",
+    "description": "Compare two canonical Evidence bundles by exact record membership, explicit one-to-one observation pairs, and complete residual-unknown revision histories. Supply absolute local filesystem paths; relative paths are rejected. Missing bundle members describe omission only, never behavioral equivalence; output is digest-anchored and returns every change inline."
+  },
+  {
+    "name": "find_changed_behavior",
+    "title": "Find Changed Behavior",
+    "description": "Aggregate validated process, artifact, and function comparison Evidence, supplied inline or by exact retained-evidence references from this session. Original records and their complete source closure remain authenticated; summaries do not substitute for comparisons. Runtime observations remain distinct from static behavior candidates; missing or incomplete comparisons produce unresolved findings, never causal claims. Returns every finding inline."
+  },
+  {
+    "name": "build_call_path",
+    "title": "Build Call Path",
+    "description": "Build every shortest direct-callee path from complete analyze_function Evidence supplied inline or by exact retained-evidence references. References reuse the complete parent of an analyze_function summary without resending dossiers. Uses exact canonical addresses; missing dossiers and provider mixing remain unknown, and every node and edge cites source Evidence."
+  },
+  {
+    "name": "correlate_static_and_runtime",
+    "title": "Correlate Static And Runtime",
+    "description": "Evaluate every explicit caller-declared hypothesis between static and runtime comparison Evidence supplied inline or by exact retained-evidence references. Similar names or paths are never auto-matched, consistent cochange never proves causality, and unknown or truncated inputs remain unresolved. Returns all correlations and their complete Evidence closure inline."
+  },
+  {
+    "name": "verify_reconstruction",
+    "title": "Verify Reconstruction",
+    "description": "Verify a finite typed behavioral and structural specification against a canonical Evidence bundle. Pass means every declared claim has complete comparable authority—not global source equivalence; changed claims fail and missing, limited, or unresolved evidence stays unknown."
+  },
+  {
+    "name": "list_unknowns",
+    "title": "List Unknowns",
+    "description": "List tracked questions' current revisions in deterministic ID order, with exact status/severity/domain filters. Complete inline by default; offset/limit pages the filtered order, total counts matches and next_offset null means exhausted. Unresolved, contradicted and non-truth dispositions stay distinct. An empty registry does not mean retained Evidence has no residual questions; inspect that Evidence or its analysis view."
+  },
+  {
+    "name": "record_unknown",
+    "title": "Record Unknown",
+    "description": "Create one deterministic residual unknown and immutable mutation evidence. Its scope is the active binary analysis target digest, or null without an active target; supporting Evidence does not select the scope. Scope contributes to stable identity. Validates all evidence and relationship references, and rejects duplicate stable identity."
+  },
+  {
+    "name": "update_unknown",
+    "title": "Update Unknown",
+    "description": "Append a full-state revision to one tracked question, with immutable mutation Evidence. Requires exact expected_revision; stale writers fail rather than overwrite. The question keeps its original scope, while mutation Evidence uses the active target digest or null and can have a different subject."
+  },
+  {
+    "name": "verify_unknown_resolution",
+    "title": "Verify Unknown Resolution",
+    "description": "Check a tracked question's current resolution against bundled Evidence, required authority/confidence/environment and revision integrity. Withdrawn and out-of-scope dispositions do not establish truth."
+  },
+  {
+    "name": "get_navigation_context",
+    "title": "Get Navigation Context",
+    "description": "Return the selected document, current address, and containing/current procedure in one provider-neutral result. The result reflects sequential provider observations, not an atomic cursor snapshot; a cursor outside any procedure returns procedure: null."
+  },
+  {
+    "name": "inspect_address_context",
+    "title": "Inspect Address Context",
+    "description": "Inspect one explicit reproducible address for its analyzed name, containing procedure, regular and inline comments, and matching bookmarks. Each unsupported facet returns a typed unavailable outcome. A facet rejected for invalid input, source Evidence integrity, or a resource constraint retains its canonical error and recovery alongside successful facets. Use xrefs, assembly, or pseudocode for those deeper views."
+  }
+]

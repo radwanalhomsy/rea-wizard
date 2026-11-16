@@ -1,0 +1,179 @@
+<!-- ============================================================ 10 EVIDENCE -->
+<section>
+  <div class="chapno">Chapter 10</div>
+  <h1>Evidence and target lifecycle</h1>
+
+  <p class="lead">REA is built around evidence rather than prose. A finding is only as good as the record behind it, and a session is only as clean as the targets it closes. This chapter covers both halves of that discipline.</p>
+
+  <h2>10.1 Evidence identifiers</h2>
+  <p>When a REA tool returns a durable fact, it returns an evidence record with an identifier of the form <code>ev_</code> followed by 64 hexadecimal characters — a SHA-256 digest.</p>
+  <table>
+    <thead><tr><th style="width:26%">Property</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>Content-derived</td><td>The identifier is computed from the record content. The same facts produce the same ID; different facts produce a different ID.</td></tr>
+      <tr><td>Quotable</td><td>You can paste an ID into a report, a ticket or another session. It identifies the record, not a file path or a moment in time.</td></tr>
+      <tr><td>Comparable</td><td>Bundle comparison is defined in terms of record identity. Two bundles that share an ID share the exact record.</td></tr>
+      <tr><td>Verifiable</td><td><code>rea evidence-import</code> validates every ID and canonical manifest before merging.</td></tr>
+    </tbody>
+  </table>
+  <p>REA Studio extracts identifiers from assistant text and tool output with a strict pattern: <code>ev_</code> plus exactly 64 hexadecimal characters. Truncated identifiers, ellipsised identifiers and invented identifiers are not tracked. This is deliberate — a partial ID is not a reference.</p>
+  <div class="callout warn">
+    <span class="callout-title">Do not retype evidence IDs</span>
+    <p>Copy them from the Evidence tab or the transcript chip. A single changed character produces a different, non-existent record, and the bundle validator will reject it.</p>
+  </div>
+
+  <h2>10.2 Transcript versus evidence</h2>
+  <p>The transcript is a conversation. The evidence registry is the durable record. They serve different purposes:</p>
+  <table>
+    <thead><tr><th style="width:30%">Artifact</th><th>Contains</th><th style="width:28%">Survives</th></tr></thead>
+    <tbody>
+      <tr><td>Transcript (Markdown save)</td><td>Messages, tool names, statuses, output excerpts and the evidence IDs that were cited.</td><td>As long as the file is kept. The IDs are pointers, not records.</td></tr>
+      <tr><td>Evidence tab</td><td>The IDs seen in this session, their first source and time.</td><td>The current session only.</td></tr>
+      <tr><td>Evidence bundle (JSON)</td><td>Complete records with canonical ordering, manifests and residual-unknown history.</td><td>Permanently, and it can be imported into another session.</td></tr>
+    </tbody>
+  </table>
+  <p>A report that cites an ID is only reproducible if the matching bundle was exported. Export before closing the session or the target if the finding matters.</p>
+
+  <h2>10.3 Bundle operations</h2>
+  <p>The Evidence tab has five controls. Each runs a deterministic REA command in a fresh process and prints the result below the list.</p>
+  <table>
+    <thead><tr><th style="width:20%">Control</th><th style="width:40%">Command</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td>Export…</td><td><code>rea evidence-export &lt;source&gt; &lt;output&gt; --overwrite</code></td><td>Canonicalise an existing bundle into byte-stable ordering. Use it before archiving or signing.</td></tr>
+      <tr><td>Validate…</td><td><code>rea evidence-import &lt;path&gt;</code></td><td>Validate every Evidence ID and manifest, then merge. Imported content is data only and is never executed.</td></tr>
+      <tr><td>Inspect…</td><td><code>rea inspect-evidence-bundle {"path":"…"}</code></td><td>Read the bundle inventory: record metadata, manifests, unknown history, links.</td></tr>
+      <tr><td>Compare…</td><td><code>rea compare &lt;left&gt; &lt;right&gt;</code></td><td>Compare two bundles by record identity. Missing members describe omission, never behavioral equivalence.</td></tr>
+      <tr><td>Copy all</td><td>—</td><td>Copy every tracked ID, one per line.</td></tr>
+    </tbody>
+  </table>
+  <p>Inside the agent session, the equivalent MCP tools are <code>export_evidence_bundle</code>, <code>import_evidence_bundle</code>, <code>get_evidence_bundle</code> and <code>compare_bundles</code>. Use the agent when you need the live session's records; use the console commands when you already have a bundle file.</p>
+  <div class="callout">
+    <span class="callout-title">Two evidence stores</span>
+    <p>The console is a fresh CLI process. It cannot see the records the agent holds in its MCP session. To capture live findings, ask the agent to export a bundle, then inspect that file with the console controls.</p>
+  </div>
+
+  <h2>10.4 Target lifecycle</h2>
+  <p>A target is an artifact an analysis engine has open. REA tools bind to the active target, and the engine keeps resources (a Ghidra Program, a debugger session, a browser context) until the target is closed.</p>
+  <ol>
+    <li><strong>Open.</strong> A tool call with a path — <code>analyze</code>, <code>decompile</code>, <code>capture-*</code>, <code>start_*_session</code> — opens or attaches a target. The Activity tab records it from the tool input fields <code>path</code>, <code>target_path</code>, <code>executable</code>, <code>document</code>, <code>capture</code> and similar keys.</li>
+    <li><strong>Active.</strong> Subsequent calls without a path operate on the open target. This is why one artifact per session is easier to reason about.</li>
+    <li><strong>Close.</strong> <code>close_binary</code>, <code>close_gdb_session</code>, <code>close_frida_session</code>, <code>close_rizin_debug_session</code>, <code>close_build_computer</code> and similar tools release the engine. Evidence and unknown history stay in memory.</li>
+    <li><strong>Cleanup confirmed.</strong> When a close, cleanup, release or detach tool completes, REA Studio removes the matching target row automatically.</li>
+  </ol>
+  <table>
+    <thead><tr><th style="width:24%">UI action</th><th>Sends this instruction</th></tr></thead>
+    <tbody>
+      <tr><td>✕ on a target</td><td>Close the target opened from that path, release its analysis/session resources, confirm cleanup, delete nothing.</td></tr>
+      <tr><td>Close all</td><td>Close every open target in the session, release resources, confirm <code>cleanup_pending</code> is false, delete nothing.</td></tr>
+    </tbody>
+  </table>
+  <p>If REA reports <code>cleanup_pending</code>, a red note appears above the target list. Do not exit the app while it is set: the engine may still hold a file lock or a debugger attachment.</p>
+
+  <h2>10.5 Target hygiene</h2>
+  <ul>
+    <li><strong>Close before comparing.</strong> A comparison that opens both sides should close both when done, especially when they are large.</li>
+    <li><strong>Do not delete files to force cleanup.</strong> Closing releases the handle; deleting the artifact only destroys your own input.</li>
+    <li><strong>Keep snapshots deliberate.</strong> <code>close_binary</code> can save a target-bound snapshot. If metadata was edited, the snapshot may be refused until the target is recreated; that refusal protects you from saving an inconsistent image.</li>
+    <li><strong>Export first, then close.</strong> Closing does not persist investigation records.</li>
+  </ul>
+
+  <h2>10.6 A defensible evidence workflow</h2>
+  <ol>
+    <li>Investigate one artifact in one session.</li>
+    <li>Ask for evidence IDs to be cited for every material claim.</li>
+    <li>Check the Evidence tab: the IDs should be complete and few, not dozens of near-duplicates.</li>
+    <li>Ask the agent to export an evidence bundle to a path inside the workspace.</li>
+    <li>Validate the bundle with <strong>Validate…</strong>, then inspect it with <strong>Inspect…</strong>.</li>
+    <li>Close all targets and confirm cleanup is not pending.</li>
+    <li>Save the transcript for the narrative, and keep the bundle for the facts.</li>
+  </ol>
+</section>
+
+<!-- ============================================================ 11 SETTINGS -->
+<section>
+  <div class="chapno">Chapter 11</div>
+  <h1>Settings, files and shortcuts</h1>
+
+  <h2>11.1 Settings file</h2>
+  <p>Preferences live in one JSON file:</p>
+  <pre>%APPDATA%\REA Studio\settings.json</pre>
+  <p>A typical file after a few sessions:</p>
+  <pre>{
+  "workspace": "D:\\REA",
+  "model": { "providerID": "anthropic", "modelID": "claude-sonnet-4-5" },
+  "agent": "build",
+  "recent": [
+    { "id": "ses_…", "title": "Triage notepad.exe" }
+  ]
+}</pre>
+  <table>
+    <thead><tr><th style="width:22%">Key</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td><code>workspace</code></td><td>Directory the agent runs in and the default location for file dialogs. Sessions are scoped to it.</td></tr>
+      <tr><td><code>model</code></td><td>Provider and model for new prompts. <code>null</code> means the server default.</td></tr>
+      <tr><td><code>agent</code></td><td>Agent name for new prompts. <code>null</code> means the server default.</td></tr>
+      <tr><td><code>recent</code></td><td>Session titles kept for quick identification. Not the transcript itself.</td></tr>
+    </tbody>
+  </table>
+  <p>The file is written whenever you change the workspace, model, agent or a session title. If it is missing or unreadable, the app falls back to <code>D:\REA</code>, then your home directory, then the current directory.</p>
+  <div class="callout tip">
+    <span class="callout-title">Reset to defaults</span>
+    <p>Close the app, rename <code>settings.json</code> to <code>settings.json.bak</code>, and start again. The app recreates the file on first change. Sessions and evidence are not stored here.</p>
+  </div>
+
+  <h2>11.2 Workspace</h2>
+  <p>The workspace chip in the header shows the current directory. Click it (or the workspace line in the rail) to pick another folder.</p>
+  <ul>
+    <li>Changing the workspace changes the session list: only sessions created for that directory are shown.</li>
+    <li>File and folder pickers start in the workspace.</li>
+    <li>Relative paths in prompts and console commands resolve against it.</li>
+    <li>The setting persists across restarts.</li>
+  </ul>
+  <p>Choose a workspace that is large enough for analysis output. A decompile-everything run can write thousands of files; point output fields at a dedicated subdirectory.</p>
+
+  <h2>11.3 Keyboard shortcuts</h2>
+  <table>
+    <thead><tr><th style="width:30%">Shortcut</th><th style="width:30%">Where</th><th>Action</th></tr></thead>
+    <tbody>
+      <tr><td><kbd>Enter</kbd></td><td>Composer</td><td>Send the message.</td></tr>
+      <tr><td><kbd>Shift</kbd>+<kbd>Enter</kbd></td><td>Composer</td><td>Insert a new line.</td></tr>
+      <tr><td><kbd>Enter</kbd></td><td>REA console command box</td><td>Run the command.</td></tr>
+      <tr><td><kbd>↑</kbd> / <kbd>↓</kbd></td><td>REA console command box</td><td>Step through the last 50 commands.</td></tr>
+      <tr><td><kbd>Enter</kbd></td><td>Session rename field</td><td>Save the title.</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Anywhere</td><td>Close the wizard, Sessions or the REA console — whichever is open, innermost first.</td></tr>
+    </tbody>
+  </table>
+  <p>There are no global hotkeys. The app does not register system-wide shortcuts.</p>
+
+  <h2>11.4 File and directory map</h2>
+  <table>
+    <thead><tr><th style="width:44%">Path</th><th>Contents</th></tr></thead>
+    <tbody>
+      <tr><td><code>%LOCALAPPDATA%\Programs\REA Studio\</code></td><td>Installed application. <code>resources\app\</code> holds <code>main.mjs</code>, <code>preload.cjs</code> and <code>renderer\</code>.</td></tr>
+      <tr><td><code>%APPDATA%\REA Studio\settings.json</code></td><td>Preferences and recent session titles.</td></tr>
+      <tr><td><code>%USERPROFILE%\.config\opencode\opencode.jsonc</code></td><td>OpenCode configuration, including the <code>mcp.rea</code> command and environment.</td></tr>
+      <tr><td><code>%APPDATA%\npm\node_modules\opencode-ai\bin\opencode.exe</code></td><td>OpenCode CLI and server executable used by the app.</td></tr>
+      <tr><td><code>…\node_modules\rea-agents\scripts\rea.mjs</code></td><td>REA CLI entry point named in the OpenCode config.</td></tr>
+      <tr><td><code>…\node_modules\rea-agents\dist\mcp-catalog-full.json</code></td><td>The 255-tool catalog read by the tools browser.</td></tr>
+      <tr><td><code>%USERPROFILE%\.local\share\opencode\</code></td><td>OpenCode session storage (managed by OpenCode, not by the app).</td></tr>
+      <tr><td><code>D:\REA\rea-wizard\</code></td><td>Source tree: <code>main.mjs</code>, <code>preload.cjs</code>, <code>renderer\</code>, <code>manual\</code>, <code>release\</code>.</td></tr>
+      <tr><td><code>D:\REA\rea-wizard\release\</code></td><td>Built installers.</td></tr>
+      <tr><td><code>D:\REA\tools\ghidra_12.1.4_PUBLIC\</code></td><td>Ghidra installation used by the REA engine.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>11.5 Environment variables</h2>
+  <p>REA Studio injects <code>mcp.rea.environment</code> into both the OpenCode server and every REA console command. The two variables that matter most:</p>
+  <table>
+    <thead><tr><th style="width:28%">Variable</th><th>Points at</th><th style="width:30%">Checked by</th></tr></thead>
+    <tbody>
+      <tr><td><code>GHIDRA_INSTALL_DIR</code></td><td>A Ghidra 12.1.x installation directory.</td><td>Health tab, <code>rea doctor</code>, every Ghidra-backed tool.</td></tr>
+      <tr><td><code>JAVA_HOME</code></td><td>A JDK 21+ installation.</td><td>Ghidra startup and the Health tab.</td></tr>
+    </tbody>
+  </table>
+  <p>Other provider variables (IDA, JEB, Frida, adb, sigrok, Playwright) are read from the same block or from the process environment. If you add one, restart the app so a new server inherits it.</p>
+  <div class="callout">
+    <span class="callout-title">The app never edits your OpenCode config</span>
+    <p>It reads the config to locate the REA CLI and to copy the environment. Changes to <code>opencode.jsonc</code> require a restart; the console and the agent both pick up the new values from the new server process.</p>
+  </div>
+</section>

@@ -1,0 +1,798 @@
+[
+  {
+    "cmd": "address-to-file-offset <path> <address>",
+    "desc": "Map one analysis address to a file offset; memory bytes may differ and ranges may not be contiguous"
+  },
+  {
+    "cmd": "analyze <path>",
+    "desc": "Get an overview of an app"
+  },
+  {
+    "cmd": "analyze-javascript-application <path>",
+    "desc": "Statically reconstruct a local JavaScript/Electron application"
+  },
+  {
+    "cmd": "analyze-web-bundle <endpoint> <targetId>",
+    "desc": "Capture and statically analyze a page bundle, defaulting to the selected target origin"
+  },
+  {
+    "cmd": "annotate-native-function <path> <procedure>",
+    "desc": "Edit function annotations and return refreshed analysis"
+  },
+  {
+    "cmd": "audit-release-exposure <path>",
+    "desc": "Report what static analysis of a shipped artifact recovers. Reads the selected path. When the selection is a file, the parent directory is listed for sibling .pdb, .dSYM, .debug, and .map debug companions."
+  },
+  {
+    "cmd": "build-reconstruction-obligation-ledger <inputJson>",
+    "desc": "Generate a deterministic Evidence-backed reconstruction obligation ledger page"
+  },
+  {
+    "cmd": "capabilities",
+    "desc": "List provider capabilities and side effects"
+  },
+  {
+    "cmd": "capture-adb-screen <serial>",
+    "desc": "Capture one screen frame as a digested PNG"
+  },
+  {
+    "cmd": "capture-browser-scenario <inputJson>",
+    "desc": "Run one bounded Playwright browser scenario and return Evidence"
+  },
+  {
+    "cmd": "capture-desktop-application",
+    "desc": "Launch a Linux desktop application, watch it while it is used and record its windows and state at checkpoints read from stdin"
+  },
+  {
+    "cmd": "capture-electron-scenario <inputJson>",
+    "desc": "Run one owned Electron scenario with cancellable actions"
+  },
+  {
+    "cmd": "capture-native-ui-scenario <path>",
+    "desc": "Run declarative AX actions or waits in one exact native application window"
+  },
+  {
+    "cmd": "capture-process <scenario>",
+    "desc": "Capture one caller-selected process scenario"
+  },
+  {
+    "cmd": "capture-web-screenshot <endpoint> <targetId>",
+    "desc": "Capture one visible page viewport within the supplied origin scope"
+  },
+  {
+    "cmd": "collect-adb-bugreport <serial>",
+    "desc": "Collect and digest one device-generated bugreport archive"
+  },
+  {
+    "cmd": "compare <left> <right>",
+    "desc": "Compare two canonical Evidence bundles by record identity; use compare-artifacts for artifact inventory contents"
+  },
+  {
+    "cmd": "compare-application-versions <inputJson>",
+    "desc": "Compare two authenticated JavaScript Application Graph versions"
+  },
+  {
+    "cmd": "compare-artifacts <inputJson>",
+    "desc": "Compare two artifact inventories, including FIT and legacy uImage firmware components, named as {left, right}: complete Evidence or {kind:\"evidence-file\",path,evidence_id?}. A one-shot command retains no session Evidence for retained-evidence references."
+  },
+  {
+    "cmd": "compare-javascript-export-shapes <inputJson>",
+    "desc": "Compare exact static JavaScript export return shapes without execution"
+  },
+  {
+    "cmd": "compare-managed-members <leftPath> <rightPath>",
+    "desc": "Compare managed PE/CLI member inventories by exact declared type, name, and signature; names alone never form a match"
+  },
+  {
+    "cmd": "compare-process-captures <left> <right> [traceSpec]",
+    "desc": "Compare two process capture Evidence JSON files"
+  },
+  {
+    "cmd": "compare-source-to-bundle <inputJson>",
+    "desc": "Compare historical source (inline graph or reference {kind:file,path}) with authenticated application Evidence. Save the complete JSON to query with inspect-analysis-view."
+  },
+  {
+    "cmd": "compare-static-and-observed-endpoints <inputJson>",
+    "desc": "Compare static JavaScript endpoints and HAR Evidence JSON offline; --detail summary with --evidence_output saves full facts for selected inspect-analysis-view pages"
+  },
+  {
+    "cmd": "compare-wasm-interfaces <input>",
+    "desc": "Compare core WASM interfaces from two exact inspection Evidence records"
+  },
+  {
+    "cmd": "compare-web-captures <beforeJson> <afterJson>",
+    "desc": "Compare two normalized passive captures or recorded browser scenarios"
+  },
+  {
+    "cmd": "compare-web-screenshots <beforeJson> <afterJson>",
+    "desc": "Compare two self-verifying PNG artifact JSON values"
+  },
+  {
+    "cmd": "cutter-command <sessionId> <expectedGeneration> <command>",
+    "desc": "Execute one Rizin command in a selected live Cutter instance"
+  },
+  {
+    "cmd": "debug-with-gdb <command>",
+    "desc": "Run one unrestricted GDB console command in an ephemeral MI session; provide an inferior TTY so a live target can be safely detached"
+  },
+  {
+    "cmd": "debug-with-rizin <path> <command>",
+    "desc": "Run one unrestricted Rizin debugger command in an ephemeral session"
+  },
+  {
+    "cmd": "decode-android-resources <path>",
+    "desc": "Decode one APK's manifest, metadata, and string resources with apktool"
+  },
+  {
+    "cmd": "decode-interface-builder <path>",
+    "desc": "Decode compiled storyboard and nib archives from an app bundle"
+  },
+  {
+    "cmd": "decode-signal-recording <path>",
+    "desc": "Decode an existing signal recording with caller-supplied sigrok"
+  },
+  {
+    "cmd": "decompile <path> [address]",
+    "desc": "Read one part of an app as code. Supply at least one of the positional address or --procedure. Alternatively, use --file-offset alone. Equal positional and --procedure values are accepted; conflicts fail. With Ghidra, a space-qualified address such as ram:0x... avoids file-offset fallback; inspect-native-load-image reports the observed default space."
+  },
+  {
+    "cmd": "decompile-all <path>",
+    "desc": "Write every function's pseudocode into a directory and return a manifest"
+  },
+  {
+    "cmd": "decompile-jeb-item <item-address> <item-kind>",
+    "desc": "Decompile one JEB type or method to engine pseudo-code"
+  },
+  {
+    "cmd": "demangle-swift <path> <symbols...>",
+    "desc": "Demangle Swift symbols without Hopper"
+  },
+  {
+    "cmd": "describe-desktop-application-task <capture>",
+    "desc": "Describe how a desktop application capture's files changed from the seed checkpoint to the end, with suggested checks and a task draft to complete for export-desktop-application --task"
+  },
+  {
+    "cmd": "discover-webmcp-tools <endpoint> <targetId>",
+    "desc": "Passively discover page-declared WebMCP tools"
+  },
+  {
+    "cmd": "doctor",
+    "desc": "Check whether REA is ready"
+  },
+  {
+    "cmd": "environment-build <capture> [directory]",
+    "desc": "Build an agent environment bundle from a recorded capture in one offline step: inspect a HAR (or read capture Evidence), project the environment manifest, derive the state, report which tools the environment answers from state, which replay and why each write is withheld, then write the bundle environment-export writes"
+  },
+  {
+    "cmd": "environment-compare <manifest>",
+    "desc": "Compare an environment with probe captures of the application it was captured from: each probe is one call sequence recorded against a freshly reset application, answered by the environment from a reset state, with agreement reported per step, tool and probe"
+  },
+  {
+    "cmd": "environment-export <manifest> <directory>",
+    "desc": "Export an environment manifest and its capture Evidence as an agent environment bundle folder the agentenv framework runs with agent-env run"
+  },
+  {
+    "cmd": "environment-serve <manifest>",
+    "desc": "Serve an environment manifest as an agent environment over streamable HTTP until SIGINT or SIGTERM: read tools, and write tools whose effect the capture confirmed, answer from the state the capture observed, derived at startup, or every tool replays retained capture records with --replay-only or when the state is unavailable"
+  },
+  {
+    "cmd": "evaluate-reconstruction-coverage <inputJson>",
+    "desc": "Evaluate inline fail-closed reconstruction coverage"
+  },
+  {
+    "cmd": "evidence-export <source> <output>",
+    "desc": "Validate and atomically export canonical Evidence JSON"
+  },
+  {
+    "cmd": "evidence-import <path>",
+    "desc": "Validate a standalone Evidence bundle and count records and Unknown revisions; does not retain them in an MCP session"
+  },
+  {
+    "cmd": "execute-rizin-command <path> <command>",
+    "desc": "Execute one Rizin command against a local artifact"
+  },
+  {
+    "cmd": "export-desktop-application <capture> <directory>",
+    "desc": "Export a desktop application capture folder as an agentenv computer app bundle: class, env.toml, skill and seed"
+  },
+  {
+    "cmd": "export-web-scripts <capturePath> <outputDirectory>",
+    "desc": "Export retained website scripts into an absent directory for static JavaScript analysis"
+  },
+  {
+    "cmd": "extract-artifact <path>",
+    "desc": "Extract all or selected regular artifact contents safely; DMG extraction is unavailable"
+  },
+  {
+    "cmd": "extract-firmware <path> <outputDirectory>",
+    "desc": "Extract selected firmware bytes and return verified files and provenance"
+  },
+  {
+    "cmd": "function <path> [address]",
+    "desc": "Analyze one complete function with evidence. Supply at least one of the positional address or --procedure. Equal values are accepted; conflicts fail."
+  },
+  {
+    "cmd": "guidance",
+    "desc": "Search or read the installed REA workflow guidance"
+  },
+  {
+    "cmd": "guided-workflows",
+    "desc": "List or render REA's existing guided workflows"
+  },
+  {
+    "cmd": "identify-flutter-build <path>",
+    "desc": "Identify a Flutter build's Dart snapshot hash and engine facts by pure APK parsing"
+  },
+  {
+    "cmd": "import-managed-reconstruction <inputJson>",
+    "desc": "Import decompiler-produced managed reconstruction against exact static member evidence"
+  },
+  {
+    "cmd": "import-reference-source <root>",
+    "desc": "Import a source tree as historical reference only"
+  },
+  {
+    "cmd": "inspect <path>",
+    "desc": "Inspect an app overview with evidence"
+  },
+  {
+    "cmd": "inspect-adb-client",
+    "desc": "Inspect the caller-selected adb client without contacting devices"
+  },
+  {
+    "cmd": "inspect-adb-device <serial>",
+    "desc": "Inspect one device's build identity through a fixed getprop whitelist"
+  },
+  {
+    "cmd": "inspect-adb-display <serial>",
+    "desc": "Report the display's declared size and density"
+  },
+  {
+    "cmd": "inspect-adb-package <serial> <package>",
+    "desc": "Inspect one installed package's version, installer, and flags through dumpsys"
+  },
+  {
+    "cmd": "inspect-adb-window <serial>",
+    "desc": "Report the window manager's current focus declarations"
+  },
+  {
+    "cmd": "inspect-analysis-view <inputJson>",
+    "desc": "Project a selected view of completed Evidence JSON for a supported analysis operation. For inventory rows, use --format csv or --format tsv with --filter-output normalized_result.items and --columns logical_path,artifact_id (if those fields are included in the view)."
+  },
+  {
+    "cmd": "inspect-android-class <path> <className>",
+    "desc": "Inspect one exact APK class's member inventory"
+  },
+  {
+    "cmd": "inspect-android-jni-bindings <path>",
+    "desc": "Link raw DEX native declarations to static JNI export/table candidates without executing the APK"
+  },
+  {
+    "cmd": "inspect-android-method <path> <className> <methodName>",
+    "desc": "Decompile one APK method with explicit overload selection"
+  },
+  {
+    "cmd": "inspect-android-package <path>",
+    "desc": "Inspect APK declarations and decoded manifest without executing it"
+  },
+  {
+    "cmd": "inspect-api-contract <path>",
+    "desc": "Inspect local OpenAPI JSON or GraphQL SDL declarations and field bindings offline"
+  },
+  {
+    "cmd": "inspect-apk-signature <path>",
+    "desc": "Inspect declared APK signing schemes, signers and content digests"
+  },
+  {
+    "cmd": "inspect-apktool-client",
+    "desc": "Inspect the caller-selected apktool launcher without decoding anything"
+  },
+  {
+    "cmd": "inspect-apple-ips <path>",
+    "desc": "Inspect an Apple .ips crash report without executing a target"
+  },
+  {
+    "cmd": "inspect-artifact <path>",
+    "desc": "Inspect one artifact and return all available observations and next probes"
+  },
+  {
+    "cmd": "inspect-asset-catalog <path>",
+    "desc": "Inspect compiled Apple asset catalog metadata"
+  },
+  {
+    "cmd": "inspect-binary-hardening <path>",
+    "desc": "Inspect ELF, PE, and Mach-O hardening without executing the image"
+  },
+  {
+    "cmd": "inspect-binary-layout <path>",
+    "desc": "Inspect binary file/linked layout without executing the selected object"
+  },
+  {
+    "cmd": "inspect-byte-entropy <path>",
+    "desc": "Inspect file-wide and block byte entropy without executing the file"
+  },
+  {
+    "cmd": "inspect-dart-aot <path>",
+    "desc": "Inspect one ABI's Dart AOT snapshot: sections, headers, and the string pool"
+  },
+  {
+    "cmd": "inspect-desktop-application <path>",
+    "desc": "Identify desktop runtime candidates from bounded directory and header observations"
+  },
+  {
+    "cmd": "inspect-desktop-application-state <capture>",
+    "desc": "Read a desktop application capture folder into the application's state: roles, typed JSON views of each version and kinds of change"
+  },
+  {
+    "cmd": "inspect-devicetree <path>",
+    "desc": "Inspect a flattened devicetree blob without executing it"
+  },
+  {
+    "cmd": "inspect-electron-fuses <path>",
+    "desc": "Inspect packaged Electron fuse bytes without launching the application"
+  },
+  {
+    "cmd": "inspect-electron-page <endpoint> <targetId>",
+    "desc": "Passively inspect one Electron file page"
+  },
+  {
+    "cmd": "inspect-elf-notes <path>",
+    "desc": "Inspect ELF PT_NOTE and SHT_NOTE identities without executing the image"
+  },
+  {
+    "cmd": "inspect-elf-unwind-ranges <path>",
+    "desc": "Inspect ELF unwind function ranges without executing the image"
+  },
+  {
+    "cmd": "inspect-erlang-beam <path>",
+    "desc": "Inspect Erlang BEAM atoms, exports, imports and Code header without executing bytecode"
+  },
+  {
+    "cmd": "inspect-evidence-bundle <inputJson>",
+    "desc": "Inspect a local Evidence bundle completely, as discovery metadata, as a page of selected complete records, or as direct-link and retained-closure membership."
+  },
+  {
+    "cmd": "inspect-evm-interface <path> <encoding>",
+    "desc": "Infer interface candidates from explicit local EVM bytecode"
+  },
+  {
+    "cmd": "inspect-firmware-regions <path>",
+    "desc": "Inspect firmware signature candidates without extracting them"
+  },
+  {
+    "cmd": "inspect-go-binary <path>",
+    "desc": "Inspect embedded Go compiler, modules, build settings and optional static (ptr, len) string literals without target execution"
+  },
+  {
+    "cmd": "inspect-gpu-code-objects <path>",
+    "desc": "Inspect embedded CUDA/HIP targets and selected static kernel metadata"
+  },
+  {
+    "cmd": "inspect-il2cpp-metadata <path>",
+    "desc": "Inventory IL2CPP global-metadata.dat names, owners and string literals, optionally linking method addresses from the native binary"
+  },
+  {
+    "cmd": "inspect-jeb-client",
+    "desc": "Inspect the running JEB MCP client without opening a target"
+  },
+  {
+    "cmd": "inspect-kernel-build-config <path>",
+    "desc": "Inspect a Linux kernel image's version banner and embedded build config without executing it"
+  },
+  {
+    "cmd": "inspect-kernel-module <path>",
+    "desc": "Inspect Linux kernel module metadata without executing the module"
+  },
+  {
+    "cmd": "inspect-keyed-archive <path> [archive]",
+    "desc": "Inspect a Foundation keyed archive as an object-reference graph"
+  },
+  {
+    "cmd": "inspect-macho <path>",
+    "desc": "Run inspect_macho without launching Hopper"
+  },
+  {
+    "cmd": "inspect-managed-artifact <path>",
+    "desc": "Inspect PE/CLI identity without loading target code"
+  },
+  {
+    "cmd": "inspect-managed-members <path>",
+    "desc": "Inspect PE/CLI metadata members, signatures, CIL anchors, and ldstr string literals without loading target code"
+  },
+  {
+    "cmd": "inspect-managed-native-boundaries <path>",
+    "desc": "Inspect PE/CLI PInvoke and native implementation boundary declarations without loading target code"
+  },
+  {
+    "cmd": "inspect-model-artifact <path>",
+    "desc": "Inspect GGUF or safetensors headers without loading model weights"
+  },
+  {
+    "cmd": "inspect-native-api <path> [address]",
+    "desc": "Reconstruct one native function API boundary with evidence. Supply at least one of the positional address or --procedure. Equal values are accepted; conflicts fail."
+  },
+  {
+    "cmd": "inspect-native-data-type <path>",
+    "desc": "Inspect one recovered database type or typed data object. Supply exactly one of --type or --address."
+  },
+  {
+    "cmd": "inspect-native-dispatch-metadata <path>",
+    "desc": "Inspect typed Objective-C and Swift dispatch metadata"
+  },
+  {
+    "cmd": "inspect-native-exports <path>",
+    "desc": "Inspect a PE or ELF image's export table without executing it"
+  },
+  {
+    "cmd": "inspect-native-initializers <path>",
+    "desc": "List ELF and Mach-O initializer and finalizer functions without executing the image"
+  },
+  {
+    "cmd": "inspect-native-instruction <path> <address>",
+    "desc": "Inspect a code or data address, its containing Ghidra listing object, and typed incoming references where supported"
+  },
+  {
+    "cmd": "inspect-native-load-image <path>",
+    "desc": "Inspect native load observations and supported snapshot verification"
+  },
+  {
+    "cmd": "inspect-ntfs-journal <mftPath> <journalPath>",
+    "desc": "Inspect paired offline NTFS MFT and USN journal acquisitions"
+  },
+  {
+    "cmd": "inspect-packet-capture <path>",
+    "desc": "Inspect an existing packet capture with caller-supplied TShark"
+  },
+  {
+    "cmd": "inspect-packet-fields",
+    "desc": "Search installed TShark protocol and field definitions"
+  },
+  {
+    "cmd": "inspect-pcap-capture <path>",
+    "desc": "Inspect one pcap/pcapng capture: endpoints, DNS, TLS SNI, and protocol distribution"
+  },
+  {
+    "cmd": "inspect-pcap-client",
+    "desc": "Inspect the caller-selected tshark and capinfos binaries without reading a capture"
+  },
+  {
+    "cmd": "inspect-pe-certificates <path>",
+    "desc": "Inspect PE Authenticode certificate table identities without verifying signatures"
+  },
+  {
+    "cmd": "inspect-pe-imports <path>",
+    "desc": "Inspect PE import and delay-load table identities without executing the image"
+  },
+  {
+    "cmd": "inspect-pe-load-config <path>",
+    "desc": "Inspect PE TLS callbacks and load configuration without executing the image"
+  },
+  {
+    "cmd": "inspect-pe-resources <path>",
+    "desc": "Inspect PE resource identities, payload ranges, hashes and icon-group relationships"
+  },
+  {
+    "cmd": "inspect-playwright-trace <path>",
+    "desc": "Inventory local saved Playwright v10 trace ZIP events offline without launching a browser"
+  },
+  {
+    "cmd": "inspect-plist <path>",
+    "desc": "Parse app plist metadata without launching Hopper"
+  },
+  {
+    "cmd": "inspect-python-pyc <path>",
+    "desc": "Inspect a supported CPython 3.7ΓÇô3.13 pyc header and marshal code objects without executing bytecode"
+  },
+  {
+    "cmd": "inspect-recorded-crash <path>",
+    "desc": "Inspect supplied core registers/signals and optional debugger mapping evidence"
+  },
+  {
+    "cmd": "inspect-rust-binary <path>",
+    "desc": "Inspect an embedded cargo-auditable Rust dependency list without target execution"
+  },
+  {
+    "cmd": "inspect-signal-decoders",
+    "desc": "Search installed sigrok decoders or selected decoder help"
+  },
+  {
+    "cmd": "inspect-signature <path>",
+    "desc": "Run inspect_signature without launching Hopper"
+  },
+  {
+    "cmd": "inspect-sqlite-database <path>",
+    "desc": "Inspect SQLite schema and optional ordinary-table rows from a local snapshot"
+  },
+  {
+    "cmd": "inspect-v8-code-cache <path>",
+    "desc": "Inspect a V8 code cache header and its embedded printable byte patterns without executing it"
+  },
+  {
+    "cmd": "inspect-wasm-artifact <path>",
+    "desc": "Inspect an explicit local WASM artifact with WABT"
+  },
+  {
+    "cmd": "inspect-web-event-listeners <endpoint> <targetId> <selector>",
+    "desc": "Inspect native listener source locations on the first main-document CSS match"
+  },
+  {
+    "cmd": "inspect-web-network-capture <capturePath> <format>",
+    "desc": "Inspect retained HAR, native mitmproxy, Fiddler SAZ or aioquic qlog records without fetching recorded URLs"
+  },
+  {
+    "cmd": "inspect-web-page <endpoint> <targetId>",
+    "desc": "Passively inspect one page through CDP, defaulting to its current origin"
+  },
+  {
+    "cmd": "inspect-windows-shortcut <path>",
+    "desc": "Inspect a Windows Shell Link (.lnk) without resolving or executing the target"
+  },
+  {
+    "cmd": "inspect-with-objdump <path> <operation>",
+    "desc": "Inspect a local artifact using GNU-style objdump arguments and retain the selected command output as Evidence"
+  },
+  {
+    "cmd": "install-adb-package <serial> <apk-path>",
+    "desc": "Install one local APK; --replace requests reinstall mode to keep existing app data"
+  },
+  {
+    "cmd": "instructions <path> [address]",
+    "desc": "Read every raw instruction without decompiling. Supply at least one of the positional address or --procedure. Equal values are accepted; conflicts fail."
+  },
+  {
+    "cmd": "instrument-with-frida <mode> <target>",
+    "desc": "Run one Frida script against a selected process and detach. Provide exactly one of --script or --script-file."
+  },
+  {
+    "cmd": "list-adb-devices",
+    "desc": "List attached devices with serial, state, transport, and inferred kind"
+  },
+  {
+    "cmd": "list-adb-directory <serial> <device-path>",
+    "desc": "List one device directory with kinds, permissions, and sizes"
+  },
+  {
+    "cmd": "list-adb-features <serial>",
+    "desc": "List the device's declared hardware and software features"
+  },
+  {
+    "cmd": "list-adb-packages <serial>",
+    "desc": "List installed packages on one device with base APK device paths"
+  },
+  {
+    "cmd": "list-adb-processes <serial>",
+    "desc": "List running processes exactly as ps -A reports them"
+  },
+  {
+    "cmd": "list-adb-services <serial>",
+    "desc": "List the device's binder services and interfaces"
+  },
+  {
+    "cmd": "list-architectures <path>",
+    "desc": "Run list_architectures without launching Hopper"
+  },
+  {
+    "cmd": "list-browser-targets <endpoint>",
+    "desc": "List page targets from a selected loopback CDP browser, optionally filtered by origin"
+  },
+  {
+    "cmd": "list-cutter-sessions",
+    "desc": "List live Cutter instances connected through the REA Python plugin bridge"
+  },
+  {
+    "cmd": "list-electron-targets <endpoint>",
+    "desc": "List local file pages exposed by the selected Electron CDP endpoint"
+  },
+  {
+    "cmd": "list-frida-devices",
+    "desc": "List local Frida devices and an optional remote endpoint"
+  },
+  {
+    "cmd": "list-frida-processes",
+    "desc": "List processes visible through a Frida device"
+  },
+  {
+    "cmd": "list-javascript-runtime-targets <endpoint>",
+    "desc": "List Node/Electron V8 Inspector targets"
+  },
+  {
+    "cmd": "list-jeb-units",
+    "desc": "List JEB project units by path and type with optional filter"
+  },
+  {
+    "cmd": "list-objdump-architectures",
+    "desc": "Capture the selected objdump command response to -i"
+  },
+  {
+    "cmd": "match-native-functions <input>",
+    "desc": "Match two observed native function inventories without executing targets"
+  },
+  {
+    "cmd": "observe-javascript-runtime <endpoint> <targetId>",
+    "desc": "Passively observe one exact Node/Electron Inspector target"
+  },
+  {
+    "cmd": "observe-native-calls <path> <inputJson>",
+    "desc": "Launch a Mach-O under LLDB and record entries into selected functions or Objective-C methods"
+  },
+  {
+    "cmd": "observe-native-ui <path>",
+    "desc": "Observe one already-running native application window by PID and window ID"
+  },
+  {
+    "cmd": "observe-web-execution <endpoint> <targetId>",
+    "desc": "Observe precise page execution; resets counters and temporarily disables optimization"
+  },
+  {
+    "cmd": "observe-web-session <endpoint> <targetId>",
+    "desc": "Observe user-driven page navigation during a chosen window"
+  },
+  {
+    "cmd": "open-jeb-project <path>",
+    "desc": "Open or create a JEB project from an artifact or .jdb2 database"
+  },
+  {
+    "cmd": "procedure-references <path> [procedure]",
+    "desc": "Inspect incoming or outgoing references for one native procedure. Supply at least one of the positional address or --procedure. Equal values are accepted; conflicts fail."
+  },
+  {
+    "cmd": "project-android-application-graph <inputJson>",
+    "desc": "Project authenticated APK inventory Evidence into an Android application graph"
+  },
+  {
+    "cmd": "project-apple-application-graph <inputJson>",
+    "desc": "Project authenticated IPA or macOS app inventory Evidence into an Apple application graph"
+  },
+  {
+    "cmd": "project-harmony-application-graph <inputJson>",
+    "desc": "Project authenticated HarmonyOS HAP, HSP, or App Pack inventory Evidence into an application graph"
+  },
+  {
+    "cmd": "project-managed-application-graph <inputJson>",
+    "desc": "Project authenticated managed static Evidence into an application graph"
+  },
+  {
+    "cmd": "providers",
+    "desc": "List configured analysis providers"
+  },
+  {
+    "cmd": "pull-adb-file <serial> <device-path>",
+    "desc": "Pull one device file to a local copy with a SHA-256 digest"
+  },
+  {
+    "cmd": "pull-adb-package <serial> <package>",
+    "desc": "Pull one installed package's complete APK set with SHA-256 digests"
+  },
+  {
+    "cmd": "push-adb-file <serial> <local-path> <device-path>",
+    "desc": "Push one local file to the device; refuses existing targets without --overwrite"
+  },
+  {
+    "cmd": "read-adb-logcat <serial>",
+    "desc": "Read a bounded dump of the device log for one buffer"
+  },
+  {
+    "cmd": "read-adb-setting <serial> <namespace> <key>",
+    "desc": "Read one settings value from system, secure, or global"
+  },
+  {
+    "cmd": "read-bytes <path> <address>",
+    "desc": "Read provider memory bytes; Ghidra memory may include loader fixups and differ from file bytes"
+  },
+  {
+    "cmd": "reconcile-javascript-runtime <inputJson>",
+    "desc": "Reconcile static application and passive runtime Evidence JSON"
+  },
+  {
+    "cmd": "recover-javascript-sources <path> <outputDirectory>",
+    "desc": "Recover readable JavaScript modules with source provenance and verified files"
+  },
+  {
+    "cmd": "resolve-adb-packages <serial> <query>",
+    "desc": "Find installed packages by case-insensitive name substring"
+  },
+  {
+    "cmd": "resolve-native-call-targets <path> <address>",
+    "desc": "Resolve one static native call site"
+  },
+  {
+    "cmd": "search <path> [pattern]",
+    "desc": "Search every analyzed string or procedure name. Supply at least one of the positional pattern or --pattern. Equal values are accepted; conflicts fail."
+  },
+  {
+    "cmd": "search-android-classes <path> <query>",
+    "desc": "Search APK class names; empty query inventories all classes"
+  },
+  {
+    "cmd": "search-bytes <path> <pattern>",
+    "desc": "Find masked bytes; unbounded searches skip unloaded blocks and overlays"
+  },
+  {
+    "cmd": "setup",
+    "desc": "Configure agent integrations and optional analysis providers"
+  },
+  {
+    "cmd": "start-adb-activity <serial> <action>",
+    "desc": "Start an intent with am start (action, URI, component, extras)"
+  },
+  {
+    "cmd": "start-adb-app <serial> <package>",
+    "desc": "Start one installed app by resolving and launching its launcher activity"
+  },
+  {
+    "cmd": "stop-adb-app <serial> <package>",
+    "desc": "Force-stop every process of one package"
+  },
+  {
+    "cmd": "trace <path> [query]",
+    "desc": "Trace a literal feature through analyzed references. Supply at least one of the positional query or --query. Equal values are accepted; conflicts fail."
+  },
+  {
+    "cmd": "trace-android-references <path> <className>",
+    "desc": "Trace APK using nodes for a defined class/method or an externally invoked DEX method"
+  },
+  {
+    "cmd": "trace-application-feature <inputJson>",
+    "desc": "Trace a typed seed through authenticated application Evidence JSON"
+  },
+  {
+    "cmd": "trace-dylib-resolution <path>",
+    "desc": "Trace dyld load-path resolution for a Mach-O or every executable in an app bundle"
+  },
+  {
+    "cmd": "trace-javascript-semantics <inputJson>",
+    "desc": "Trace bounded static semantic relations through authenticated application Evidence"
+  },
+  {
+    "cmd": "trace-native-ui-action <path> <action>",
+    "desc": "Trace a compiled UI action selector to its native handler and direct callees"
+  },
+  {
+    "cmd": "trace-native-values <path> <procedure>",
+    "desc": "Trace bounded native def-use and call dependencies"
+  },
+  {
+    "cmd": "trace-web-module-imports <manifestPath> <scriptIndex>",
+    "desc": "Trace one captured script's native imports to URLs and captured source candidates"
+  },
+  {
+    "cmd": "trace-web-source-location <manifestPath> <scriptIndex> <sourceMapPath> <sourceMapUrl> <line> <column>",
+    "desc": "Trace one retained script position through an explicitly selected local source map"
+  },
+  {
+    "cmd": "uninstall",
+    "desc": "Remove REA-owned agent configuration and skill files"
+  },
+  {
+    "cmd": "uninstall-adb-package <serial> <package>",
+    "desc": "Uninstall one package and its data from the device"
+  },
+  {
+    "cmd": "update",
+    "desc": "Update this REA installation and verify the installed release"
+  },
+  {
+    "cmd": "validate-browser-scenario <inputJson>",
+    "desc": "Validate one browser scenario without launching or attaching to a browser"
+  },
+  {
+    "cmd": "verify-managed-native-boundaries <inputJson>",
+    "desc": "Verify managed P/Invoke declarations against authenticated native Evidence"
+  },
+  {
+    "cmd": "xrefs <path> [address]",
+    "desc": "List bounded, untyped references to an analyzed address. For typed incoming references, use inspect-native-instruction at the target address where supported. Supply at least one of the positional address or --address. Equal values are accepted; conflicts fail."
+  },
+  {
+    "cmd": "mcp add --agent opencode --command \"npx -y rea-agents@6.9.0 mcp\"",
+    "desc": "Register REA as an MCP server in client settings (with backups)"
+  },
+  {
+    "cmd": "mcp doctor",
+    "desc": "Validate MCP server startup and tool listing"
+  },
+  {
+    "cmd": "mcp",
+    "desc": "MCP server registration and diagnostics"
+  }
+]

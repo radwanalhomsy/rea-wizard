@@ -1,0 +1,179 @@
+<!-- ============================================================ 10 EVIDENCE -->
+<section>
+  <div class="chapno">الفصل 10</div>
+  <h1>الأدلة ودورة حياة الأهداف</h1>
+
+  <p class="lead">بُني REA حول الأدلة لا حول النثر. والنتيجة بقدر جودة السجل الذي تقف خلفه، والجلسة بقدر نظافة الأهداف التي تغلقها. يغطّي هذا الفصل شقّي هذا الانضباط.</p>
+
+  <h2>10.1 معرّفات الأدلة</h2>
+  <p>عندما تعيد أداة REA حقيقة دائمة، تعيد سجل دليل بمعرّف على الشكل <code>ev_</code> يتبعه 64 حرفًا سداسيًا عشريًا — أي بصمة SHA-256.</p>
+  <table>
+    <thead><tr><th style="width:26%">الخاصية</th><th>المعنى</th></tr></thead>
+    <tbody>
+      <tr><td>مشتق من المحتوى</td><td>يُحسب المعرّف من محتوى السجل. فالحقائق نفسها تنتج المعرّف نفسه؛ والحقائق المختلفة تنتج معرّفًا مختلفًا.</td></tr>
+      <tr><td>قابل للاقتباس</td><td>يمكنك لصق المعرّف في تقرير أو تذكرة أو جلسة أخرى. فهو يحدّد السجل، لا مسار ملف أو لحظة زمنية.</td></tr>
+      <tr><td>قابل للمقارنة</td><td>تُعرَّف مقارنة الحزم بهوية السجل. فالحزمتان اللتان تشتركان في معرّف تشتركان في السجل نفسه بالضبط.</td></tr>
+      <tr><td>قابل للتحقّق</td><td><code>rea evidence-import</code> يتحقّق من كل معرّف وبيان وصفي قانوني قبل الدمج.</td></tr>
+    </tbody>
+  </table>
+  <p>يستخرج REA Studio المعرّفات من نص المساعد ومخرجات الأدوات بنمط صارم: <code>ev_</code> مع 64 حرفًا سداسيًا عشريًا بالضبط. ولا تُتتبَّع المعرّفات المبتورة ولا المُختصرة بنقاط ولا المختلقة. وهذا مقصود — فالمعرّف الجزئي ليس مرجعًا.</p>
+  <div class="callout warn">
+    <span class="callout-title">لا تُعِد كتابة معرّفات الأدلة يدويًا</span>
+    <p>انسخها من تبويب Evidence أو من شارة السجل. فتغيير حرف واحد ينتج سجلًا مختلفًا غير موجود، ويرفضه مدقّق الحزم.</p>
+  </div>
+
+  <h2>10.2 السجل مقابل الأدلة</h2>
+  <p>السجل محادثة. وسجل الأدلة هو السجل الدائم. ولكل منهما غرض مختلف:</p>
+  <table>
+    <thead><tr><th style="width:30%">الأثر</th><th>يحتوي</th><th style="width:28%">يبقى</th></tr></thead>
+    <tbody>
+      <tr><td>السجل (حفظ Markdown)</td><td>الرسائل، وأسماء الأدوات، والحالات، ومقتطفات الإخراج، ومعرّفات الأدلة التي استُشهد بها.</td><td>طالما حُفظ الملف. والمعرّفات مؤشّرات لا سجلات.</td></tr>
+      <tr><td>تبويب Evidence</td><td>المعرّفات المرئية في هذه الجلسة، ومصدرها الأول ووقتها.</td><td>الجلسة الحالية فقط.</td></tr>
+      <tr><td>حزمة الأدلة (JSON)</td><td>سجلات كاملة بترتيب قانوني وبيانات وصفية وتاريخ المجهولات المتبقية.</td><td>بشكل دائم، ويمكن استيرادها في جلسة أخرى.</td></tr>
+    </tbody>
+  </table>
+  <p>التقرير الذي يستشهد بمعرّف لا يكون قابلًا لإعادة الإنتاج إلا إذا صُدّرت الحزمة المطابقة. صدّر قبل إغلاق الجلسة أو الهدف إذا كانت النتيجة مهمة.</p>
+
+  <h2>10.3 عمليات الحزم</h2>
+  <p>يحتوي تبويب Evidence خمسة عناصر. كل منها يشغّل أمر REA حتميًا في عملية جديدة ويطبع النتيجة أسفل القائمة.</p>
+  <table>
+    <thead><tr><th style="width:20%">العنصر</th><th style="width:40%">الأمر</th><th>الغرض</th></tr></thead>
+    <tbody>
+      <tr><td>Export…</td><td><code>rea evidence-export &lt;source&gt; &lt;output&gt; --overwrite</code></td><td>تحويل حزمة قائمة إلى ترتيب قانوني ثابت البايتات. استخدمه قبل الأرشفة أو التوقيع.</td></tr>
+      <tr><td>Validate…</td><td><code>rea evidence-import &lt;path&gt;</code></td><td>التحقّق من كل معرّف دليل وبيان وصفي، ثم الدمج. المحتوى المستورد بيانات فقط ولا يُنفَّذ أبدًا.</td></tr>
+      <tr><td>Inspect…</td><td><code>rea inspect-evidence-bundle {"path":"…"}</code></td><td>قراءة جرد الحزمة: البيانات الوصفية للسجلات، والبيانات الوصفية، وتاريخ المجهولات، والروابط.</td></tr>
+      <tr><td>Compare…</td><td><code>rea compare &lt;left&gt; &lt;right&gt;</code></td><td>مقارنة حزمتين بهوية السجل. والأعضاء المفقودون يصفون إغفالًا، لا تكافؤًا سلوكيًا.</td></tr>
+      <tr><td>Copy all</td><td>—</td><td>نسخ كل معرّف متتبَّع، معرّفًا في كل سطر.</td></tr>
+    </tbody>
+  </table>
+  <p>داخل جلسة الوكيل، الأدوات المكافئة في MCP هي <code>export_evidence_bundle</code> و<code>import_evidence_bundle</code> و<code>get_evidence_bundle</code> و<code>compare_bundles</code>. استخدم الوكيل عندما تحتاج إلى سجلات الجلسة الحيّة؛ واستخدم أوامر وحدة التحكم عندما يكون لديك ملف حزمة بالفعل.</p>
+  <div class="callout">
+    <span class="callout-title">مخزنا أدلة</span>
+    <p>وحدة التحكم عملية CLI جديدة. ولا ترى السجلات التي يحتفظ بها الوكيل في جلسة MCP. لالتقاط النتائج الحيّة، اطلب من الوكيل تصدير حزمة، ثم افحص ذلك الملف بعناصر وحدة التحكم.</p>
+  </div>
+
+  <h2>10.4 دورة حياة الهدف</h2>
+  <p>الهدف أثر مفتوح في محرّك تحليل. وترتبط أدوات REA بالهدف النشط، ويحتفظ المحرّك بالموارد (برنامج Ghidra، جلسة منقّح، سياق متصفح) حتى يُغلق الهدف.</p>
+  <ol>
+    <li><strong>الفتح.</strong> استدعاء أداة بمسار — <code>analyze</code> أو <code>decompile</code> أو <code>capture-*</code> أو <code>start_*_session</code> — يفتح هدفًا أو يرتبط به. ويسجّله تبويب Activity من حقول إدخال الأداة <code>path</code> و<code>target_path</code> و<code>executable</code> و<code>document</code> و<code>capture</code> وما شابه.</li>
+    <li><strong>النشاط.</strong> الاستدعاءات اللاحقة بلا مسار تعمل على الهدف المفتوح. ولهذا يكون أثر واحد لكل جلسة أسهل في الاستدلال.</li>
+    <li><strong>الإغلاق.</strong> <code>close_binary</code> و<code>close_gdb_session</code> و<code>close_frida_session</code> و<code>close_rizin_debug_session</code> و<code>close_build_computer</code> وما شابه تحرّر المحرّك. وتبقى الأدلة وتاريخ المجهولات في الذاكرة.</li>
+    <li><strong>تأكيد التنظيف.</strong> عند اكتمال أداة إغلاق أو تنظيف أو تحرير أو فصل، يزيل REA Studio صف الهدف المطابق تلقائيًا.</li>
+  </ol>
+  <table>
+    <thead><tr><th style="width:24%">إجراء الواجهة</th><th>يرسل هذه التعليمات</th></tr></thead>
+    <tbody>
+      <tr><td>✕ على هدف</td><td>أغلق الهدف المفتوح من ذلك المسار، وحرّر موارد التحليل/الجلسة، وأكّد التنظيف، ولا تحذف شيئًا.</td></tr>
+      <tr><td>Close all</td><td>أغلق كل هدف مفتوح في الجلسة، وحرّر الموارد، وأكّد أن <code>cleanup_pending</code> يساوي false، ولا تحذف شيئًا.</td></tr>
+    </tbody>
+  </table>
+  <p>إذا أبلغ REA عن <code>cleanup_pending</code>، تظهر ملاحظة حمراء فوق قائمة الأهداف. لا تخرج من التطبيق وهو مضبوط: فقد يحتفظ المحرّك بقفل ملف أو ارتباط منقّح.</p>
+
+  <h2>10.5 نظافة الأهداف</h2>
+  <ul>
+    <li><strong>أغلق قبل المقارنة.</strong> المقارنة التي تفتح الطرفين ينبغي أن تغلقهما عند الانتهاء، خصوصًا إذا كانا كبيرين.</li>
+    <li><strong>لا تحذف ملفات لفرض التنظيف.</strong> الإغلاق يحرّر المقبض؛ وحذف الأثر يدمّر مدخلك أنت فقط.</li>
+    <li><strong>اجعل اللقطات مقصودة.</strong> يمكن لـ<code>close_binary</code> حفظ لقطة مرتبطة بالهدف. وإذا عُدّلت البيانات الوصفية، فقد تُرفض اللقطة حتى يُعاد إنشاء الهدف؛ وهذا الرفض يحميك من حفظ صورة غير متّسقة.</li>
+    <li><strong>صدّر أولًا ثم أغلق.</strong> الإغلاق لا يحفظ سجلات التحقيق.</li>
+  </ul>
+
+  <h2>10.6 سير عمل أدلة قابل للدفاع عنه</h2>
+  <ol>
+    <li>حلّل أثرًا واحدًا في جلسة واحدة.</li>
+    <li>اطلب الاستشهاد بمعرّفات الأدلة لكل ادّعاء جوهري.</li>
+    <li>افحص تبويب Evidence: ينبغي أن تكون المعرّفات كاملة وقليلة، لا عشرات من شبه التكرارات.</li>
+    <li>اطلب من الوكيل تصدير حزمة أدلة إلى مسار داخل مساحة العمل.</li>
+    <li>تحقّق من الحزمة بـ<strong>Validate…</strong>، ثم افحصها بـ<strong>Inspect…</strong>.</li>
+    <li>أغلق كل الأهداف وأكّد أن التنظيف غير معلّق.</li>
+    <li>احفظ السجل للسرد، واحتفظ بالحزمة للحقائق.</li>
+  </ol>
+</section>
+
+<!-- ============================================================ 11 SETTINGS -->
+<section>
+  <div class="chapno">الفصل 11</div>
+  <h1>الإعدادات والملفات والاختصارات</h1>
+
+  <h2>11.1 ملف الإعدادات</h2>
+  <p>تعيش التفضيلات في ملف JSON واحد:</p>
+  <pre>%APPDATA%\REA Studio\settings.json</pre>
+  <p>وهذا ملف نموذجي بعد بضع جلسات:</p>
+  <pre>{
+  "workspace": "D:\\REA",
+  "model": { "providerID": "anthropic", "modelID": "claude-sonnet-4-5" },
+  "agent": "build",
+  "recent": [
+    { "id": "ses_…", "title": "Triage notepad.exe" }
+  ]
+}</pre>
+  <table>
+    <thead><tr><th style="width:22%">المفتاح</th><th>الأثر</th></tr></thead>
+    <tbody>
+      <tr><td><code>workspace</code></td><td>المجلد الذي يعمل فيه الوكيل والموقع الافتراضي لمربّعات الملفات. وتُنسب الجلسات إليه.</td></tr>
+      <tr><td><code>model</code></td><td>المزوّد والنموذج للطلبات الجديدة. و<code>null</code> يعني افتراضي الخادم.</td></tr>
+      <tr><td><code>agent</code></td><td>اسم الوكيل للطلبات الجديدة. و<code>null</code> يعني افتراضي الخادم.</td></tr>
+      <tr><td><code>recent</code></td><td>عناوين الجلسات المحفوظة للتعرّف السريع. وليست السجل نفسه.</td></tr>
+    </tbody>
+  </table>
+  <p>يُكتب الملف كلما غيّرت مساحة العمل أو النموذج أو الوكيل أو عنوان جلسة. وإذا كان مفقودًا أو غير قابل للقراءة، يعود التطبيق إلى <code>D:\REA</code>، ثم إلى مجلد المستخدم، ثم إلى المجلد الحالي.</p>
+  <div class="callout tip">
+    <span class="callout-title">إعادة التعيين إلى الافتراضي</span>
+    <p>أغلق التطبيق، وأعد تسمية <code>settings.json</code> إلى <code>settings.json.bak</code>، ثم ابدأ من جديد. يعيد التطبيق إنشاء الملف عند أول تغيير. ولا تُخزَّن الجلسات والأدلة هنا.</p>
+  </div>
+
+  <h2>11.2 مساحة العمل</h2>
+  <p>تعرض شارة مساحة العمل في الشريط العلوي المجلد الحالي. انقرها (أو سطر مساحة العمل في الشريط الجانبي) لاختيار مجلد آخر.</p>
+  <ul>
+    <li>تغيير مساحة العمل يغيّر قائمة الجلسات: فلا تُعرض إلا الجلسات المنشأة لذلك المجلد.</li>
+    <li>تبدأ منتقيات الملفات والمجلدات من مساحة العمل.</li>
+    <li>تُحلّ المسارات النسبية في الطلبات وأوامر وحدة التحكم بالنسبة إليها.</li>
+    <li>يبقى الإعداد محفوظًا عبر إعادات التشغيل.</li>
+  </ul>
+  <p>اختر مساحة عمل كبيرة بما يكفي لمخرجات التحليل. فتشغيل «تفكيك كل شيء» قد يكتب آلاف الملفات؛ وجّه حقول الإخراج إلى مجلد فرعي مخصّص.</p>
+
+  <h2>11.3 اختصارات لوحة المفاتيح</h2>
+  <table>
+    <thead><tr><th style="width:30%">الاختصار</th><th style="width:30%">المكان</th><th>الإجراء</th></tr></thead>
+    <tbody>
+      <tr><td><kbd>Enter</kbd></td><td>المحرّر</td><td>إرسال الرسالة.</td></tr>
+      <tr><td><kbd>Shift</kbd>+<kbd>Enter</kbd></td><td>المحرّر</td><td>إدراج سطر جديد.</td></tr>
+      <tr><td><kbd>Enter</kbd></td><td>صندوق أوامر وحدة تحكم REA</td><td>تشغيل الأمر.</td></tr>
+      <tr><td><kbd>↑</kbd> / <kbd>↓</kbd></td><td>صندوق أوامر وحدة تحكم REA</td><td>التنقّل في آخر 50 أمرًا.</td></tr>
+      <tr><td><kbd>Enter</kbd></td><td>حقل إعادة تسمية الجلسة</td><td>حفظ العنوان.</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>في أي مكان</td><td>إغلاق المعالج أو Sessions أو وحدة تحكم REA — أيّها كان مفتوحًا، من الداخل إلى الخارج.</td></tr>
+    </tbody>
+  </table>
+  <p>لا توجد اختصارات عامة. ولا يسجّل التطبيق اختصارات على مستوى النظام.</p>
+
+  <h2>11.4 خريطة الملفات والمجلدات</h2>
+  <table>
+    <thead><tr><th style="width:44%">المسار</th><th>المحتوى</th></tr></thead>
+    <tbody>
+      <tr><td><code>%LOCALAPPDATA%\Programs\REA Studio\</code></td><td>التطبيق المثبّت. ويحتوي <code>resources\app\</code> على <code>main.mjs</code> و<code>preload.cjs</code> و<code>renderer\</code>.</td></tr>
+      <tr><td><code>%APPDATA%\REA Studio\settings.json</code></td><td>التفضيلات وعناوين الجلسات الأخيرة.</td></tr>
+      <tr><td><code>%USERPROFILE%\.config\opencode\opencode.jsonc</code></td><td>إعداد OpenCode، بما في ذلك أمر <code>mcp.rea</code> وبيئته.</td></tr>
+      <tr><td><code>%APPDATA%\npm\node_modules\opencode-ai\bin\opencode.exe</code></td><td>ملف OpenCode CLI والخادم التنفيذي الذي يستخدمه التطبيق.</td></tr>
+      <tr><td><code>…\node_modules\rea-agents\scripts\rea.mjs</code></td><td>نقطة دخول REA CLI المذكورة في إعداد OpenCode.</td></tr>
+      <tr><td><code>…\node_modules\rea-agents\dist\mcp-catalog-full.json</code></td><td>فهرس الأدوات الـ255 الذي يقرأه متصفح الأدوات.</td></tr>
+      <tr><td><code>%USERPROFILE%\.local\share\opencode\</code></td><td>مخزن جلسات OpenCode (يديره OpenCode لا التطبيق).</td></tr>
+      <tr><td><code>D:\REA\rea-wizard\</code></td><td>شجرة المصدر: <code>main.mjs</code> و<code>preload.cjs</code> و<code>renderer\</code> و<code>manual\</code> و<code>release\</code>.</td></tr>
+      <tr><td><code>D:\REA\rea-wizard\release\</code></td><td>المثبّتات المبنية.</td></tr>
+      <tr><td><code>D:\REA\tools\ghidra_12.1.4_PUBLIC\</code></td><td>تثبيت Ghidra الذي يستخدمه محرّك REA.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>11.5 متغيّرات البيئة</h2>
+  <p>يحقن REA Studio كتلة <code>mcp.rea.environment</code> في خادم OpenCode وفي كل أمر من أوامر وحدة تحكم REA. وأهم متغيّرين هما:</p>
+  <table>
+    <thead><tr><th style="width:28%">المتغيّر</th><th>يشير إلى</th><th style="width:30%">يتحقّق منه</th></tr></thead>
+    <tbody>
+      <tr><td><code>GHIDRA_INSTALL_DIR</code></td><td>مجلد تثبيت Ghidra 12.1.x.</td><td>تبويب Health، و<code>rea doctor</code>، وكل أداة تعتمد على Ghidra.</td></tr>
+      <tr><td><code>JAVA_HOME</code></td><td>تثبيت JDK 21+.</td><td>بدء Ghidra وتبويب Health.</td></tr>
+    </tbody>
+  </table>
+  <p>تُقرأ متغيّرات المزوّدين الأخرى (IDA وJEB وFrida وadb وsigrok وPlaywright) من الكتلة نفسها أو من بيئة العملية. وإذا أضفت واحدًا، فأعد تشغيل التطبيق ليرثه خادم جديد.</p>
+  <div class="callout">
+    <span class="callout-title">لا يعدّل التطبيق إعداد OpenCode الخاص بك</span>
+    <p>يقرأ التطبيق الإعداد لتحديد موقع REA CLI ولنسخ البيئة. وتعديلات <code>opencode.jsonc</code> تتطلّب إعادة تشغيل؛ وتلتقط وحدة التحكم والوكيل القيم الجديدة من عملية الخادم الجديدة.</p>
+  </div>
+</section>

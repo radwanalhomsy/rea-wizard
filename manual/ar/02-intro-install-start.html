@@ -1,0 +1,216 @@
+<!-- ============================================================ 1 INTRO -->
+<section>
+  <div class="chapno">الفصل 1</div>
+  <h1>المقدمة</h1>
+
+  <p class="lead">REA Studio هو مقعد عمل مكتبي لهندسة العكس. يجمع معالجًا موجّهًا ومحادثة حيّة مع الوكيل وكامل سطح أوامر REA في نافذة واحدة، بحيث ينتقل التحقيق الواحد من بطاقة مهمة إلى نتائج مدعومة بالأدلة دون مغادرة التطبيق.</p>
+
+  <h2>1.1 ما هو REA Studio</h2>
+  <p>REA Studio تطبيق Electron يجمع ثلاث طبقات:</p>
+  <ul>
+    <li><strong>وكيل OpenCode</strong> — وكيل نموذج لغوي كبير قادر على استدعاء الأدوات. يخطّط للتحقيق، ويستدعي أدوات REA، ويشرح النتائج، ويستشهد بالأدلة.</li>
+    <li><strong>عدّة أدوات REA</strong> — محرّك هندسة العكس. يعرّض 255 أداة MCP للأعمال الأصلية والمُدارة وJavaScript والويب والبرامج الثابتة وAndroid وApple والتقاط العمليات وإعادة البناء.</li>
+    <li><strong>REA Studio</strong> — الواجهة البشرية. يوفّر بطاقات مهام ومعالجًا يحوّل النيّة إلى طلب دقيق، وسجلًّا يعرض نشاط الأدوات والأدلة، ووحدة تحكم مباشرة بسطر الأوامر للأوامر الحتمية.</li>
+  </ul>
+  <p>لا شيء في REA مخفي خلف التطبيق: كل أداة MCP متاحة للوكيل، وكل أمر من أوامر سطر الأوامر متاح في وحدة التحكم، ويمكن قراءة فهرس الأدوات والإرشادات داخل الواجهة.</p>
+
+  <h2>1.2 لمن هذا الدليل</h2>
+  <table>
+    <thead><tr><th style="width:32%">القارئ</th><th>الاستخدام</th></tr></thead>
+    <tbody>
+      <tr><td>مهندس العكس / المحلّل</td><td>الفصول 3–10: إجراء التحقيقات، وتفسير الأدلة، والحفاظ على نظافة الأهداف.</td></tr>
+      <tr><td>مراجع الأمان</td><td>الفصول 4 و9 و10: مقارنة الإصدارات، وتدقيق ما يتعرّض له الإصدار، وتصدير الحزم.</td></tr>
+      <tr><td>المسؤول</td><td>الفصول 2 و11 و12: التثبيت، وضبط Ghidra وJava، وتشخيص فشل بدء التشغيل.</td></tr>
+      <tr><td>المطوّر</td><td>الفصل 13 والملاحق: إعادة بناء MSI، وتوسيع التطبيق، وفحص سطح الأوامر الكامل.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>1.3 كيف يعمل</h2>
+  <p>ينقسم التطبيق إلى عملية عرض (النافذة) وعملية رئيسية (جانب نظام التشغيل). لا تتحدّث عملية العرض إلى REA مباشرة؛ بل ترسل طلبات IPC مُحدّدة النوع عبر جسر preload.</p>
+  <pre>┌────────────────────────────── REA Studio window ──────────────────────────────┐
+│  Renderer (index.html + app.js + styles.css)                                  │
+│    task rail · wizard · transcript · inspector · console · tools browser      │
+└───────────────────────────────┬───────────────────────────────────────────────┘
+                                │  window.rea.*  (contextBridge, preload.cjs)
+┌───────────────────────────────┴───────────────────────────────────────────────┐
+│  Main process (main.mjs)                                                      │
+│    · starts or reuses the OpenCode server on 127.0.0.1:4096                   │
+│    · streams agent events over SSE                                            │
+│    · spawns `node rea.mjs …` for console commands                             │
+│    · file dialogs, save, attachments, settings                                │
+└───────────────┬───────────────────────────────────┬───────────────────────────┘
+                │ HTTP + SSE                        │ child process
+        ┌───────┴────────┐                  ┌───────┴────────┐
+        │ OpenCode server│                  │ REA CLI        │
+        │  agent + tools │                  │ rea.mjs        │
+        └───────┬────────┘                  └────────────────┘
+                │ MCP (stdio)
+        ┌───────┴────────┐
+        │ REA MCP server │ 255 tools · evidence · providers
+        └────────────────┘</pre>
+  <p>يصل الوكيل إلى REA عبر خادم MCP المُهيّأ في <code>%USERPROFILE%\.config\opencode\opencode.jsonc</code>. وتصل وحدة التحكم إلى REA عبر نقطة دخول سطر الأوامر المذكورة في الملف نفسه. وكلاهما يشترك في متغيّري بيئة Ghidra وJava المحقونين من ذلك الملف.</p>
+
+  <h2>1.4 الجديد في 1.1.0</h2>
+  <table>
+    <thead><tr><th style="width:30%">المجال</th><th>الإضافة</th></tr></thead>
+    <tbody>
+      <tr><td>وحدة تحكم REA</td><td>مساعدة ومخطط JSON Schema لكل أمر، وإلغاء، وسجل (قائمة منسدلة و↑/↓)، و<code>--token-offset</code>، و<code>--token-count</code>، و<code>--full-output</code>، والبيان، وإصدار REA الحيّ.</td></tr>
+      <tr><td>متصفح الأدوات</td><td>جميع أدوات MCP الـ255 مع أوصافها ومخططات مدخلاتها؛ و«اسأل الوكيل» و«نسخ الطلب» بنقرة واحدة.</td></tr>
+      <tr><td>الإرشاد</td><td>تبويب جديد في لوحة الفحص: البحث في إرشادات REA المثبّتة وقراءة المقاطع المطابقة.</td></tr>
+      <tr><td>شريط المهام</td><td>خمس بطاقات نطاقات جديدة: التقاط الشبكة، ومقارنة عمليات الالتقاط/الآثار، وسجل إعادة البناء، ووضع تعليقات وخرائط للعناوين، وتفكيك JEB.</td></tr>
+      <tr><td>AgentEnv</td><td>أوضاع البطاقة: البناء، والتقديم، ومقارنة البيانات الوصفية، وتصدير تطبيق سطح مكتب.</td></tr>
+      <tr><td>فهرس وحدة التحكم</td><td>تضمين الأوامر المخفية <code>mcp</code> و<code>mcp add</code> و<code>mcp doctor</code> (199 مدخلًا).</td></tr>
+      <tr><td>الأدلة</td><td>تُطابَق معرّفات الأدلة بالطول الكامل فقط (64 حرفًا سداسيًا عشريًا)، ما يلغي التكرارات المبتورة.</td></tr>
+      <tr><td>الأهداف</td><td>اكتمال أدوات الإغلاق/التنظيف يزيل الهدف المطابق تلقائيًا.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ 2 INSTALL -->
+<section>
+  <div class="chapno">الفصل 2</div>
+  <h1>المتطلبات والتثبيت</h1>
+
+  <h2>2.1 متطلبات النظام</h2>
+  <table>
+    <thead><tr><th style="width:28%">المكوّن</th><th>المتطلب</th><th style="width:30%">ملاحظات</th></tr></thead>
+    <tbody>
+      <tr><td>نظام التشغيل</td><td>Windows 10 أو Windows 11 (x64)</td><td>تثبيت لكل مستخدم؛ لا حاجة إلى صلاحيات مسؤول.</td></tr>
+      <tr><td>الذاكرة</td><td>8 GB كحد أدنى، و16 GB مُستحسنة</td><td>تحليل Ghidra للثنائيات الكبيرة يستهلك ذاكرة كبيرة.</td></tr>
+      <tr><td>القرص</td><td>نحو 1 GB للتطبيق، إضافةً إلى سلاسل الأدوات</td><td>يضيف Ghidra 12.1.4 نحو 1.5 GB؛ وتنمو ذاكرات التحليل المؤقتة مع كل هدف.</td></tr>
+      <tr><td>OpenCode CLI</td><td>1.19 أو أحدث</td><td>يُتوقّع في <code>%APPDATA%\npm\node_modules\opencode-ai\bin\opencode.exe</code>.</td></tr>
+      <tr><td>Node.js</td><td>20 أو أحدث</td><td>يشغّل نقطة دخول REA CLI المذكورة في إعداد OpenCode.</td></tr>
+      <tr><td>REA</td><td>{{REA_VERSION}}</td><td>يُثبّت عبر إعداد MCP في OpenCode؛ ويجب أن يكون <code>rea doctor</code> سليمًا.</td></tr>
+      <tr><td>Ghidra</td><td>12.1.x فقط</td><td>يرفض REA أي إصدار رئيسي/فرعي آخر. اضبط <code>GHIDRA_INSTALL_DIR</code>.</td></tr>
+      <tr><td>Java</td><td>JDK 21 أو أحدث</td><td>يتطلّبه Ghidra. اضبط <code>JAVA_HOME</code>.</td></tr>
+      <tr><td>مزوّدون اختياريون</td><td>IDA وHopper وCutter وJEB وFrida وadb</td><td>لا تُحتاج إلا للأدوات المقابلة؛ وتُبلّغ مصفوفة القدرات عمّا هو متاح.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn">
+    <span class="callout-title">قبل أن تثبّت</span>
+    <p>REA Studio واجهة أمامية. إذا كانت OpenCode أو REA أو Ghidra مفقودة، فستفتح النافذة لكن شارة الخادم تبقى في حالة خطأ وتفشل أدوات التحليل. أكمل فحص البيئة في القسم 2.4 قبل الاعتماد على النتائج.</p>
+  </div>
+
+  <h2>2.2 تثبيت MSI</h2>
+  <ol>
+    <li>شغّل <code>D:\REA\rea-wizard\release\REA-Studio-{{VERSION}}-x64.msi</code>.</li>
+    <li>اقبل تحذير SmartScreen إن ظهر: <strong>More info → Run anyway</strong>. المثبّت غير موقّع رقميًا.</li>
+    <li>اختر نطاق التثبيت إن طُلب منك. الافتراضي هو لكل مستخدم، ولا يحتاج إلى رفع صلاحيات.</li>
+    <li>أكمل المعالج. يبدأ التطبيق تلقائيًا (خيار <em>run after finish</em> مُفعّل).</li>
+  </ol>
+  <p>ينشئ المثبّت ما يلي:</p>
+  <table>
+    <thead><tr><th style="width:42%">المسار</th><th>المحتوى</th></tr></thead>
+    <tbody>
+      <tr><td><code>%LOCALAPPDATA%\Programs\REA Studio\</code></td><td>ثنائيات التطبيق و<code>resources\app\</code> (العملية الرئيسية وpreload وعملية العرض).</td></tr>
+      <tr><td><code>%USERPROFILE%\Desktop\REA Studio.lnk</code></td><td>اختصار سطح المكتب.</td></tr>
+      <tr><td><code>%APPDATA%\Microsoft\Windows\Start Menu\Programs\REA Studio.lnk</code></td><td>اختصار قائمة ابدأ.</td></tr>
+      <tr><td><code>%APPDATA%\REA Studio\settings.json</code></td><td>تفضيلات مساحة العمل والنموذج والوكيل (تُنشأ عند أول تشغيل).</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2.3 التثبيت الصامت والترقية وإزالة التثبيت</h2>
+  <p>تثبيت صامت (لكل مستخدم، دون إعادة تشغيل):</p>
+  <pre>msiexec /i "D:\REA\rea-wizard\release\REA-Studio-{{VERSION}}-x64.msi" /qn /norestart</pre>
+  <p>إزالة تثبيت صامتة عبر «التطبيقات والميزات»، أو عبر رمز المنتج:</p>
+  <pre>msiexec /x "{PRODUCT-CODE}" /qn /norestart</pre>
+  <p>للعثور على رمز المنتج:</p>
+  <pre>Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*,
+                 HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* |
+  Where-Object DisplayName -like '*REA Studio*' |
+  Select-Object DisplayName, DisplayVersion, PSChildName</pre>
+  <div class="callout">
+    <span class="callout-title">الترقية</span>
+    <p>ثبّت ملف MSI الأحدث فوق الأقدم. تُحفظ الإعدادات في <code>%APPDATA%\REA Studio\settings.json</code>. إذا أفاد Windows Installer بأن المنتج مثبّت بالفعل، فأزل الإصدار القديم أولًا ثم ثبّت الجديد.</p>
+  </div>
+
+  <h2>2.4 أول تشغيل وفحص البيئة</h2>
+  <ol>
+    <li>شغّل التطبيق من قائمة ابدأ أو من اختصار سطح المكتب.</li>
+    <li>راقب شارة الحالة في الشريط العلوي. تنتقل من <code>starting…</code> إلى <code>server ready · v1.19.0</code> (يعكس الرقم إصدار OpenCode المثبّت لديك).</li>
+    <li>افتح <strong>Health</strong> في الشريط العلوي. يجب أن تُظهر لوحة Environment صفوفًا خضراء لـ OpenCode server وMCP · rea وGhidra وJava وREA CLI.</li>
+    <li>انقر <strong>Run</strong> بجوار Doctor. تطبع البيئة السليمة <code>healthy: true</code> وقائمة بالفحوصات الناجحة.</li>
+  </ol>
+  <table>
+    <thead><tr><th style="width:26%">صف الصحة</th><th>معنى الأخضر</th><th style="width:34%">إذا كان أحمر أو كهرمانيًا</th></tr></thead>
+    <tbody>
+      <tr><td>OpenCode server</td><td>يستخدم التطبيق خادمًا يمكن الوصول إليه على 127.0.0.1:4096.</td><td>راجع 12.1. تحقّق من مسار تثبيت OpenCode ومن تعارض المنافذ.</td></tr>
+      <tr><td>MCP · rea</td><td>خادم REA MCP متصل ويبلّغ عن 255 أداة.</td><td>شغّل <code>rea setup --client opencode --yes</code> في وحدة تحكم REA، ثم أعد تشغيل التطبيق.</td></tr>
+      <tr><td>Ghidra</td><td><code>GHIDRA_INSTALL_DIR</code> يشير إلى شجرة 12.1.x تتضمّن المفكّك.</td><td>ثبّت Ghidra 12.1.4 واضبط المتغيّر في بيئة MCP الخاصة بـ OpenCode.</td></tr>
+      <tr><td>Java</td><td><code>JAVA_HOME</code> يشير إلى JDK يقبله Ghidra.</td><td>ثبّت JDK 21+ وحدّث <code>JAVA_HOME</code>.</td></tr>
+      <tr><td>REA CLI</td><td><code>rea --version</code> يستجيب.</td><td>تحقّق من أمر MCP في إعداد OpenCode وشغّل <code>rea --version</code> في وحدة التحكم.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2.5 من أين يحصل REA على بيئته</h2>
+  <p>يقرأ التطبيق <code>%USERPROFILE%\.config\opencode\opencode.jsonc</code> ويعيد استخدام كتلة <code>mcp.rea.environment</code>. يبدو المدخل النموذجي هكذا:</p>
+  <pre>"rea": {
+  "type": "local",
+  "enabled": true,
+  "environment": {
+    "GHIDRA_INSTALL_DIR": "D:\\REA\\tools\\ghidra_12.1.4_PUBLIC",
+    "JAVA_HOME": "C:\\Program Files\\Eclipse Adoptium\\jdk-25.0.4.101-hotspot"
+  },
+  "command": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "C:\\Users\\&lt;you&gt;\\AppData\\Local\\npm-cache\\_npx\\...\\rea-agents\\scripts\\rea.mjs",
+    "mcp"
+  ]
+}</pre>
+  <p>يتلقّى كلٌّ من الوكيل ووحدة التحكم هذين المتغيّرين. ويتطلّب تعديل الإعداد إعادة تشغيل التطبيق (وخادم OpenCode) ليصبح ساريًا.</p>
+</section>
+
+<!-- ============================================================ 3 START -->
+<section>
+  <div class="chapno">الفصل 3</div>
+  <h1>البدء السريع</h1>
+
+  <h2>3.1 جولة في النافذة</h2>
+  <table>
+    <thead><tr><th style="width:20%">المنطقة</th><th>ما تحتويه</th></tr></thead>
+    <tbody>
+      <tr><td>الشريط العلوي</td><td>العلامة، وشارة مساحة العمل، ومحدّدا النموذج والوكيل، وحالة الخادم، والأزرار <strong>REA</strong> و<strong>Sessions</strong> و<strong>Health</strong> و<strong>Save</strong> و<strong>New session</strong>.</td></tr>
+      <tr><td>الشريط الأيسر</td><td>بطاقات المهام: ستة سير عمل موجّه من REA، وعشر مهام سريعة، وأربع عشرة بطاقة نطاق. وزر إعادة تحميل يحدّث سير العمل من REA.</td></tr>
+      <tr><td>الوسط</td><td>السجل (الرسائل، وبطاقات الأدوات، ومطالبات الأذونات) والمحرّر في الأسفل.</td></tr>
+      <tr><td>لوحة الفحص اليمنى</td><td>خمسة تبويبات: Activity وEvidence وProviders وGuidance وHealth.</td></tr>
+      <tr><td>النوافذ المنبثقة</td><td>المعالج، وSessions، ووحدة تحكم REA، ومتصفح أدوات MCP.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3.2 أول تحقيق لك</h2>
+  <p>يستخدم هذا العرض التوضيحي ملفًا برمجيًا آمنًا من Windows. استبدله بأي ملف تملك إذنًا بتحليله.</p>
+  <ol>
+    <li>انقر <strong>Triage a binary</strong> في الشريط.</li>
+    <li>في الخطوة 1، أدخل المسار <code>C:\Windows\System32\notepad.exe</code> أو تصفّح إليه.</li>
+    <li>انقر <strong>Next</strong>. اترك المحرّك على <em>Auto</em> والعمق على <em>Summary first</em> والإخراج على <em>Concise</em>.</li>
+    <li>انقر <strong>Next</strong> مرة أخرى للمراجعة. معاينة الطلب قابلة للتعديل. انقر <strong>Launch task</strong>.</li>
+    <li>ينشئ التطبيق جلسة جديدة ويرسل الطلب. راقب السجل: يستدعي الوكيل <code>binary_overview</code>، ثم يقرأ الإجراءات والسلاسل النصية.</li>
+    <li>افتح <strong>Activity</strong> لرؤية كل استدعاء أداة REA والزمن المستغرق فيه. وافتح <strong>Evidence</strong> لرؤية المعرّفات التي تستشهد بها الإجابة.</li>
+    <li>عند الانتهاء، استخدم <strong>Close all</strong> في Activity (أو ✕ على كل هدف) واترك الوكيل يؤكّد التنظيف.</li>
+  </ol>
+  <div class="callout tip">
+    <span class="callout-title">توقّع أن يكون التحليل الأول بطيئًا</span>
+    <p>قد تستغرق أول مرحلة Ghidra على ملف نظام دقائق (قِيسَ <code>binary_overview</code> على notepad.exe بنحو 3.5 دقائق، معظمها في محلّل موارد Windows). بطاقة أداة تعمل طويلًا ليست تعليقًا. الزمن المستغرق في Activity هو المؤشّر الموثوق.</p>
+  </div>
+
+  <h2>3.3 قراءة السجل</h2>
+  <ul>
+    <li><strong>نص المساعد</strong> يُعرض بصيغة Markdown خفيفة: العناوين والقوائم والجداول وكتل الشيفرة والروابط.</li>
+    <li><strong>بطاقات الأدوات</strong> تُظهر اسم الأداة وحالة (running / completed / error) والعنوان الذي أبلغ عنه REA ومخرجًا قابلًا للتوسيع. تبقى البطاقات المكتملة مطويّة للحفاظ على قابلية قراءة السجل.</li>
+    <li><strong>شارات الأدلة</strong> معرّفات <code>ev_…</code> بِلاحقة SHA-256 الكاملة المكوّنة من 64 حرفًا. انقر واحدة لنسخها.</li>
+    <li><strong>مطالبات الأذونات</strong> تظهر داخل السجل عندما يطلب الوكيل تشغيل أمر أو كتابة ملف. اختر السماح أو الرفض؛ ويُعاد الاختيار إلى الوكيل.</li>
+  </ul>
+
+  <h2>3.4 الأذونات</h2>
+  <p>يطبّق OpenCode سياسة الأذونات الخاصة به. عندما يحتاج طلب إلى موافقة، يعرض REA Studio بطاقة فوق المحرّر تتضمّن الإجراء ونمطه. تُعرض ثلاثة خيارات:</p>
+  <table>
+    <thead><tr><th style="width:22%">الزر</th><th>الأثر</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Allow once</strong></td><td>يوافق على هذا الطلب وحده. يواصل الوكيل فورًا.</td></tr>
+      <tr><td><strong>Always</strong></td><td>يوافق على هذا الإجراء لبقية الجلسة، فلا تُعاد المطالبة عند تكرار الاستدعاءات المتطابقة.</td></tr>
+      <tr><td><strong>Reject</strong></td><td>يرفض الطلب. يتلقّى الوكيل الرفض وعليه أن يتكيّف أو يتوقّف.</td></tr>
+    </tbody>
+  </table>
+  <p>تبقى البطاقات المُجابة ظاهرة مع الرد، فيسجّل السجل ما تمّت الموافقة عليه.</p>
+</section>

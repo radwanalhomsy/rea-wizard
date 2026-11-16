@@ -1,0 +1,95 @@
+<!-- ============================================================ APPENDIX A -->
+<section>
+  <div class="chapno">الملحق أ</div>
+  <h1>مرجع أوامر سطر الأوامر</h1>
+
+  <p class="lead">كل أمر تقدّمه وحدة تحكم REA، كما يبلّغ عنه <code>rea --llms</code> للإصدار REA {{REA_VERSION}}، إضافةً إلى مجموعة <code>mcp</code> المخفية. وتُشغَّل الأوامر كـ<code>rea &lt;command&gt; …</code>.</p>
+
+  <div class="callout">
+    <span class="callout-title">قراءة التوقيعات</span>
+    <p>الأقواس الزاوية تشير إلى الوسائط الموضعية. والأقواس المربّعة تشير إلى الاختيارية. للحصول على مخطط الوسائط الكامل لأي أمر، اكتب اسم الأمر في وحدة التحكم واضغط <strong>Schema</strong>؛ ولنص الاستخدام اضغط <strong>Help</strong>.</p>
+  </div>
+
+  {{COMMANDS}}
+</section>
+
+<!-- ============================================================ APPENDIX B -->
+<section>
+  <div class="chapno">الملحق ب</div>
+  <h1>فهرس أدوات MCP</h1>
+
+  <p class="lead">المجموعة الكاملة لأدوات REA المعروضة على الوكيل في هذا الإصدار. وكل مدخل هو اسم الأداة وعنوان عرضها وملخّص من سطر واحد.</p>
+
+  <div class="callout tip">
+    <span class="callout-title">المخططات في التطبيق</span>
+    <p>افتح <strong>REA → Tools</strong> لقراءة مخطط مدخلات JSON الكامل لأي أداة، أو لنسخ طلب وكيل جاهز، أو لإرساله مباشرة. وهذا الفهرس للتوجيه والطباعة.</p>
+  </div>
+
+  {{TOOLS}}
+</section>
+
+<!-- ============================================================ APPENDIX C -->
+<section>
+  <div class="chapno">الملحق ج</div>
+  <h1>وسائط سير العمل الموجّه</h1>
+
+  <p class="lead">يصوغ REA طلب كل سير عمل موجّه من تعريفات وسائطه الخاصة. وهذه سير العمل الستة التي يحمّلها الشريط عند بدء التشغيل، مع كل وسيط وما إذا كان مطلوبًا.</p>
+
+  {{WORKFLOWS}}
+
+  <h2>C.7 كيف يبني الشريط الطلب</h2>
+  <ol>
+    <li>يستدعي الشريط <code>rea guided-workflows --format json</code> ويحتفظ بقائمة الوسائط لكل سير عمل.</li>
+    <li>يجمع المعالج القيم ويطلب من REA صياغة الطلب (<code>rea guided-workflow-prompt</code> أو المصوغ المكافئ).</li>
+    <li>إذا لم تتوفّر الصياغة، يعود التطبيق إلى طلب منظّم يحتوي وصف سير العمل وكائن JSON بالوسائط المقدَّمة.</li>
+    <li>الطلب المراجَع في الخطوة 3 قابل للتعديل؛ وما في الصندوق هو ما يُرسَل.</li>
+  </ol>
+</section>
+
+<!-- ============================================================ APPENDIX D -->
+<section>
+  <div class="chapno">الملحق د</div>
+  <h1>المصطلحات</h1>
+
+  <table>
+    <thead><tr><th style="width:26%">المصطلح</th><th>المعنى</th></tr></thead>
+    <tbody>
+      <tr><td>Agent<br><span class="small">الوكيل</span></td><td>عملية OpenCode للنموذج اللغوي التي تخطّط العمل وتستدعي الأدوات وتكتب الإجابة. يُختار لكل طلب من الشريط العلوي.</td></tr>
+      <tr><td>AgentEnv<br><span class="small">بيئة الوكيل</span></td><td>حزمة بيئة محمولة لتطبيق ويب أو تطبيق سطح مكتب Linux، تُبنى من نسخة حيّة أو من التقاط، وتُستخدم للتحليل لاحقًا.</td></tr>
+      <tr><td>Artifact<br><span class="small">الأثر</span></td><td>ملف مُصدَّر قيد التحليل: ملف تنفيذي، أو مكتبة، أو مثبّت، أو أرشيف، أو APK، أو Mach-O، أو صورة برنامج ثابت، أو التقاط، أو حزمة.</td></tr>
+      <tr><td>Bundle (evidence)<br><span class="small">حزمة الأدلة</span></td><td>مستند JSON قانوني يحتوي سجلات الأدلة والبيانات الوصفية وتاريخ المجهولات. قابل للاستيراد والمقارنة بهوية السجل.</td></tr>
+      <tr><td>Cleanup pending<br><span class="small">تنظيف معلّق</span></td><td>راية حالة في REA تعني أن محرّكًا ما زال يحتفظ بموارد يجب تحريرها قبل الخروج.</td></tr>
+      <tr><td>Evidence<br><span class="small">الدليل</span></td><td>سجل دائم معنون بالمحتوى لحقيقة مرصودة، يُعرَّف بـ<code>ev_</code> مع بصمة SHA-256 من 64 حرفًا.</td></tr>
+      <tr><td>Ghidra</td><td>محرّك التحليل الأصلي. ويتطلّب REA الإصدار 12.1.x.</td></tr>
+      <tr><td>Guidance<br><span class="small">الإرشاد</span></td><td>كتب تشغيل REA المثبّتة. قابلة للبحث في تبويب Guidance وللقراءة بواسطة الوكيل.</td></tr>
+      <tr><td>Manifest<br><span class="small">البيان الوصفي</span></td><td>جرد لمكوّنات أثر وعلاقاتها، يُستخدم للمقارنة وإعادة البناء.</td></tr>
+      <tr><td>MCP</td><td>بروتوكول سياق النموذج (Model Context Protocol). واجهة stdio التي يستدعي الوكيل عبرها أدوات REA الـ255.</td></tr>
+      <tr><td>Occurrence<br><span class="small">التواجد</span></td><td>ظهور محدّد لأثر أو مكوّن داخل جرد؛ يُستخدم لتركيز المقارنات دون تخويل الاستخراج.</td></tr>
+      <tr><td>Procedure<br><span class="small">الإجراء</span></td><td>دالة أو طريقة في ثنائي أصلي أو مُدار، تُعرَّف بالاسم أو بالعنوان.</td></tr>
+      <tr><td>Provider<br><span class="small">المزوّد</span></td><td>خلفية تحليل: Ghidra وIDA وHopper وCutter/Rizin وJEB وFrida وadb وPlaywright وغيرها. وتبلّغ مصفوفة القدرات عن التوفّر.</td></tr>
+      <tr><td>Reconstruction ledger<br><span class="small">سجل إعادة البناء</span></td><td>قائمة حتمية مدعومة بالأدلة بالتزامات إعادة البناء، مع التغطية والمجهولات المتبقية.</td></tr>
+      <tr><td>Residual unknown<br><span class="small">مجهول متبقٍّ</span></td><td>سؤال لا تجيب عنه الأدلة المتاحة. يُتتبَّع صراحةً حتى لا يُغلق بصمت.</td></tr>
+      <tr><td>Session<br><span class="small">الجلسة</span></td><td>محادثة OpenCode منسوبة إلى مساحة عمل. تحتفظ بالرسائل ونشاط الأدوات وسجل الأدلة الحيّ.</td></tr>
+      <tr><td>Target<br><span class="small">الهدف</span></td><td>أثر مفتوح حاليًا في محرّك تحليل، مع موارد محجوزة حتى إغلاقه.</td></tr>
+      <tr><td>Token limit / offset<br><span class="small">حد الرموز / إزاحتها</span></td><td>عناصر تحكّم في إخراج النتائج الكبيرة: تحديد الحجم، أو التصفّح بتخطّي الرموز.</td></tr>
+      <tr><td>Workflow<br><span class="small">سير العمل</span></td><td>قالب تحقيق متعدّد الخطوات يعرّفه REA، بوسائط مطلوبة واختيارية.</td></tr>
+      <tr><td>Workspace<br><span class="small">مساحة العمل</span></td><td>المجلد الذي يعمل فيه الوكيل ونطاق سرد الجلسات ومربّعات الملفات.</td></tr>
+    </tbody>
+  </table>
+
+  <hr />
+
+  <h2>D.1 معلومات الوثيقة</h2>
+  <div class="kv">
+    <div class="k">الوثيقة</div><div class="v">REA Studio — دليل المستخدم والمسؤول</div>
+    <div class="k">إصدار الوثيقة</div><div class="v">{{VERSION}}</div>
+    <div class="k">التاريخ</div><div class="v">{{DATE}}</div>
+    <div class="k">التطبيق</div><div class="v">REA Studio {{VERSION}}</div>
+    <div class="k">REA</div><div class="v">{{REA_VERSION}}</div>
+    <div class="k">OpenCode</div><div class="v">1.19 أو أحدث</div>
+    <div class="k">Ghidra</div><div class="v">12.1.x</div>
+    <div class="k">شجرة المصدر</div><div class="v">D:\REA\rea-wizard</div>
+  </div>
+
+  <p class="small">يصف هذا الدليل سلوك التطبيق كما بُني من شجرة المصدر أعلاه. أسماء الأدوات وتوقيعات الأوامر ووسائط سير العمل مولَّدة من إصدار REA المثبّت وقد تختلف بعد الترقية؛ أعد بناء الدليل لتحديث الملاحق.</p>
+</section>

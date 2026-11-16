@@ -1,0 +1,179 @@
+<!-- ============================================================ 7 INSPECTOR -->
+<section>
+  <div class="chapno">الفصل 7</div>
+  <h1>لوحة الفحص</h1>
+
+  <p class="lead">اللوحة اليمنى هي عرض الأدلة والبيئة. تحتوي خمسة تبويبات ولا تقاطع المحادثة أبدًا.</p>
+
+  <h2>7.1 النشاط</h2>
+  <p><strong>Open targets</strong> يسرد كل أثر فتحه الوكيل في هذه الجلسة، مستخرجًا من مدخلات الأدوات (path، target path، executable، document، capture وما شابه).</p>
+  <table>
+    <thead><tr><th style="width:26%">العنصر</th><th>السلوك</th></tr></thead>
+    <tbody>
+      <tr><td>صف الهدف</td><td>انقر لنسخ المسار الكامل.</td></tr>
+      <tr><td>✕ على الصف</td><td>يرسل طلبًا إلى الوكيل: أغلق ذلك الهدف، وحرّر موارد التحليل، وأكّد التنظيف، ولا تحذف شيئًا.</td></tr>
+      <tr><td>Close all</td><td>يطلب من الوكيل إغلاق كل هدف مفتوح وتأكيد أن <code>cleanup_pending</code> يساوي false.</td></tr>
+    </tbody>
+  </table>
+  <p>عند اكتمال أداة إغلاق أو تنظيف أو تحرير أو فصل، يُزال الهدف المطابق تلقائيًا (بالمطابقة على المسار الدقيق أو على اسم الملف). وإذا أبلغ REA عن <code>cleanup_pending</code>، تظهر ملاحظة حمراء فوق القائمة.</p>
+  <p><strong>Tool calls</strong> يسرد آخر 80 عملية REA مع نقطة حالة وزمن مستغرق (بالمللي ثانية أو الثواني). والأداة التي تعمل منذ دقائق ما زالت تعمل؛ قارن قيمة الزمن بدل افتراض التعليق.</p>
+
+  <h2>7.2 الأدلة</h2>
+  <p>يجمع تبويب Evidence كل معرّف دليل يُستشهد به في السجل. وتُطابَق المعرّفات بالطول الكامل فقط: <code>ev_</code> يتبعه 64 حرفًا سداسيًا عشريًا بالضبط (SHA-256). وتُهمَل المعرّفات المبتورة أو الجزئية، فلا تحتوي القائمة على تكرارات.</p>
+  <table>
+    <thead><tr><th style="width:24%">العنصر</th><th>السلوك</th></tr></thead>
+    <tbody>
+      <tr><td>صف السجل</td><td>انقر لنسخ المعرّف. ويعرض الصف أيضًا أين رُئي أول مرة ومتى.</td></tr>
+      <tr><td>Copy all</td><td>ينسخ كل المعرّفات، معرّفًا في كل سطر.</td></tr>
+      <tr><td>Export…</td><td>اختر حزمة مصدر وملف إخراج؛ يشغّل <code>rea evidence-export &lt;source&gt; &lt;output&gt; --overwrite</code>.</td></tr>
+      <tr><td>Validate…</td><td>اختر حزمة؛ يشغّل <code>rea evidence-import &lt;path&gt;</code>.</td></tr>
+      <tr><td>Inspect…</td><td>اختر حزمة؛ يشغّل <code>rea inspect-evidence-bundle {"path":…}</code>.</td></tr>
+      <tr><td>Compare…</td><td>اختر حزمتي اليسار واليمين؛ يشغّل <code>rea compare &lt;left&gt; &lt;right&gt;</code>.</td></tr>
+    </tbody>
+  </table>
+  <p>تُفتح النتائج في جزء الإخراج أسفل القائمة. ولا يعدّل التصدير أو الاستيراد أو المقارنة المحادثة.</p>
+
+  <h2>7.3 المزوّدون</h2>
+  <p>يشغّل تبويب Providers الأمر <code>rea capabilities --format json</code> ويعرض مصفوفة قدرات.</p>
+  <ul>
+    <li><strong>Summary</strong> — <em>N/M operations available</em>، إضافةً إلى الحالة المفتوحة وسجلات الأدلة والمجهولات المفتوحة والتنظيف المعلّق.</li>
+    <li><strong>صفوف المزوّدين</strong> — تتوسّع لعرض مجموعات العمليات، والتوفّر، والسبب أو رمز التوفّر عند عدم التوفّر، والآثار الجانبية المعلنة.</li>
+    <li><strong>ملاحظة العملية الجديدة</strong> — تأتي أعداد القدرات من عملية CLI جديدة. أما حالة جلسة MCP الحيّة (الأدلة، والأهداف المفتوحة، والتنظيف) فيحتفظ بها وكيل MCP ويُبلّغ عنها في السجل. وكون عدد الأدلة صفرًا هنا لا يعني أن التحقيق بلا أدلة.</li>
+  </ul>
+  <p><strong>Refresh</strong> يفرض تشغيل قدرات جديدًا. وتُخزَّن النتائج مؤقتًا لدقيقة واحدة.</p>
+
+  <h2>7.4 الإرشاد</h2>
+  <p>يعرّض تبويب Guidance كتب التشغيل المثبّتة نفسها التي يمكن للوكيل قراءتها.</p>
+  <ol>
+    <li>اكتب استعلامًا (مثل <code>frida</code> أو <code>pcap</code> أو <code>AgentEnv</code>) واضغط <strong>Search</strong>.</li>
+    <li>تعرض النتائج عنوان المقطع ومسار الدليل ومقتطف سياق.</li>
+    <li>انقر نتيجة لقراءة المقطع عبر <code>rea guidance --action read</code>. ويُفتح النص أسفل القائمة.</li>
+    <li><strong>Clear</strong> يفرّغ الاستعلام والنتائج والقارئ.</li>
+  </ol>
+  <p>هذا مفيد عندما تريد التسلسل المُستحسن الدقيق قبل كتابة طلب مخصّص.</p>
+
+  <h2>7.5 الصحة</h2>
+  <p>يفحص تبويب Health بيئة التشغيل ويعرض صفًا لكل مكوّن:</p>
+  <table>
+    <thead><tr><th style="width:24%">الصف</th><th>التفصيل</th></tr></thead>
+    <tbody>
+      <tr><td>OpenCode server</td><td>عنوان URL، والمرحلة، والإصدار، وما إذا أُعيد استخدام خادم قائم.</td></tr>
+      <tr><td>MCP · rea</td><td>حالة الاتصال وعدد الأدوات.</td></tr>
+      <tr><td>Ghidra</td><td>مسار التثبيت وما إذا كان المفكّك الأصلي موجودًا.</td></tr>
+      <tr><td>Java</td><td><code>JAVA_HOME</code> والملف التنفيذي المحلول.</td></tr>
+      <tr><td>REA CLI</td><td>الإصدار الذي يبلّغ عنه <code>rea --version</code>.</td></tr>
+      <tr><td>Workspace</td><td>المجلد الذي يعمل فيه الوكيل.</td></tr>
+    </tbody>
+  </table>
+  <p><strong>Doctor → Run</strong> ينفّذ <code>rea doctor --client opencode --json</code> ويطبع قائمة نجاح/فشل موجزة. قد يستغرق Doctor دقيقة؛ فهو يتحقّق من المزوّدين ومتغيّرات البيئة وبدء MCP.</p>
+</section>
+
+<!-- ============================================================ 8 CONSOLE -->
+<section>
+  <div class="chapno">الفصل 8</div>
+  <h1>وحدة تحكم REA</h1>
+
+  <p class="lead">تشغّل وحدة التحكم سطر أوامر REA مباشرة. وهي حتمية، ولا تستهلك دورًا من الوكيل، وهي الأداة المناسبة للإعداد والتشخيص والتصدير والأوامر المتفرّقة.</p>
+
+  <h2>8.1 الفتح وفهرس الأوامر</h2>
+  <p>انقر <strong>REA</strong> في الشريط العلوي. يسرد العمود الأيسر 199 مدخلًا محلّلًا من <code>rea --llms</code> إضافةً إلى الأوامر الفرعية المخفية <code>mcp</code> و<code>mcp add</code> و<code>mcp doctor</code>.</p>
+  <ul>
+    <li>اكتب في <strong>Search commands…</strong> للتصفية حسب اسم الأمر أو وصفه.</li>
+    <li>انقر أمرًا لوضعه في صندوق الأوامر. ويُحدَّد أول <code>&lt;placeholder&gt;</code> لتكتب فوقه.</li>
+    <li>يعرض العنوان الفرعي إصدار REA الحيّ (مثل <em>Direct CLI · REA {{REA_VERSION}}</em>).</li>
+  </ul>
+
+  <h2>8.2 تشغيل أمر</h2>
+  <ol>
+    <li>اكتب أو الصق الأمر بعد البادئة الضمنية <code>rea</code>، مثل <code>analyze D:\samples\app.exe</code>.</li>
+    <li>اضبط أي خيارات إخراج (8.3).</li>
+    <li>اضغط <kbd>Enter</kbd> أو <strong>Run</strong>.</li>
+  </ol>
+  <p>يتدفّق المخرج القياسي والخطأ القياسي إلى جزء الإخراج أثناء تشغيل العملية. ويبلّغ سطر الحالة عن <code>running</code> أو <code>exit 0</code> أو رمز خروج أو <code>canceled</code> أو <code>error</code>.</p>
+  <p>تُشغَّل الأوامر كـ<code>node &lt;rea.mjs&gt; &lt;args&gt;</code> باستخدام نقطة الدخول من إعداد OpenCode، وببيئة Ghidra وJava نفسها التي يستخدمها الوكيل. ويتبع الاقتباس مُجزِّئ رموز التطبيق: علامات الاقتباس المزدوجة أو المفردة تجمع الكلمات، والشرطة المائلة العكسية تُهرّب علامة اقتباس.</p>
+
+  <h2>8.3 خيارات الإخراج</h2>
+  <table>
+    <thead><tr><th style="width:30%">العنصر</th><th>العلَم</th><th style="width:34%">الاستخدام</th></tr></thead>
+    <tbody>
+      <tr><td>format</td><td><code>--format</code></td><td>json أو md أو toon أو yaml أو jsonl.</td></tr>
+      <tr><td>--token-limit</td><td><code>--token-limit n</code></td><td>تحديد حجم الإخراج.</td></tr>
+      <tr><td>--token-offset</td><td><code>--token-offset n</code></td><td>تخطّي أول n رمزًا؛ تصفّح الإخراج الكبير.</td></tr>
+      <tr><td>tokens</td><td><code>--token-count</code></td><td>طباعة عدد الرموز فقط.</td></tr>
+      <tr><td>full</td><td><code>--full-output</code></td><td>عرض غلاف الإخراج الكامل بدل العرض المقتطع.</td></tr>
+      <tr><td>--filter-output</td><td><code>--filter-output keys</code></td><td>الاحتفاظ بمسارات المفاتيح المدرجة فقط، مثل <code>foo,bar.baz,a[0,3]</code>.</td></tr>
+      <tr><td>timings</td><td><code>--timings</code></td><td>كتابة التوقيت المقيس إلى الخطأ القياسي.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8.4 المساعدة والمخطط والإلغاء والسجل</h2>
+  <table>
+    <thead><tr><th style="width:20%">الزر</th><th>يشغّل</th><th style="width:38%">متى تستخدمه</th></tr></thead>
+    <tbody>
+      <tr><td>Help</td><td><code>rea &lt;command&gt; --help</code></td><td>لعرض الاستخدام والوسائط وكل خيارات الأمر الموجود في الصندوق.</td></tr>
+      <tr><td>Schema</td><td><code>rea &lt;command&gt; --schema --format json</code></td><td>للحصول على مخطط الوسائط المقروء آليًا (مفيد لبناء مدخل JSON).</td></tr>
+      <tr><td>Cancel</td><td>يقتل العملية الفرعية الجارية</td><td>لإيقاف أمر طويل. تصبح الحالة <code>canceled</code>؛ ويُحتفظ بالإخراج الجزئي.</td></tr>
+      <tr><td>History…</td><td>آخر 50 أمرًا</td><td>لاختيار أمر سابق لإعادة تشغيله أو تعديله.</td></tr>
+      <tr><td>↑ / ↓</td><td>في صندوق الأوامر</td><td>للتنقّل في السجل دون فتح القائمة المنسدلة.</td></tr>
+    </tbody>
+  </table>
+  <div class="callout tip">
+    <span class="callout-title">المخطط أسرع طريق لتعلّم أمر</span>
+    <p>ضع اسم الأمر في الصندوق، وانقر <strong>Schema</strong>، واقرأ JSON. الوسائط المطلوبة والتعدادات والأنماط والقيم الافتراضية كلها هناك، دون مغادرة التطبيق.</p>
+  </div>
+
+  <h2>8.5 الإجراءات السريعة</h2>
+  <table>
+    <thead><tr><th style="width:20%">الإجراء</th><th>يشغّل</th></tr></thead>
+    <tbody>
+      <tr><td>Doctor</td><td><code>rea doctor --client opencode --json</code></td></tr>
+      <tr><td>Capabilities</td><td><code>rea capabilities --format json</code> (يحدّث تبويب Providers أيضًا)</td></tr>
+      <tr><td>Setup</td><td><code>rea setup --client opencode --dry-run --yes</code></td></tr>
+      <tr><td>Update</td><td><code>rea update</code></td></tr>
+      <tr><td>MCP doctor</td><td><code>rea mcp doctor</code></td></tr>
+      <tr><td>Version</td><td><code>rea --version</code></td></tr>
+      <tr><td>Manifest</td><td><code>rea --llms-full</code> — كل أمر ووسيط وأداة بصيغة Markdown (نحو 180 KB)</td></tr>
+      <tr><td>Tools</td><td>يفتح متصفح أدوات MCP (الفصل 9)</td></tr>
+      <tr><td>Guidance</td><td>يغلق وحدة التحكم ويفتح تبويب Guidance</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8.6 النسخ والحفظ</h2>
+  <p><strong>Copy</strong> يضع جزء الإخراج في الحافظة. و<strong>Save…</strong> يفتح مربّع حفظ (الافتراضي <code>rea-output.txt</code>) ويكتب ما يُعرض بالضبط، بما في ذلك أقسام الخطأ القياسي.</p>
+
+  <div class="callout warn">
+    <span class="callout-title">حالة وحدة التحكم منفصلة عن الوكيل</span>
+    <p>كل أمر في وحدة التحكم عملية جديدة. ولا ترى أهداف الوكيل المفتوحة ولا سجلات أدلته. استخدم الوكيل عندما تحتاج إلى استمرارية الجلسة؛ واستخدم وحدة التحكم للأوامر المستقلة والتشخيص.</p>
+  </div>
+</section>
+
+<!-- ============================================================ 9 TOOLS -->
+<section>
+  <div class="chapno">الفصل 9</div>
+  <h1>متصفح أدوات MCP</h1>
+
+  <p class="lead">لدى الوكيل 255 أداة REA. يجعل متصفح الأدوات هذا السطح مرئيًا: الأسماء والأوصاف ومخططات المدخلات الكاملة، مع طريق بنقرة واحدة لتشغيل أي أداة عبر الوكيل.</p>
+
+  <h2>9.1 فتح الفهرس</h2>
+  <p>افتح <strong>REA → Tools</strong>. يبلّغ العنوان الفرعي عن العدد والإصدار، مثل <em>255 tools exposed to the agent · REA {{REA_VERSION}}</em>.</p>
+  <ul>
+    <li><strong>Search</strong> يصفّي حسب اسم الأداة أو عنوانها أو وصفها.</li>
+    <li>اختيار أداة يعرض وصفها ومخطط مدخلات JSON منسّقًا، بما في ذلك الخصائص والتعدادات والأنماط والحقول المطلوبة والأمثلة.</li>
+    <li>تُسرد الأدوات أبجديًا. والملحق ب هو الفهرس القابل للطباعة.</li>
+  </ul>
+
+  <h2>9.2 تشغيل أداة عبر الوكيل</h2>
+  <table>
+    <thead><tr><th style="width:24%">الزر</th><th>السلوك</th></tr></thead>
+    <tbody>
+      <tr><td>Ask agent</td><td>يغلق المتصفح ويرسل طلبًا يسمّي الأداة، ويتضمّن وسائط المثال من المخطط بصيغة JSON، ويطلب من الوكيل تشغيلها وشرح النتيجة والاستشهاد بالأدلة.</td></tr>
+      <tr><td>Copy request</td><td>ينسخ الطلب نفسه دون إرساله، لتعدّل المسارات أو الوسائط أولًا.</td></tr>
+    </tbody>
+  </table>
+  <p>هذا هو الجسر للأدوات التي ليس لها أمر CLI بالاسم نفسه (مثل أدوات الجلسة، وإعدادات التحليل، وعمليات build-computer، وبعض أدوات المقارنة). والطلب دور وكيل عادي، فتعمل الأداة داخل جلسة MCP الخاصة بالوكيل وتشارك أدلته وحالة أهدافه.</p>
+
+  <div class="callout">
+    <span class="callout-title">لماذا لا تُستدعى أدوات MCP مباشرة؟</span>
+    <p>جلسة MCP ثانية ستملك مخزن أدلة ومجموعة أهداف وحالة تنظيف مختلفة. وتوجيه استدعاءات الأدوات عبر الوكيل يُبقي التحقيق واحدًا متماسكًا. ويمنحك المتصفح المخطط والطلب الدقيق دون تقسيم تلك الحالة.</p>
+  </div>
+</section>

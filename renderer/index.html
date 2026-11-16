@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; style-src 'self' 'unsafe-inline' file:; script-src 'self' file:; img-src 'self' data: file:;" />
+  <title>REA Studio</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">R</div>
+        <div class="brand-text">
+          <strong>REA Studio</strong>
+          <span>OpenCode agent + REA toolkit</span>
+        </div>
+      </div>
+
+      <button id="workspaceBtn" class="chip chip-workspace" title="Change working directory">
+        <span class="chip-dot"></span>
+        <span id="workspaceLabel">D:\REA</span>
+      </button>
+
+      <select id="modelSelect" class="select-chip" title="Model used for new prompts">
+        <option value="">default model</option>
+      </select>
+      <select id="agentSelect" class="select-chip" title="Agent used for new prompts">
+        <option value="">default agent</option>
+      </select>
+
+      <div class="topbar-spacer"></div>
+
+      <div id="serverChip" class="chip chip-status" data-phase="idle">
+        <span class="chip-dot"></span>
+        <span id="serverLabel">starting…</span>
+      </div>
+
+      <button id="reaBtn" class="btn btn-ghost" title="Run REA commands directly (no agent turn)">REA</button>
+      <button id="sessionsBtn" class="btn btn-ghost" title="Browse and reopen sessions">Sessions</button>
+      <button id="healthBtn" class="btn btn-ghost" title="Open the health panel">Health</button>
+      <button id="saveBtn" class="btn btn-ghost" title="Save the transcript as Markdown">Save</button>
+      <button id="newBtn" class="btn btn-ghost" title="Start a fresh session">New session</button>
+    </header>
+
+    <main class="layout">
+      <!-- ------------------------------------------------------- left rail -->
+      <aside class="rail">
+        <div class="rail-head">
+          <h2>What do you want to do?</h2>
+          <p>Guided workflows come from your installed REA. Quick tasks are presets.</p>
+        </div>
+
+        <div class="rail-body">
+          <div class="rail-group">
+            <div class="rail-group-head">
+              <span>REA guided workflows</span>
+              <button id="reloadWf" class="btn btn-tiny" title="Reload from rea guided-workflows">↻</button>
+            </div>
+            <div id="wfList" class="task-list">
+              <div class="rail-note" id="wfNote">Loading workflows…</div>
+            </div>
+          </div>
+
+          <div class="rail-group">
+            <div class="rail-group-head"><span>Quick tasks</span></div>
+            <div id="taskList" class="task-list"></div>
+          </div>
+        </div>
+
+        <div class="rail-foot">
+          <div class="mini-label">Workspace</div>
+          <button id="railWorkspace" class="rail-path" title="Change working directory">D:\REA</button>
+          <div class="mini-label" style="margin-top:14px">Session</div>
+          <div id="sessionLabel" class="rail-session">not started</div>
+        </div>
+      </aside>
+
+      <!-- ---------------------------------------------------------- chat -->
+      <section class="chat">
+        <div id="transcript" class="transcript">
+          <div class="empty-state" id="emptyState">
+            <h1>Start with a task</h1>
+            <p>Choose a card on the left, or type a question below.</p>
+            <div class="empty-hints">
+              <span>Absolute paths only</span>
+              <span>One artifact per request</span>
+              <span>Evidence IDs are cited</span>
+            </div>
+          </div>
+          <div id="msgList"></div>
+          <div id="permArea"></div>
+        </div>
+
+        <form id="composer" class="composer">
+          <div id="attachChips" class="attach-chips" hidden></div>
+          <div class="composer-box">
+            <textarea id="input" rows="1" placeholder="Ask anything, or drop a target path… (Enter to send, Shift+Enter for a new line)"></textarea>
+            <div class="composer-actions">
+              <button type="button" id="attachBtn" class="icon-btn" title="Attach files (images, PDFs, source, logs)">＋</button>
+              <button type="submit" id="sendBtn" class="send-btn" title="Send">Send</button>
+              <button type="button" id="stopBtn" class="send-btn stop" hidden title="Stop the agent">Stop</button>
+            </div>
+          </div>
+          <div class="composer-meta">
+            <span id="composerHint">Ready</span>
+            <span id="composerModel"></span>
+          </div>
+        </form>
+      </section>
+
+      <!-- ----------------------------------------------------- inspector -->
+      <aside class="inspector">
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="activity" role="tab">Activity</button>
+          <button class="tab" data-tab="evidence" role="tab">Evidence</button>
+          <button class="tab" data-tab="providers" role="tab">Providers</button>
+          <button class="tab" data-tab="guidance" role="tab">Guidance</button>
+          <button class="tab" data-tab="health" role="tab">Health</button>
+        </div>
+
+        <div class="tab-panel active" data-panel="activity">
+          <div class="panel-head">
+            <span>Open targets</span>
+            <button id="closeTargets" class="btn btn-tiny" title="Ask the agent to close every open REA target">Close all</button>
+          </div>
+          <div id="targetsBox" class="targets">
+            <div class="panel-empty" id="targetsEmpty">No targets opened in this session yet.</div>
+          </div>
+
+          <div class="panel-head" style="margin-top:14px"><span>Tool calls</span></div>
+          <div class="panel-empty" id="activityEmpty">Tool calls and REA operations will appear here.</div>
+          <div id="activityList" class="activity-list"></div>
+        </div>
+
+        <div class="tab-panel" data-panel="evidence">
+          <div class="panel-head">
+            <span id="evidenceCount">0 records</span>
+            <button id="copyEvidence" class="btn btn-tiny">Copy all</button>
+          </div>
+          <div class="ev-actions">
+            <button class="btn btn-tiny" data-evact="export" title="rea evidence-export &lt;source&gt; &lt;output&gt;">Export…</button>
+            <button class="btn btn-tiny" data-evact="import" title="rea evidence-import &lt;path&gt;">Validate…</button>
+            <button class="btn btn-tiny" data-evact="inspect" title="rea inspect-evidence-bundle">Inspect…</button>
+            <button class="btn btn-tiny" data-evact="compare" title="rea compare &lt;left&gt; &lt;right&gt;">Compare…</button>
+          </div>
+          <div class="panel-empty" id="evidenceEmpty">Evidence IDs cited by the agent are collected here.</div>
+          <div id="evidenceList" class="evidence-list"></div>
+          <pre id="evidenceOut" class="doctor-out" hidden></pre>
+        </div>
+
+        <div class="tab-panel" data-panel="providers">
+          <div class="panel-head">
+            <span id="capSummary">Capabilities</span>
+            <button id="refreshCaps" class="btn btn-tiny">Refresh</button>
+          </div>
+          <div id="capBody" class="health-body">
+            <div class="panel-empty">Loading…</div>
+          </div>
+        </div>
+
+        <div class="tab-panel" data-panel="guidance">
+          <div class="panel-head">
+            <span>REA guidance</span>
+            <button id="guideClear" class="btn btn-tiny">Clear</button>
+          </div>
+          <form id="guideForm" class="guide-form">
+            <input id="guideQuery" type="text" placeholder="Search installed guidance… e.g. frida, pcap, AgentEnv" spellcheck="false" />
+            <button class="btn btn-tiny" type="submit">Search</button>
+          </form>
+          <div id="guideList" class="guide-list">
+            <div class="panel-empty">Search REA's installed workflow guidance, then open a section to read it.</div>
+          </div>
+          <pre id="guideBody" class="doctor-out" hidden></pre>
+        </div>
+
+        <div class="tab-panel" data-panel="health">
+          <div class="panel-head">
+            <span>Environment</span>
+            <button id="refreshHealth" class="btn btn-tiny">Refresh</button>
+          </div>
+          <div id="healthBody" class="health-body">
+            <div class="panel-empty">Checking…</div>
+          </div>
+          <div class="panel-head" style="margin-top:8px">
+            <span>Doctor</span>
+            <button id="runDoctor" class="btn btn-tiny">Run</button>
+          </div>
+          <pre id="doctorOut" class="doctor-out">Not run yet.</pre>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- --------------------------------------------------------- wizard -->
+  <div id="wizard" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="wizardTitle">
+      <header class="modal-head">
+        <div>
+          <div class="wizard-steps" id="wizardSteps">
+            <span class="ws active" data-ws="1">1 Target</span>
+            <span class="ws" data-ws="2">2 Options</span>
+            <span class="ws" data-ws="3">3 Review</span>
+          </div>
+          <h2 id="wizardTitle">New task</h2>
+        </div>
+        <button id="wizardClose" class="icon-btn" title="Close">✕</button>
+      </header>
+
+      <div class="modal-body">
+        <div class="wstep active" data-step="1">
+          <p class="wstep-desc" id="wizardDesc"></p>
+          <div id="wizardFields" class="fields"></div>
+        </div>
+
+        <div class="wstep" data-step="2">
+          <div class="fields">
+            <label class="field">
+              <span class="field-label">Analysis engine</span>
+              <select id="optProvider">
+                <option value="auto">Auto (REA picks)</option>
+                <option value="ghidra">Ghidra 12.1.4 (local native)</option>
+                <option value="none">No engine (static metadata only)</option>
+              </select>
+              <span class="field-hint">Ghidra handles Windows PE x86/x64 on this machine.</span>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Depth</span>
+              <select id="optDepth">
+                <option value="summary">Summary first</option>
+                <option value="complete">Complete dossier</option>
+              </select>
+              <span class="field-hint">Summary is faster; complete decompiles everything it touches.</span>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Output style</span>
+              <select id="optOutput">
+                <option value="concise">Concise — key findings and evidence</option>
+                <option value="detailed">Detailed — tables, code, full inventories</option>
+              </select>
+              <span class="field-hint">Keeps large REA tool output from flooding the transcript.</span>
+            </label>
+
+            <label class="field">
+              <span class="field-label">Session title</span>
+              <input id="optTitle" type="text" placeholder="REA session" />
+            </label>
+
+            <label class="field">
+              <span class="field-label">Extra instructions <em>(optional)</em></span>
+              <textarea id="optNotes" rows="3" placeholder="e.g. focus on the license check, ignore the installer code"></textarea>
+            </label>
+          </div>
+        </div>
+
+        <div class="wstep" data-step="3">
+          <p class="wstep-desc">This is exactly what will be sent. Edit it if you like.</p>
+          <textarea id="wizardPrompt" class="prompt-preview" rows="14"></textarea>
+          <div class="review-meta">
+            <span>Workspace: <code id="reviewWorkspace"></code></span>
+            <span>Engine: <code id="reviewProvider"></code></span>
+            <span>Output: <code id="reviewOutput"></code></span>
+          </div>
+        </div>
+      </div>
+
+      <footer class="modal-foot">
+        <button id="wizardBack" class="btn btn-ghost">Back</button>
+        <div class="spacer"></div>
+        <button id="wizardCancel" class="btn btn-ghost">Cancel</button>
+        <button id="wizardNext" class="btn btn-primary">Next</button>
+        <button id="wizardLaunch" class="btn btn-primary" hidden>Launch task</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ------------------------------------------------------- sessions -->
+  <div id="sessions" class="modal" hidden>
+    <div class="modal-card wide" role="dialog" aria-modal="true">
+      <header class="modal-head">
+        <div>
+          <h2>Sessions</h2>
+          <p class="modal-sub" id="sessionsSub">Recent sessions in this workspace</p>
+        </div>
+        <button id="sessionsClose" class="icon-btn" title="Close">✕</button>
+      </header>
+      <div class="modal-body">
+        <div id="sessionsList" class="sessions-list">
+          <div class="panel-empty">Loading…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------------------------------------------------- rea console -->
+  <div id="reaModal" class="modal" hidden>
+    <div class="modal-card wide" role="dialog" aria-modal="true">
+      <header class="modal-head">
+        <div>
+          <h2>REA console</h2>
+          <p class="modal-sub" id="reaVersionLine">Direct CLI — deterministic, no agent turn</p>
+        </div>
+        <button id="reaClose" class="icon-btn" title="Close">✕</button>
+      </header>
+      <div class="modal-body">
+        <div class="quick-actions">
+          <button class="btn btn-tiny" data-rea-quick="doctor">Doctor</button>
+          <button class="btn btn-tiny" data-rea-quick="capabilities">Capabilities</button>
+          <button class="btn btn-tiny" data-rea-quick="setup">Setup</button>
+          <button class="btn btn-tiny" data-rea-quick="update">Update</button>
+          <button class="btn btn-tiny" data-rea-quick="mcp-doctor">MCP doctor</button>
+          <button class="btn btn-tiny" data-rea-quick="version">Version</button>
+          <button class="btn btn-tiny" data-rea-quick="manifest" title="rea --llms-full — every command and MCP tool">Manifest</button>
+          <button class="btn btn-tiny" data-rea-quick="tools" title="Browse all 255 MCP tools and their schemas">Tools</button>
+          <button class="btn btn-tiny" data-rea-quick="guidance" title="rea guidance --action search">Guidance</button>
+        </div>
+
+        <div class="console-grid">
+          <div class="cmd-col">
+            <input id="cmdSearch" type="text" placeholder="Search commands…" spellcheck="false" />
+            <div id="cmdList" class="cmd-list"></div>
+          </div>
+          <div class="cmd-run">
+            <label class="field">
+              <span class="field-label">Command</span>
+              <input id="reaCmd" type="text" spellcheck="false" placeholder="analyze D:\samples\app.exe" />
+            </label>
+            <div class="console-opts">
+              <select id="reaFormat" title="--format">
+                <option value="">format: default</option>
+                <option value="json">json</option>
+                <option value="md">md</option>
+                <option value="toon">toon</option>
+                <option value="yaml">yaml</option>
+                <option value="jsonl">jsonl</option>
+              </select>
+              <input id="reaTokenLimit" type="number" min="1" placeholder="--token-limit" />
+              <input id="reaTokenOffset" type="number" min="0" placeholder="--token-offset" />
+              <input id="reaFilter" type="text" placeholder="--filter-output a,b.c" spellcheck="false" />
+              <label class="chk"><input id="reaTimings" type="checkbox" /> timings</label>
+              <label class="chk" title="Show the full output envelope"><input id="reaFull" type="checkbox" /> full</label>
+              <label class="chk" title="Print only the token count"><input id="reaTokenCount" type="checkbox" /> tokens</label>
+            </div>
+            <div class="console-foot">
+              <button id="reaRunBtn" class="btn btn-primary">Run</button>
+              <button id="reaCancelBtn" class="btn btn-ghost" disabled title="Stop the running command">Cancel</button>
+              <button id="reaHelp" class="btn btn-ghost" title="rea &lt;command&gt; --help">Help</button>
+              <button id="reaSchema" class="btn btn-ghost" title="rea &lt;command&gt; --schema --format json">Schema</button>
+              <select id="reaHistory" class="history-select" title="Command history"><option value="">History…</option></select>
+              <button id="reaCopy" class="btn btn-ghost" title="Copy output">Copy</button>
+              <button id="reaSave" class="btn btn-ghost" title="Save output to a file">Save…</button>
+              <span id="reaStatus" class="console-status"></span>
+            </div>
+            <pre id="reaOut" class="doctor-out console-out">Ready.</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toolsModal" class="modal" hidden>
+    <div class="modal-card wide" role="dialog" aria-modal="true">
+      <header class="modal-head">
+        <div>
+          <h2>REA MCP tools</h2>
+          <p class="modal-sub" id="toolsSub">Every tool the agent can call</p>
+        </div>
+        <button id="toolsClose" class="icon-btn" title="Close">✕</button>
+      </header>
+      <div class="modal-body">
+        <div class="console-grid">
+          <div class="cmd-col">
+            <input id="toolSearch" type="text" placeholder="Search tools, titles, descriptions…" spellcheck="false" />
+            <div id="toolList" class="cmd-list"></div>
+          </div>
+          <div class="cmd-run">
+            <div class="panel-head">
+              <span id="toolName">Select a tool</span>
+              <span class="tool-actions">
+                <button id="toolAsk" class="btn btn-tiny" disabled>Ask agent</button>
+                <button id="toolCopy" class="btn btn-tiny" disabled>Copy request</button>
+              </span>
+            </div>
+            <p id="toolDesc" class="modal-sub tool-desc">Pick a tool to see its description and JSON input schema.</p>
+            <pre id="toolSchema" class="doctor-out console-out">—</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

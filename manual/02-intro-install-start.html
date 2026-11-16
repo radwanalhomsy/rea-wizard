@@ -1,0 +1,216 @@
+<!-- ============================================================ 1 INTRO -->
+<section>
+  <div class="chapno">Chapter 1</div>
+  <h1>Introduction</h1>
+
+  <p class="lead">REA Studio is a desktop workbench for reverse engineering. It puts a guided wizard, a live agent conversation, and the complete REA command-line surface in one window, so a single investigation can move from a task card to evidence-backed findings without leaving the app.</p>
+
+  <h2>1.1 What REA Studio is</h2>
+  <p>REA Studio is an Electron application that combines three layers:</p>
+  <ul>
+    <li><strong>The OpenCode agent</strong> — an LLM agent with tool-calling. It plans the investigation, calls REA tools, explains results, and cites evidence.</li>
+    <li><strong>The REA toolkit</strong> — the reverse-engineering engine. It exposes 255 MCP tools for native, managed, JavaScript, web, firmware, Android, Apple, capture and reconstruction work.</li>
+    <li><strong>REA Studio</strong> — the human interface. It provides task cards and a wizard that turn intent into a precise prompt, a transcript that renders tool activity and evidence, and a direct CLI console for deterministic commands.</li>
+  </ul>
+  <p>Nothing about REA is hidden behind the app: every MCP tool is available to the agent, every CLI command is available in the console, and the tool catalog and guidance are readable in the UI.</p>
+
+  <h2>1.2 Who this manual is for</h2>
+  <table>
+    <thead><tr><th style="width:32%">Reader</th><th>Use</th></tr></thead>
+    <tbody>
+      <tr><td>Reverse engineer / analyst</td><td>Chapters 3–10: run investigations, interpret evidence, keep targets clean.</td></tr>
+      <tr><td>Security reviewer</td><td>Chapters 4, 9, 10: compare builds, audit release exposure, export bundles.</td></tr>
+      <tr><td>Administrator</td><td>Chapters 2, 11, 12: install, configure Ghidra and Java, diagnose startup.</td></tr>
+      <tr><td>Developer</td><td>Chapter 13 and appendices: rebuild the MSI, extend the app, inspect the full command surface.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>1.3 How it works</h2>
+  <p>The app is split into a renderer (the window) and a main process (the operating-system side). The renderer never talks to REA directly; it sends typed IPC requests through a preload bridge.</p>
+  <pre>┌────────────────────────────── REA Studio window ──────────────────────────────┐
+│  Renderer (index.html + app.js + styles.css)                                  │
+│    task rail · wizard · transcript · inspector · console · tools browser      │
+└───────────────────────────────┬───────────────────────────────────────────────┘
+                                │  window.rea.*  (contextBridge, preload.cjs)
+┌───────────────────────────────┴───────────────────────────────────────────────┐
+│  Main process (main.mjs)                                                      │
+│    · starts or reuses the OpenCode server on 127.0.0.1:4096                   │
+│    · streams agent events over SSE                                            │
+│    · spawns `node rea.mjs …` for console commands                             │
+│    · file dialogs, save, attachments, settings                                │
+└───────────────┬───────────────────────────────────┬───────────────────────────┘
+                │ HTTP + SSE                        │ child process
+        ┌───────┴────────┐                  ┌───────┴────────┐
+        │ OpenCode server│                  │ REA CLI        │
+        │  agent + tools │                  │ rea.mjs        │
+        └───────┬────────┘                  └────────────────┘
+                │ MCP (stdio)
+        ┌───────┴────────┐
+        │ REA MCP server │ 255 tools · evidence · providers
+        └────────────────┘</pre>
+  <p>The agent reaches REA through the MCP server configured in <code>%USERPROFILE%\.config\opencode\opencode.jsonc</code>. The console reaches REA through the CLI entry point named in the same configuration. Both share the Ghidra and Java environment variables injected from that file.</p>
+
+  <h2>1.4 What's new in 1.1.0</h2>
+  <table>
+    <thead><tr><th style="width:30%">Area</th><th>Addition</th></tr></thead>
+    <tbody>
+      <tr><td>REA console</td><td>Help and JSON Schema per command, cancel, history (dropdown and ↑/↓), <code>--token-offset</code>, <code>--token-count</code>, <code>--full-output</code>, manifest, live REA version.</td></tr>
+      <tr><td>Tools browser</td><td>All 255 MCP tools with descriptions and input schemas; one-click “Ask agent” and “Copy request”.</td></tr>
+      <tr><td>Guidance</td><td>New inspector tab: search installed REA guidance and read matching sections.</td></tr>
+      <tr><td>Task rail</td><td>Five new domain cards: network capture, compare captures/artifacts, reconstruction ledger, annotate and map addresses, JEB decompile.</td></tr>
+      <tr><td>AgentEnv</td><td>Card modes: build, serve, compare manifests, export desktop app.</td></tr>
+      <tr><td>Console catalog</td><td>Hidden <code>mcp</code>, <code>mcp add</code> and <code>mcp doctor</code> commands included (199 entries).</td></tr>
+      <tr><td>Evidence</td><td>Evidence IDs are matched at full SHA-256 length only (64 hex characters), eliminating truncated duplicates.</td></tr>
+      <tr><td>Targets</td><td>Close/cleanup tool completions now remove the matching target automatically.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ 2 INSTALL -->
+<section>
+  <div class="chapno">Chapter 2</div>
+  <h1>Requirements and installation</h1>
+
+  <h2>2.1 System requirements</h2>
+  <table>
+    <thead><tr><th style="width:28%">Component</th><th>Requirement</th><th style="width:30%">Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Operating system</td><td>Windows 10 or Windows 11, x64</td><td>Per-user install; no administrator rights required.</td></tr>
+      <tr><td>Memory</td><td>8 GB minimum, 16 GB recommended</td><td>Ghidra analysis of large binaries is memory-hungry.</td></tr>
+      <tr><td>Disk</td><td>~1 GB for the app, plus toolchains</td><td>Ghidra 12.1.4 adds ~1.5 GB; analysis caches grow per target.</td></tr>
+      <tr><td>OpenCode CLI</td><td>1.19 or newer</td><td>Expected at <code>%APPDATA%\npm\node_modules\opencode-ai\bin\opencode.exe</code>.</td></tr>
+      <tr><td>Node.js</td><td>20 or newer</td><td>Runs the REA CLI entry point named in the OpenCode config.</td></tr>
+      <tr><td>REA</td><td>{{REA_VERSION}}</td><td>Installed through the OpenCode MCP configuration; <code>rea doctor</code> must be healthy.</td></tr>
+      <tr><td>Ghidra</td><td>12.1.x only</td><td>REA rejects other major/minor versions. Set <code>GHIDRA_INSTALL_DIR</code>.</td></tr>
+      <tr><td>Java</td><td>JDK 21 or newer</td><td>Required by Ghidra. Set <code>JAVA_HOME</code>.</td></tr>
+      <tr><td>Optional providers</td><td>IDA, Hopper, Cutter, JEB, Frida, adb</td><td>Only needed for the corresponding tools; the capability matrix reports what is available.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn">
+    <span class="callout-title">Before you install</span>
+    <p>REA Studio is a front end. If OpenCode, REA or Ghidra are missing, the window still opens but the server chip stays in an error state and analysis tools fail. Complete the environment check in section 2.4 before relying on results.</p>
+  </div>
+
+  <h2>2.2 Install the MSI</h2>
+  <ol>
+    <li>Run <code>D:\REA\rea-wizard\release\REA-Studio-{{VERSION}}-x64.msi</code>.</li>
+    <li>Accept the SmartScreen warning if it appears: <strong>More info → Run anyway</strong>. The installer is not code-signed.</li>
+    <li>Choose the install scope if prompted. The default is per-user, which needs no elevation.</li>
+    <li>Finish the wizard. The app starts automatically (<em>run after finish</em> is enabled).</li>
+  </ol>
+  <p>The installer creates:</p>
+  <table>
+    <thead><tr><th style="width:42%">Path</th><th>Contents</th></tr></thead>
+    <tbody>
+      <tr><td><code>%LOCALAPPDATA%\Programs\REA Studio\</code></td><td>Application binaries and <code>resources\app\</code> (main, preload, renderer).</td></tr>
+      <tr><td><code>%USERPROFILE%\Desktop\REA Studio.lnk</code></td><td>Desktop shortcut.</td></tr>
+      <tr><td><code>%APPDATA%\Microsoft\Windows\Start Menu\Programs\REA Studio.lnk</code></td><td>Start Menu shortcut.</td></tr>
+      <tr><td><code>%APPDATA%\REA Studio\settings.json</code></td><td>Workspace, model and agent preferences (created on first run).</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2.3 Silent install, upgrade and uninstall</h2>
+  <p>Silent install (per-user, no restart):</p>
+  <pre>msiexec /i "D:\REA\rea-wizard\release\REA-Studio-{{VERSION}}-x64.msi" /qn /norestart</pre>
+  <p>Silent uninstall through Apps &amp; features, or by product code:</p>
+  <pre>msiexec /x "{PRODUCT-CODE}" /qn /norestart</pre>
+  <p>To find the product code:</p>
+  <pre>Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*,
+                 HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* |
+  Where-Object DisplayName -like '*REA Studio*' |
+  Select-Object DisplayName, DisplayVersion, PSChildName</pre>
+  <div class="callout">
+    <span class="callout-title">Upgrading</span>
+    <p>Install the newer MSI over the older one. Settings in <code>%APPDATA%\REA Studio\settings.json</code> are preserved. If Windows Installer reports the product is already installed, uninstall the old version first, then install the new one.</p>
+  </div>
+
+  <h2>2.4 First launch and environment check</h2>
+  <ol>
+    <li>Start the app from the Start Menu or Desktop shortcut.</li>
+    <li>Watch the status chip in the header. It moves from <code>starting…</code> to <code>server ready · v1.19.0</code> (the version reflects your installed OpenCode).</li>
+    <li>Open <strong>Health</strong> in the header. The Environment panel must show green rows for OpenCode server, MCP · rea, Ghidra, Java and REA CLI.</li>
+    <li>Click <strong>Run</strong> next to Doctor. A healthy environment prints <code>healthy: true</code> and a list of passing checks.</li>
+  </ol>
+  <table>
+    <thead><tr><th style="width:26%">Health row</th><th>Green means</th><th style="width:34%">If red or amber</th></tr></thead>
+    <tbody>
+      <tr><td>OpenCode server</td><td>The app is using a reachable server on 127.0.0.1:4096.</td><td>See 12.1. Check the OpenCode installation path and port conflicts.</td></tr>
+      <tr><td>MCP · rea</td><td>The REA MCP server is connected and reports 255 tools.</td><td>Run <code>rea setup --client opencode --yes</code> in the REA console, then restart the app.</td></tr>
+      <tr><td>Ghidra</td><td><code>GHIDRA_INSTALL_DIR</code> points at a 12.1.x tree with the decompiler.</td><td>Install Ghidra 12.1.4 and set the variable in the OpenCode MCP environment.</td></tr>
+      <tr><td>Java</td><td><code>JAVA_HOME</code> points at a JDK that Ghidra accepts.</td><td>Install JDK 21+ and update <code>JAVA_HOME</code>.</td></tr>
+      <tr><td>REA CLI</td><td><code>rea --version</code> answers.</td><td>Verify the MCP command in the OpenCode config and run <code>rea --version</code> in the console.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2.5 Where REA gets its environment</h2>
+  <p>The app reads <code>%USERPROFILE%\.config\opencode\opencode.jsonc</code> and reuses the <code>mcp.rea.environment</code> block. A typical entry looks like this:</p>
+  <pre>"rea": {
+  "type": "local",
+  "enabled": true,
+  "environment": {
+    "GHIDRA_INSTALL_DIR": "D:\\REA\\tools\\ghidra_12.1.4_PUBLIC",
+    "JAVA_HOME": "C:\\Program Files\\Eclipse Adoptium\\jdk-25.0.4.101-hotspot"
+  },
+  "command": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "C:\\Users\\&lt;you&gt;\\AppData\\Local\\npm-cache\\_npx\\...\\rea-agents\\scripts\\rea.mjs",
+    "mcp"
+  ]
+}</pre>
+  <p>Both the agent and the console receive these variables. Editing the config requires restarting the app (and the OpenCode server) to take effect.</p>
+</section>
+
+<!-- ============================================================ 3 START -->
+<section>
+  <div class="chapno">Chapter 3</div>
+  <h1>Getting started</h1>
+
+  <h2>3.1 Window tour</h2>
+  <table>
+    <thead><tr><th style="width:20%">Region</th><th>What it contains</th></tr></thead>
+    <tbody>
+      <tr><td>Header</td><td>Brand, workspace chip, model and agent selectors, server status, and the buttons <strong>REA</strong>, <strong>Sessions</strong>, <strong>Health</strong>, <strong>Save</strong>, <strong>New session</strong>.</td></tr>
+      <tr><td>Left rail</td><td>Task cards: six REA guided workflows, ten quick tasks and fourteen domain cards. A reload button refreshes the workflows from REA.</td></tr>
+      <tr><td>Center</td><td>The transcript (messages, tool cards, permission prompts) and the composer at the bottom.</td></tr>
+      <tr><td>Right inspector</td><td>Five tabs: Activity, Evidence, Providers, Guidance, Health.</td></tr>
+      <tr><td>Modals</td><td>Wizard, Sessions, REA console, MCP tools browser.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3.2 Your first investigation</h2>
+  <p>This walkthrough uses a harmless Windows binary. Substitute any file you are authorised to analyse.</p>
+  <ol>
+    <li>Click <strong>Triage a binary</strong> in the rail.</li>
+    <li>In step 1, enter or browse to <code>C:\Windows\System32\notepad.exe</code>.</li>
+    <li>Click <strong>Next</strong>. Leave engine on <em>Auto</em>, depth on <em>Summary first</em> and output on <em>Concise</em>.</li>
+    <li>Click <strong>Next</strong> again to review. The prompt preview is editable. Click <strong>Launch task</strong>.</li>
+    <li>The app creates a new session and sends the prompt. Watch the transcript: the agent calls <code>binary_overview</code>, then reads procedures and strings.</li>
+    <li>Open <strong>Activity</strong> to see each REA tool call and its elapsed time. Open <strong>Evidence</strong> to see the IDs the answer cites.</li>
+    <li>When finished, use <strong>Close all</strong> in Activity (or the ✕ on each target) and let the agent confirm cleanup.</li>
+  </ol>
+  <div class="callout tip">
+    <span class="callout-title">Expect the first analysis to be slow</span>
+    <p>A first Ghidra pass on a system binary can take minutes (a <code>binary_overview</code> on notepad.exe has been measured at roughly 3.5 minutes, much of it the Windows resource analyser). A long-running tool card is not a hang. The elapsed time in Activity is the reliable signal.</p>
+  </div>
+
+  <h2>3.3 Reading the transcript</h2>
+  <ul>
+    <li><strong>Assistant text</strong> renders light Markdown: headings, lists, tables, code fences, links.</li>
+    <li><strong>Tool cards</strong> show the tool name, a status (running / completed / error), the title REA reported, and an expandable output. Completed cards stay collapsed to keep the transcript readable.</li>
+    <li><strong>Evidence chips</strong> are <code>ev_…</code> identifiers with the full 64-character SHA-256 suffix. Click one to copy it.</li>
+    <li><strong>Permission prompts</strong> appear inline when the agent asks to run a command or write a file. Choose allow or deny; the choice is sent back to the agent.</li>
+  </ul>
+
+  <h2>3.4 Permissions</h2>
+  <p>OpenCode applies its own permission policy. When a request needs approval, REA Studio renders a card above the composer with the action and its pattern. Three choices are offered:</p>
+  <table>
+    <thead><tr><th style="width:22%">Button</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td>Allow once</td><td>Approves this single request. The agent continues immediately.</td></tr>
+      <tr><td>Always</td><td>Approves this action for the rest of the session, so repeated identical calls do not prompt again.</td></tr>
+      <tr><td>Reject</td><td>Refuses the request. The agent receives the refusal and must adapt or stop.</td></tr>
+    </tbody>
+  </table>
+  <p>Answered cards remain visible with the response, so the transcript records what was approved.</p>
+</section>
