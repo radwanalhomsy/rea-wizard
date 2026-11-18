@@ -127,6 +127,7 @@ function renderCloneList() {
         </div>`
       })
       .join('')
+  renderClonePickers()
 }
 
 async function openClone(slug, keepScroll = false) {
@@ -143,25 +144,50 @@ async function openClone(slug, keepScroll = false) {
   }
 }
 
-function renderCloneDetail() {
-  const box = $('#cloneDetail')
-  if (!box) return
-  const p = cloneState.detail
-  if (!p) {
-    box.hidden = true
-    box.innerHTML = ''
-    return
-  }
-  box.hidden = false
+/* --------------------------------------------------------- shared rendering */
 
+function projectPickerOptions() {
+  const projects = cloneState.projects || []
+  if (!projects.length) return '<option value="">No projects</option>'
+  return (
+    '<option value="">Select project...</option>' +
+    projects
+      .map(
+        (p) =>
+          `<option value="${escapeHtml(p.slug)}"${
+            p.slug === cloneState.current ? ' selected' : ''
+          }>${escapeHtml(p.name)}</option>`,
+      )
+      .join('')
+  )
+}
+
+function renderClonePickers() {
+  const has = (cloneState.projects || []).length > 0
+  $$('.clone-project-pick').forEach((sel) => {
+    sel.innerHTML = projectPickerOptions()
+    sel.disabled = !has
+  })
+}
+
+function emptyProjectNote(tool) {
+  const any = (cloneState.projects || []).length > 0
+  return any
+    ? `<div class="clone-empty-note">Select a clone project above to use the ${tool}.</div>`
+    : '<div class="clone-empty-note">No clone projects yet. Create one in the <b>Clone</b> tab first.</div>'
+}
+
+function targetLineHtml(p) {
   const target = p.target
-  const targetLine = target
-    ? `${escapeHtml(target.path)}<br><span style="color:var(--text-faint)">${
-        target.sha256 ? 'sha256 ' + target.sha256.slice(0, 16) + '…' : 'not hashed'
-      } · ${bytes(target.size)} · ${escapeHtml(target.kind || 'kind unknown')}</span>`
-    : 'No target recorded yet.'
+  if (!target) return 'No target recorded yet.'
+  const hash = target.sha256 ? 'sha256 ' + target.sha256.slice(0, 16) + '...' : 'not hashed'
+  return `${escapeHtml(target.path)}<br><span style="color:var(--text-faint)">${hash} | ${bytes(
+    target.size,
+  )} | ${escapeHtml(target.kind || 'kind unknown')}</span>`
+}
 
-  const stages = (p.stageBoard || [])
+function stageBoardHtml(p) {
+  return (p.stageBoard || [])
     .map((s, i) => {
       const status = s.status || 'pending'
       const gate = s.gate || { allowed: true, blockers: [] }
@@ -184,11 +210,11 @@ function renderCloneDetail() {
           : `<button class="btn btn-tiny" data-stage-act="blocked" data-stage="${s.id}">Block</button>`
       return `<div class="clone-stage ${status}">
         <div class="clone-stage-top">
-          <span class="clone-stage-num">${status === 'complete' ? '✓' : i + 1}</span>
+          <span class="clone-stage-num">${status === 'complete' ? '&#10003;' : i + 1}</span>
           <span class="clone-stage-title">${escapeHtml(s.title)}</span>
           <span class="clone-stage-goal">${escapeHtml(s.goal)}</span>
         </div>
-        <div class="clone-stage-detail">${escapeHtml(s.detail)}${s.note ? ' — ' + escapeHtml(s.note) : ''}</div>
+        <div class="clone-stage-detail">${escapeHtml(s.detail)}${s.note ? ' - ' + escapeHtml(s.note) : ''}</div>
         <div class="clone-stage-actions">
           ${startBtn}${completeBtn}${blockBtn}
           <button class="btn btn-tiny" data-stage-act="ask" data-stage="${s.id}" title="Ask the agent to work this stage">Ask agent</button>
@@ -197,183 +223,202 @@ function renderCloneDetail() {
       </div>`
     })
     .join('')
+}
 
+function unknownListHtml(p) {
   const unknowns = (p.unknowns || []).slice().sort((a, b) => {
     if (a.status !== b.status) return a.status === 'open' ? -1 : 1
     if (a.blocking !== b.blocking) return a.blocking ? -1 : 1
     return String(b.createdAt).localeCompare(String(a.createdAt))
   })
+  if (!unknowns.length) {
+    return '<div class="clone-empty-note">No open questions recorded. Every unresolved finding belongs here so a stage cannot quietly "finish".</div>'
+  }
+  return unknowns
+    .map((u) => {
+      const cls = [
+        'clone-unknown',
+        u.status === 'closed' ? 'closed' : '',
+        u.blocking && u.status === 'open' ? 'blocking' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')
+      const act =
+        u.status === 'open'
+          ? `<button class="btn btn-tiny" data-un-act="close" data-un="${u.id}" title="Resolve this unknown">Resolve</button>`
+          : `<button class="btn btn-tiny" data-un-act="reopen" data-un="${u.id}" title="Reopen">Reopen</button>`
+      return `<div class="${cls}">
+        <div class="clone-unknown-body">
+          <div class="clone-unknown-q">${escapeHtml(u.question)}</div>
+          <div class="clone-unknown-meta">${escapeHtml(u.stage || 'any stage')} - ${
+            u.blocking ? 'blocking' : 'non-blocking'
+          }${u.evidence ? ' - ' + escapeHtml(u.evidence) : ''}${
+            u.resolution ? ' - ' + escapeHtml(u.resolution) : ''
+          } - ${ago(u.createdAt)}</div>
+        </div>
+        <div class="clone-unknown-actions">
+          ${act}
+          <button class="btn btn-tiny" data-un-act="toggle-block" data-un="${u.id}" title="Toggle blocking">${
+            u.blocking ? 'Unblock' : 'Block'
+          }</button>
+          <button class="btn btn-tiny" data-un-act="delete" data-un="${u.id}" title="Remove">&#10005;</button>
+        </div>
+      </div>`
+    })
+    .join('')
+}
 
-  const unknownHtml = unknowns.length
-    ? unknowns
-        .map((u) => {
-          const cls = ['clone-unknown', u.status === 'closed' ? 'closed' : '', u.blocking && u.status === 'open' ? 'blocking' : '']
-            .filter(Boolean)
-            .join(' ')
-          const act =
-            u.status === 'open'
-              ? `<button class="btn btn-tiny" data-un-act="close" data-un="${u.id}" title="Resolve this unknown">Resolve</button>`
-              : `<button class="btn btn-tiny" data-un-act="reopen" data-un="${u.id}" title="Reopen">Reopen</button>`
-          return `<div class="${cls}">
-            <div class="clone-unknown-body">
-              <div class="clone-unknown-q">${escapeHtml(u.question)}</div>
-              <div class="clone-unknown-meta">${escapeHtml(u.stage || 'any stage')} · ${
-                u.blocking ? 'blocking' : 'non-blocking'
-              }${u.evidence ? ' · ' + escapeHtml(u.evidence) : ''}${
-                u.resolution ? ' · ' + escapeHtml(u.resolution) : ''
-              } · ${ago(u.createdAt)}</div>
-            </div>
-            <div class="clone-unknown-actions">
-              ${act}
-              <button class="btn btn-tiny" data-un-act="toggle-block" data-un="${u.id}" title="Toggle blocking">${
-                u.blocking ? 'Unblock' : 'Block'
-              }</button>
-              <button class="btn btn-tiny" data-un-act="delete" data-un="${u.id}" title="Remove">✕</button>
-            </div>
-          </div>`
-        })
-        .join('')
-    : '<div class="clone-empty-note">No open questions recorded. Every unresolved finding belongs here so a stage cannot quietly "finish".</div>'
-
-  const cases = (p.cases || []).slice().sort((a, b) => String(b.recordedAt).localeCompare(String(a.recordedAt)))
-  const casesHtml = cases.length
-    ? cases
-        .map((c) => {
-          const dims = (c.parity?.dims || []).map((d) => `${d.name}: ${d.status} (${d.detail || ''})`).join('\n')
-          const badge = c.parity
-            ? `<span class="clone-parity ${escapeHtml(c.parity.status)}" title="${escapeHtml(
-                [c.parity.note, dims].filter(Boolean).join('\n') || c.parity.status,
-              )}">${escapeHtml(c.parity.status)}</span>`
-            : ''
-          return `<div class="clone-case" data-case="${c.id}">
-            <div class="clone-case-body">
-              <div class="clone-case-title"><span class="clone-case-kind">${escapeHtml(c.kind)}</span>${escapeHtml(
-                c.title,
-              )}${badge}</div>
-              <div class="clone-case-meta">${escapeHtml(c.provider)} · ${
-                c.steps?.length || 0
-              } steps${c.parity ? ' · checked ' + ago(c.parity.at) : ''} · recorded ${ago(c.recordedAt)}</div>
-            </div>
-            <div class="clone-case-actions">
-              <button class="btn btn-tiny" data-case-act="replay" data-case="${c.id}" title="Re-run the exact recorded request and diff it against the original">Replay</button>
-              <button class="btn btn-tiny" data-case-act="json" data-case="${c.id}" title="Show the recorded case file">JSON</button>
-              <button class="btn btn-tiny" data-case-act="copy" data-case="${c.id}" title="Copy the replay request">Copy</button>
-              <button class="btn btn-tiny" data-case-act="delete" data-case="${c.id}" title="Delete this journey">✕</button>
-            </div>
-          </div>`
-        })
-        .join('')
-    : '<div class="clone-empty-note">No journeys recorded. Arm <b>Record</b>, then have the agent run a <code>capture_*</code> tool for this target — the exact request is saved for replay.</div>'
-
-  const artifacts = cloneState.artifacts || []
-  const artifactHtml = artifacts.length
-    ? artifacts
-        .map(
-          (a) => `<button class="clone-artifact" data-artifact="${escapeHtml(a.path)}" title="${escapeHtml(
-            a.path,
-          )}"><span class="clone-artifact-area">${escapeHtml(a.area || 'file')}</span><span class="clone-artifact-path">${escapeHtml(
-            a.path,
-          )}</span><span class="clone-artifact-size">${bytes(a.bytes)}</span></button>`,
-        )
-        .join('')
-    : '<div class="clone-empty-note">Nothing generated yet. <b>Compile spec</b> writes features, contracts, state machines, tests and reports; <b>Scaffold</b> writes a code skeleton with explicit TODOs.</div>'
-
-  const generating = cloneState.generating
+function evidenceListHtml(p) {
   const evidence = (p.evidence || []).slice(-8).reverse()
-  const evidenceHtml = evidence.length
-    ? evidence
-        .map(
-          (e) =>
-            `<div class="clone-unknown"><div class="clone-unknown-body"><div class="clone-unknown-q">${escapeHtml(
-              e.id,
-            )}</div><div class="clone-unknown-meta">${escapeHtml(e.stage || 'unassigned')} · ${escapeHtml(
-              e.source || 'agent',
-            )} · ${ago(e.capturedAt)}${e.file ? ' · snapshot saved' : ''}</div></div></div>`,
-        )
-        .join('')
-    : '<div class="clone-empty-note">Evidence IDs found in agent answers are recorded here automatically while this project is selected.</div>'
+  if (!evidence.length) {
+    return '<div class="clone-empty-note">Evidence IDs found in agent answers are recorded here automatically while this project is selected.</div>'
+  }
+  return evidence
+    .map(
+      (e) =>
+        `<div class="clone-unknown"><div class="clone-unknown-body"><div class="clone-unknown-q">${escapeHtml(
+          e.id,
+        )}</div><div class="clone-unknown-meta">${escapeHtml(e.stage || 'unassigned')} - ${escapeHtml(
+          e.source || 'agent',
+        )} - ${ago(e.capturedAt)}${e.file ? ' - snapshot saved' : ''}</div></div></div>`,
+    )
+    .join('')
+}
 
+function activityListHtml(p) {
+  const log = (p.log || []).slice(-6).reverse()
+  if (!log.length) return '<div class="clone-empty-note">No activity recorded yet.</div>'
+  return log
+    .map(
+      (l) =>
+        `<div class="clone-empty-note">${ago(l.at)} - ${escapeHtml(l.event)} - ${escapeHtml(l.detail || '')}</div>`,
+    )
+    .join('')
+}
+
+function parityBadge(c) {
+  if (!c.parity) return ''
+  const dims = (c.parity.dims || []).map((d) => `${d.name}: ${d.status} (${d.detail || ''})`).join('\n')
+  return `<span class="clone-parity ${escapeHtml(c.parity.status)}" title="${escapeHtml(
+    [c.parity.note, dims].filter(Boolean).join('\n') || c.parity.status,
+  )}">${escapeHtml(c.parity.status)}</span>`
+}
+
+function caseListHtml(p, opts = {}) {
+  const cases = (p.cases || []).slice().sort((a, b) => String(b.recordedAt).localeCompare(String(a.recordedAt)))
+  if (!cases.length) {
+    return `<div class="clone-empty-note">${opts.empty || 'No journeys recorded.'}</div>`
+  }
+  const parityMode = opts.mode === 'parity'
+  return cases
+    .map((c) => {
+      const dims = (c.parity?.dims || [])
+        .map(
+          (d) =>
+            `${escapeHtml(d.name)}: ${escapeHtml(d.status)}${
+              d.detail ? ' - ' + escapeHtml(d.detail) : ''
+            }`,
+        )
+        .join('<br>')
+      const actions = parityMode
+        ? `<button class="btn btn-tiny" data-case-act="replay" data-case="${c.id}" title="Re-run the exact recorded request and diff it against the original">Replay</button>
+           <button class="btn btn-tiny" data-case-act="json" data-case="${c.id}" title="Show the recorded case file">JSON</button>
+           <button class="btn btn-tiny" data-case-act="copy" data-case="${c.id}" title="Copy the replay request">Copy</button>`
+        : `<button class="btn btn-tiny" data-case-act="replay" data-case="${c.id}" title="Re-run the exact recorded request and diff it against the original">Replay</button>
+           <button class="btn btn-tiny" data-case-act="json" data-case="${c.id}" title="Show the recorded case file">JSON</button>
+           <button class="btn btn-tiny" data-case-act="copy" data-case="${c.id}" title="Copy the replay request">Copy</button>
+           <button class="btn btn-tiny" data-case-act="delete" data-case="${c.id}" title="Delete this journey">&#10005;</button>`
+      return `<div class="clone-case" data-case="${c.id}">
+        <div class="clone-case-body">
+          <div class="clone-case-title"><span class="clone-case-kind">${escapeHtml(c.kind)}</span>${escapeHtml(
+            c.title,
+          )}${parityBadge(c)}</div>
+          <div class="clone-case-meta">${escapeHtml(c.provider)} - ${
+            c.steps?.length || 0
+          } steps${c.parity ? ' - checked ' + ago(c.parity.at) : ''} - recorded ${ago(c.recordedAt)}</div>
+          ${parityMode && dims ? `<div class="clone-case-dims">${dims}</div>` : ''}
+        </div>
+        <div class="clone-case-actions">${actions}</div>
+      </div>`
+    })
+    .join('')
+}
+
+function paritySummaryHtml(p) {
+  const cases = p.cases || []
+  const n = (s) => cases.filter((c) => c.parity?.status === s).length
+  const unchecked = cases.filter((c) => !c.parity).length
+  const stats = [
+    ['match', n('match')],
+    ['changed', n('changed')],
+    ['error', n('error')],
+    ['unavailable', n('unavailable')],
+    ['unchecked', unchecked],
+  ]
+    .filter(([, v]) => v)
+    .map(([k, v]) => `<span class="clone-parity-stat ${k}">${k} ${v}</span>`)
+    .join('')
+  return stats ? `<div class="clone-parity-summary">${stats}</div>` : ''
+}
+
+function artifactListHtml() {
+  const artifacts = cloneState.artifacts || []
+  if (!artifacts.length) {
+    return '<div class="clone-empty-note">Nothing generated yet. <b>Compile spec</b> writes features, contracts, state machines, tests and reports; <b>Scaffold</b> writes a code skeleton with explicit TODOs.</div>'
+  }
+  return artifacts
+    .map(
+      (a) => `<button class="clone-artifact" data-artifact="${escapeHtml(a.path)}" title="${escapeHtml(
+        a.path,
+      )}"><span class="clone-artifact-area">${escapeHtml(a.area || 'file')}</span><span class="clone-artifact-path">${escapeHtml(
+        a.path,
+      )}</span><span class="clone-artifact-size">${bytes(a.bytes)}</span></button>`,
+    )
+    .join('')
+}
+
+/* ---------------------------------------------------------- clone project */
+
+function renderCloneProjectDetail() {
+  const box = $('#cloneDetail')
+  if (!box) return
+  const p = cloneState.detail
+  if (!p) {
+    box.hidden = true
+    box.innerHTML = ''
+    return
+  }
+  box.hidden = false
+  const complete = (p.stageBoard || []).filter((s) => s.status === 'complete').length
+  const openUnknowns = (p.unknowns || []).filter((u) => u.status === 'open').length
   box.innerHTML = `
     <div class="clone-detail-head">
       <span class="clone-detail-title">${escapeHtml(p.name)}</span>
       <span class="clone-head-actions">
-        <button class="btn btn-tiny${cloneState.armed ? ' clone-armed' : ''}" id="cloneArm" title="Record capture tool calls into this project">${
-          cloneState.armed ? '● Recording' : 'Record'
-        }</button>
         <button class="btn btn-tiny" id="cloneOpenFolder" title="Show the project folder">Folder</button>
         <button class="btn btn-tiny" id="cloneDelete" title="Delete this project folder">Delete</button>
       </span>
     </div>
-    <div class="clone-target">${targetLine}</div>
-    <div class="clone-section-head"><span>Stages</span><span style="font-size:10px">${(p.stageBoard || []).filter((s) => s.status === 'complete').length}/6 done</span></div>
-    <div>${stages}</div>
-    <div class="clone-section-head"><span>Journeys</span><span style="font-size:10px">${
-      cases.length
-    } recorded</span></div>
-    <div class="clone-cases">${casesHtml}</div>
-    <div class="clone-guide-row">
-      <button class="btn btn-tiny" data-guide="browser">Browser journey</button>
-      <button class="btn btn-tiny" data-guide="electron">Electron journey</button>
-      <button class="btn btn-tiny" data-guide="native">Native UI journey</button>
-      <button class="btn btn-tiny" data-guide="process">Process journey</button>
-    </div>
-    <div class="clone-section-head"><span>Spec &amp; build</span><span style="font-size:10px">${
-      artifacts.length
-    } files</span></div>
-    <div class="clone-deliverable-actions">
-      <button class="btn btn-tiny" id="cloneCompile" ${
-        generating ? 'disabled' : ''
-      }>${generating === 'spec' ? 'Compiling…' : 'Compile spec'}</button>
-      <select id="cloneLang" class="clone-lang" title="Scaffold language" ${generating ? 'disabled' : ''}>
-        <option value="typescript"${cloneState.language === 'typescript' ? ' selected' : ''}>TypeScript</option>
-        <option value="python"${cloneState.language === 'python' ? ' selected' : ''}>Python</option>
-      </select>
-      <button class="btn btn-tiny" id="cloneScaffold" ${
-        generating ? 'disabled' : ''
-      }>${generating === 'scaffold' ? 'Scaffolding…' : 'Scaffold'}</button>
-    </div>
-    <div class="clone-artifacts">${artifactHtml}</div>
-    <div class="clone-section-head"><span>Unknowns</span><span style="font-size:10px">${
-      (p.unknowns || []).filter((u) => u.status === 'open').length
-    } open</span></div>
-    <div class="clone-unknowns">${unknownHtml}</div>
+    <div class="clone-target">${targetLineHtml(p)}</div>
+    <div class="clone-empty-note">Journeys live in <b>Recorder</b>, replay diffs in <b>Parity</b>, and generated files in <b>Spec</b>.</div>
+    <div class="clone-section-head"><span>Stages</span><span style="font-size:10px">${complete}/6 done</span></div>
+    <div>${stageBoardHtml(p)}</div>
+    <div class="clone-section-head"><span>Unknowns</span><span style="font-size:10px">${openUnknowns} open</span></div>
+    <div class="clone-unknowns">${unknownListHtml(p)}</div>
     <div class="clone-unknown-form">
       <input id="cloneUnknownInput" placeholder="What is still unknown about this target?" />
       <button class="btn btn-tiny" id="cloneUnknownAdd">Add</button>
     </div>
     <div class="clone-section-head"><span>Evidence</span><span style="font-size:10px">${(p.evidence || []).length} total</span></div>
-    <div class="clone-unknowns">${evidenceHtml}</div>
+    <div class="clone-unknowns">${evidenceListHtml(p)}</div>
     <div class="clone-section-head"><span>Recent activity</span></div>
-    <div class="clone-unknowns">${(p.log || [])
-      .slice(-6)
-      .reverse()
-      .map(
-        (l) =>
-          `<div class="clone-empty-note">${ago(l.at)} · ${escapeHtml(l.event)} · ${escapeHtml(l.detail || '')}</div>`,
-      )
-      .join('')}</div>
+    <div class="clone-unknowns">${activityListHtml(p)}</div>
   `
-
-  wireCloneDetail(p)
+  wireCloneProjectDetail(p)
 }
 
-function wireCloneDetail(p) {
+function wireCloneProjectDetail(p) {
   $('#cloneOpenFolder')?.addEventListener('click', () => api.reveal(p.paths?.dir || cloneState.root))
-  $('#cloneArm')?.addEventListener('click', toggleArmed)
-  $('#cloneCompile')?.addEventListener('click', () => generate('spec'))
-  $('#cloneScaffold')?.addEventListener('click', () => generate('scaffold'))
-  $('#cloneLang')?.addEventListener('change', (e) => {
-    cloneState.language = e.target.value
-  })
-  $$('#cloneDetail [data-artifact]').forEach((btn) =>
-    btn.addEventListener('click', () => openArtifact(btn.dataset.artifact)),
-  )
-  $$('#cloneDetail [data-guide]').forEach((btn) =>
-    btn.addEventListener('click', () => guideJourney(btn.dataset.guide)),
-  )
-  $$('#cloneDetail [data-case-act]').forEach((btn) =>
-    btn.addEventListener('click', () => caseAction(btn.dataset.case, btn.dataset.caseAct, p)),
-  )
   $('#cloneDelete')?.addEventListener('click', async () => {
     if (!confirm(`Delete clone project "${p.name}" and everything in its folder?`)) return
     const res = await api.cloneDelete({ slug: p.slug })
@@ -400,6 +445,144 @@ function wireCloneDetail(p) {
     btn.addEventListener('click', () => unknownAction(btn.dataset.un, btn.dataset.unAct))
   })
 }
+
+/* --------------------------------------------------------------- recorder */
+
+function renderRecorderDetail() {
+  const box = $('#cloneRecorder')
+  if (!box) return
+  const p = cloneState.detail
+  if (!p) {
+    box.innerHTML = emptyProjectNote('recorder')
+    return
+  }
+  const count = (p.cases || []).length
+  box.innerHTML = `
+    <div class="clone-recorder-head">
+      <button class="btn btn-tiny${cloneState.armed ? ' clone-armed' : ''}" id="cloneArm" title="Record capture tool calls into this project">${
+        cloneState.armed ? 'Stop recording' : 'Record'
+      }</button>
+      <span class="clone-recorder-state">${
+        cloneState.armed ? 'Armed - capture calls are saved to this project' : 'Not recording'
+      }</span>
+    </div>
+    <div class="clone-empty-note">Arm <b>Record</b>, then have the agent run a <code>capture_*</code> or <code>observe_web_session</code> tool. The exact request is stored so it can be replayed in the <b>Parity</b> tab.</div>
+    <div class="clone-section-head"><span>Guided journeys</span></div>
+    <div class="clone-guide-row">
+      <button class="btn btn-tiny" data-guide="browser">Browser journey</button>
+      <button class="btn btn-tiny" data-guide="electron">Electron journey</button>
+      <button class="btn btn-tiny" data-guide="native">Native UI journey</button>
+      <button class="btn btn-tiny" data-guide="process">Process journey</button>
+    </div>
+    <div class="clone-section-head"><span>Recorded journeys</span><span style="font-size:10px">${count} recorded</span></div>
+    <div class="clone-cases">${caseListHtml(p, {
+      empty:
+        'No journeys recorded yet. Arm Record and ask the agent to capture one user action end to end.',
+    })}</div>
+  `
+  wireRecorderDetail(p)
+}
+
+function wireRecorderDetail(p) {
+  $('#cloneArm')?.addEventListener('click', toggleArmed)
+  $$('#cloneRecorder [data-guide]').forEach((btn) =>
+    btn.addEventListener('click', () => guideJourney(btn.dataset.guide)),
+  )
+  $$('#cloneRecorder [data-case-act]').forEach((btn) =>
+    btn.addEventListener('click', () => caseAction(btn.dataset.case, btn.dataset.caseAct, p, btn)),
+  )
+}
+
+/* ----------------------------------------------------------------- parity */
+
+function renderParityDetail() {
+  const box = $('#cloneParity')
+  if (!box) return
+  const p = cloneState.detail
+  if (!p) {
+    box.innerHTML = emptyProjectNote('parity')
+    return
+  }
+  const cases = (p.cases || []).length
+  const report = (cloneState.artifacts || []).find((a) => /reports[\\/]parity\.md$/i.test(a.path))
+  box.innerHTML = `
+    ${paritySummaryHtml(p)}
+    <div class="clone-empty-note">Replay re-runs the exact recorded request through the REA CLI and diffs steps, exit code, unknowns and record shape. Volatile timing and evidence IDs are ignored.</div>
+    <div class="clone-section-head">
+      <span>Journeys</span>
+      <span style="display:flex;gap:4px;align-items:center">
+        <span style="font-size:10px">${cases} recorded</span>
+        ${report ? `<button class="btn btn-tiny" data-artifact="${escapeHtml(report.path)}">Open report</button>` : ''}
+      </span>
+    </div>
+    <div class="clone-cases">${caseListHtml(p, {
+      mode: 'parity',
+      empty: 'Nothing to replay yet. Record a journey in the Recorder tab first.',
+    })}</div>
+  `
+  wireParityDetail(p)
+}
+
+function wireParityDetail(p) {
+  $$('#cloneParity [data-case-act]').forEach((btn) =>
+    btn.addEventListener('click', () => caseAction(btn.dataset.case, btn.dataset.caseAct, p, btn)),
+  )
+  $$('#cloneParity [data-artifact]').forEach((btn) =>
+    btn.addEventListener('click', () => openArtifact(btn.dataset.artifact)),
+  )
+}
+
+/* ------------------------------------------------------------------- spec */
+
+function renderSpecDetail() {
+  const box = $('#cloneSpec')
+  if (!box) return
+  const p = cloneState.detail
+  if (!p) {
+    box.innerHTML = emptyProjectNote('spec')
+    return
+  }
+  const artifacts = cloneState.artifacts || []
+  const generating = cloneState.generating
+  box.innerHTML = `
+    <div class="clone-empty-note">Compile the spec from evidence and recorded journeys, then scaffold a runnable skeleton. Both are deterministic: regenerating produces byte-identical files, and unfinished behaviour is written as explicit <code>TODO(case_...)</code> stubs.</div>
+    <div class="clone-deliverable-actions">
+      <button class="btn btn-tiny" id="cloneCompile" ${
+        generating ? 'disabled' : ''
+      }>${generating === 'spec' ? 'Compiling...' : 'Compile spec'}</button>
+      <select id="cloneLang" class="clone-lang" title="Scaffold language" ${generating ? 'disabled' : ''}>
+        <option value="typescript"${cloneState.language === 'typescript' ? ' selected' : ''}>TypeScript</option>
+        <option value="python"${cloneState.language === 'python' ? ' selected' : ''}>Python</option>
+      </select>
+      <button class="btn btn-tiny" id="cloneScaffold" ${
+        generating ? 'disabled' : ''
+      }>${generating === 'scaffold' ? 'Scaffolding...' : 'Scaffold'}</button>
+    </div>
+    <div class="clone-section-head"><span>Generated files</span><span style="font-size:10px">${artifacts.length} files</span></div>
+    <div class="clone-artifacts">${artifactListHtml()}</div>
+  `
+  wireSpecDetail(p)
+}
+
+function wireSpecDetail(p) {
+  $('#cloneCompile')?.addEventListener('click', () => generate('spec'))
+  $('#cloneScaffold')?.addEventListener('click', () => generate('scaffold'))
+  $('#cloneLang')?.addEventListener('change', (e) => {
+    cloneState.language = e.target.value
+  })
+  $$('#cloneSpec [data-artifact]').forEach((btn) =>
+    btn.addEventListener('click', () => openArtifact(btn.dataset.artifact)),
+  )
+}
+
+function renderCloneDetail() {
+  renderCloneProjectDetail()
+  renderRecorderDetail()
+  renderParityDetail()
+  renderSpecDetail()
+  renderClonePickers()
+}
+
 
 async function generate(kind) {
   if (!cloneState.current || cloneState.generating) return
@@ -431,9 +614,8 @@ async function openArtifact(file) {
   if (!res?.ok) toast('Open artifact failed: ' + (res?.error || 'unknown'))
 }
 
-async function caseAction(id, act, project) {
+async function caseAction(id, act, project, btn) {
   if (act === 'replay') {
-    const btn = document.querySelector(`[data-case-act="replay"][data-case="${id}"]`)
     if (btn) {
       btn.disabled = true
       btn.textContent = 'Running…'
@@ -678,8 +860,22 @@ function wireCloneUi() {
     if (card) openClone(card.dataset.slug)
   })
   $$('.tab').forEach((tab) => {
-    if (tab.dataset.tab === 'clone') tab.addEventListener('click', () => loadClone())
+    if (['clone', 'recorder', 'parity', 'spec'].includes(tab.dataset.tab)) {
+      tab.addEventListener('click', () => loadClone())
+    }
   })
+  $$('.clone-project-pick').forEach((sel) =>
+    sel.addEventListener('change', () => {
+      if (sel.value) openClone(sel.value)
+    }),
+  )
+  $$('[data-clone-tool]').forEach((btn) =>
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation()
+      activateTab(btn.dataset.cloneTool)
+      loadClone()
+    }),
+  )
   try {
     api.onEvent(handleCloneEvent)
   } catch { }

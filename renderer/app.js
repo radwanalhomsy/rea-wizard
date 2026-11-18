@@ -1794,7 +1794,7 @@ function wireUi() {
   // rail cards (delegated: survives reloads)
   $('.rail-body').addEventListener('click', (e) => {
     const card = e.target.closest('.task-card')
-    if (!card) return
+    if (!card || !card.dataset.card) return
     $$('.task-card').forEach((c) => c.classList.toggle('active', c === card))
     openWizard(cardById(card.dataset.card))
   })

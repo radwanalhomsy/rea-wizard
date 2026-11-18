@@ -37,7 +37,7 @@ The app does **not** install or configure any of these; it uses what
 ## Install (Windows MSI)
 
 ```powershell
-msiexec /i "D:\REA\rea-wizard\release\REA-Studio-1.2.0-x64.msi"
+msiexec /i "D:\REA\rea-wizard\release\REA-Studio-1.2.1-x64.msi"
 ```
 
 The wizard offers *per-user* (default, no admin prompt) or *per-machine*
@@ -189,7 +189,10 @@ to confirm). Deleting the current session starts a clean chat.
 
 ## Clone projects
 
-The **Clone** tab keeps a durable, on-disk workspace per target. It exists
+The clone workspace is split across four sidebar tabs: **Clone** (projects,
+stages, unknowns, evidence), **Recorder** (replayable journeys), **Parity**
+(replay diffs), and **Spec** (compiled specs and scaffolds). The same four
+tools also appear in the left rail under **Clone toolkit**. It exists
 because REA's Windows Ghidra path has no program checkpoint: every new process
 re-imports and re-analyses the target, so anything learned only in chat is lost
 on restart.
@@ -252,7 +255,7 @@ and tests that are skipped unless `CLONE_REPLAY` is set. Every generated
 function throws `not implemented` and carries a `TODO(case_…)` comment naming
 the case that defines it. It is a skeleton to fill in, not a working clone.
 
-The artifact list under **Spec & build** shows every generated file; click one
+The artifact list under **Spec** shows every generated file; click one
 to reveal it in the file manager.
 
 ### Limitations

@@ -716,11 +716,30 @@ code, pre, textarea, input, select { font-family: inherit; }
 
 /* ---------------------------------------------------------- clone projects */
 
-.tabs { overflow-x: auto; scrollbar-width: none; }
+.tabs { flex-wrap: wrap; overflow-x: visible; row-gap: 2px; }
 .tabs::-webkit-scrollbar { display: none; }
-.tab { font-size: 10.5px; padding: 0 4px; }
+.tab { font-size: 10.5px; padding: 0 6px; flex: 0 0 auto; }
 
-.clone-head-actions { display: flex; gap: 4px; }
+.clone-head-actions { display: flex; gap: 4px; align-items: center; }
+.clone-project-pick {
+  height: 22px; max-width: 150px; background: var(--bg-3); color: var(--text-dim);
+  border: 1px solid var(--line); border-radius: 5px; font-size: 10.5px; padding: 0 4px;
+}
+.clone-recorder-head { display: flex; align-items: center; gap: 7px; }
+.clone-recorder-state { font-size: 10.5px; color: var(--text-faint); line-height: 1.4; }
+.clone-parity-summary { display: flex; flex-wrap: wrap; gap: 4px; }
+.clone-parity-stat {
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: .05em;
+  border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px;
+  color: var(--text-faint);
+}
+.clone-parity-stat.match { color: #06120c; background: var(--ok); border-color: var(--ok); }
+.clone-parity-stat.changed { color: #1a0f00; background: var(--warn); border-color: var(--warn); }
+.clone-parity-stat.error { color: #1a0605; background: var(--err); border-color: var(--err); }
+.clone-case-dims {
+  margin-top: 4px; font-family: var(--mono); font-size: 9.5px;
+  color: var(--text-faint); line-height: 1.45; white-space: normal;
+}
 .clone-list { display: flex; flex-direction: column; gap: 6px; }
 .clone-card {
   border: 1px solid var(--line);

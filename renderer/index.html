@@ -63,6 +63,32 @@
           </div>
 
           <div class="rail-group">
+            <div class="rail-group-head"><span>Clone toolkit</span></div>
+            <div id="cloneTools" class="task-list">
+              <button class="task-card" data-clone-tool="clone">
+                <span class="task-ico">▣</span>
+                <span class="task-body"><span class="task-title">Clone project</span>
+                  <span class="task-sub">Target hash, six stage gates, unknowns and evidence</span></span>
+              </button>
+              <button class="task-card" data-clone-tool="recorder">
+                <span class="task-ico">●</span>
+                <span class="task-body"><span class="task-title">Journey recorder</span>
+                  <span class="task-sub">Save each completed capture call for exact replay</span></span>
+              </button>
+              <button class="task-card" data-clone-tool="parity">
+                <span class="task-ico">⇄</span>
+                <span class="task-body"><span class="task-title">Parity harness</span>
+                  <span class="task-sub">Replay a journey and diff steps, exit code, unknowns, shape</span></span>
+              </button>
+              <button class="task-card" data-clone-tool="spec">
+                <span class="task-ico">⚙</span>
+                <span class="task-body"><span class="task-title">Spec compiler</span>
+                  <span class="task-sub">Compile specs and scaffold a TypeScript or Python clone</span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="rail-group">
             <div class="rail-group-head"><span>Quick tasks</span></div>
             <div id="taskList" class="task-list"></div>
           </div>
@@ -113,7 +139,10 @@
       <aside class="inspector">
         <div class="tabs" role="tablist">
           <button class="tab active" data-tab="activity" role="tab">Activity</button>
-          <button class="tab" data-tab="clone" role="tab">Clone</button>
+          <button class="tab" data-tab="clone" role="tab" title="Clone projects, stages and unknowns">Clone</button>
+          <button class="tab" data-tab="recorder" role="tab" title="Record replayable user journeys">Recorder</button>
+          <button class="tab" data-tab="parity" role="tab" title="Replay journeys and diff the results">Parity</button>
+          <button class="tab" data-tab="spec" role="tab" title="Compile specs and scaffold a clone">Spec</button>
           <button class="tab" data-tab="evidence" role="tab">Evidence</button>
           <button class="tab" data-tab="providers" role="tab">Providers</button>
           <button class="tab" data-tab="guidance" role="tab">Guidance</button>
@@ -204,6 +233,30 @@
           </div>
           <div id="cloneList" class="clone-list"></div>
           <div id="cloneDetail" class="clone-detail" hidden></div>
+        </div>
+
+        <div class="tab-panel" data-panel="recorder">
+          <div class="panel-head">
+            <span>Journey recorder</span>
+            <select class="clone-project-pick" data-pick="recorder" title="Clone project"></select>
+          </div>
+          <div id="cloneRecorder" class="clone-detail"></div>
+        </div>
+
+        <div class="tab-panel" data-panel="parity">
+          <div class="panel-head">
+            <span>Parity harness</span>
+            <select class="clone-project-pick" data-pick="parity" title="Clone project"></select>
+          </div>
+          <div id="cloneParity" class="clone-detail"></div>
+        </div>
+
+        <div class="tab-panel" data-panel="spec">
+          <div class="panel-head">
+            <span>Spec compiler</span>
+            <select class="clone-project-pick" data-pick="spec" title="Clone project"></select>
+          </div>
+          <div id="cloneSpec" class="clone-detail"></div>
         </div>
       </aside>
     </main>
