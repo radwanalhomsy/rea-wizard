@@ -250,8 +250,12 @@ save transcript (Markdown), new session.
 
 ## Notes and limits
 
-- The app reuses port `4096`. If an OpenCode TUI is already running there, the
-  app attaches to its server instead of spawning a second one.
+- The app prefers port `4096`. If a healthy OpenCode server is already listening
+  there (for example an OpenCode TUI), the app attaches to it instead of spawning
+  a second one. If `4096` is occupied by an unresponsive or orphaned listener,
+  the app skips it and starts its own server on the next free port (shown in the
+  header chip, e.g. `server ready · v1.19.0 · :4097`). To force a specific port,
+  set `"port"` in `%APPDATA%\rea-studio\settings.json` and restart.
 - `OPENCODE_SERVER_PASSWORD` is not set, so the server is unsecured — it binds
   `127.0.0.1` only. Do not expose that port.
 - Ghidra on Windows is read-only and experimental: annotation/edit tools return

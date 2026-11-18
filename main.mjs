@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
+import net from 'node:net'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { createOpencodeClient } from '@opencode-ai/sdk/client'
@@ -16,8 +17,8 @@ const DEFAULT_PORT = 4096
 
 let win = null
 let client = null
-let settings = { workspace: 'D:\\REA', model: null, agent: null, recent: [] }
-let server = { phase: 'idle', url: null, reused: false, error: null, version: null, pid: null }
+let settings = { workspace: 'D:\\REA', model: null, agent: null, recent: [], port: DEFAULT_PORT }
+let server = { phase: 'idle', url: null, reused: false, error: null, version: null, pid: null, port: null }
 let serverProc = null
 let eventAbort = null
 
@@ -95,6 +96,26 @@ async function probe(url, ms = 1500) {
   } catch { return false }
 }
 
+// A port can be held by a listener that accepts connections but never answers
+// (e.g. an orphaned socket left behind by a crashed process). Such a port is
+// unusable even though bind() may still succeed, so we test both: probe the
+// existing server first, then look for a port we can actually bind.
+function portFree(port) {
+  return new Promise((resolve) => {
+    const srv = net.createServer()
+    srv.once('error', () => resolve(false))
+    srv.once('listening', () => srv.close(() => resolve(true)))
+    srv.listen(port, '127.0.0.1')
+  })
+}
+
+async function pickPort(start, tries = 25) {
+  for (let p = start; p < start + tries; p++) {
+    if (await portFree(p)) return p
+  }
+  return null
+}
+
 function opencodeVersion() {
   try { return JSON.parse(fs.readFileSync(OPENCODE_PKG, 'utf8')).version || null } catch { return null }
 }
@@ -121,17 +142,26 @@ function waitForServerUrl(proc, timeoutMs = 120000) {
 
 async function startServer() {
   setPhase('starting', { error: null })
-  const base = `http://127.0.0.1:${DEFAULT_PORT}`
+  const preferred = Number(settings.port) || DEFAULT_PORT
+  const base = `http://127.0.0.1:${preferred}`
   if (await probe(base)) {
-    setPhase('ready', { url: base, reused: true, version: opencodeVersion() })
+    setPhase('ready', { url: base, reused: true, version: opencodeVersion(), port: preferred })
     return
   }
   if (!fs.existsSync(OPENCODE_EXE)) {
     setPhase('error', { error: 'OpenCode executable not found at ' + OPENCODE_EXE })
     return
   }
+  // The preferred port may be held by a dead/unresponsive listener. Move to the
+  // next bindable port instead of failing with "server not running".
+  const port = await pickPort(preferred)
+  if (!port) {
+    setPhase('error', { error: `No free port available in ${preferred}-${preferred + 24}` })
+    return
+  }
+  if (port !== preferred) console.warn(`[opencode] port ${preferred} unavailable, using ${port}`)
   const env = { ...process.env, ...reaEnvironment() }
-  const proc = spawn(OPENCODE_EXE, ['serve', '--port', String(DEFAULT_PORT), '--hostname', '127.0.0.1'], {
+  const proc = spawn(OPENCODE_EXE, ['serve', '--port', String(port), '--hostname', '127.0.0.1'], {
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe'],
     env,
@@ -151,7 +181,7 @@ async function startServer() {
     const url = await waitForServerUrl(proc)
     for (let i = 0; i < 40; i++) {
       if (await probe(url, 1000)) {
-        setPhase('ready', { url, reused: false, pid: proc.pid, version: opencodeVersion() })
+        setPhase('ready', { url, reused: false, pid: proc.pid, version: opencodeVersion(), port })
         return
       }
       await new Promise((r) => setTimeout(r, 500))

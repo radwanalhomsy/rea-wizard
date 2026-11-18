@@ -2114,7 +2114,7 @@ function onStatus(s) {
   const chip = $('#serverChip')
   chip.dataset.phase = s.phase
   const label = s.phase === 'ready'
-    ? 'server ready' + (s.reused ? ' (reused)' : '') + (s.version ? ' · v' + s.version : '')
+    ? 'server ready' + (s.reused ? ' (reused)' : '') + (s.version ? ' · v' + s.version : '') + (s.port && s.port !== 4096 ? ' · :' + s.port : '')
     : s.phase === 'starting' ? 'starting server…' : s.phase === 'error' ? 'server error' : 'idle'
   $('#serverLabel').textContent = label
   chip.title = s.error || s.url || ''
