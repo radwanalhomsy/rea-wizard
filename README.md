@@ -257,8 +257,11 @@ to reveal it in the file manager.
 
 - Windows has no PTY process capture, so `capture-process` replay fails with a
   `capability_unavailable` error. Use Linux, WSL for Linux commands, or macOS.
-- Browser and Electron replay need the corresponding local runtime; a replay
-  that cannot run is reported as `error`, not as parity.
+- Browser replay needs a local Chromium build. Launch mode takes an absolute
+  executable path (verified on Windows with Microsoft Edge); connect mode takes
+  a loopback CDP endpoint and target id.
+- Electron replay needs the corresponding local app; a replay that cannot run is
+  reported as `error`, not as parity.
 - Parity compares only what both captures carry. A dimension that could not be
   produced is shown as `not checked`.
 

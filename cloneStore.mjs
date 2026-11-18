@@ -515,20 +515,14 @@ function caseTitle(tool, input) {
 }
 
 function extractSteps(output) {
-  if (!output || typeof output !== 'object') return []
-  const candidates = ['steps', 'actions', 'events', 'interactions', 'records', 'observations']
-  for (const key of candidates) {
-    const v = output[key]
-    if (Array.isArray(v) && v.length) {
-      return v.slice(0, 60).map((step, idx) => ({
-        index: idx + 1,
-        action: step?.action ?? step?.type ?? step?.kind ?? null,
-        target: step?.target ?? step?.selector ?? step?.url ?? null,
-        status: step?.status ?? step?.result ?? null,
-      }))
-    }
-  }
-  return []
+  const steps = findArray(output, ['steps', 'actions', 'events', 'interactions', 'records', 'observations'])
+  if (!steps || !steps.length) return []
+  return steps.slice(0, 60).map((step, idx) => ({
+    index: idx + 1,
+    action: step?.action ?? step?.type ?? step?.kind ?? null,
+    target: step?.target ?? step?.selector ?? step?.url ?? step?.after_url?.url ?? null,
+    status: step?.status ?? step?.result ?? null,
+  }))
 }
 
 function trimForIndex(value, max = 200_000) {
@@ -617,14 +611,17 @@ function summarizeExpectation(output) {
   const pick = ['normalized_result', 'summary', 'exit_code', 'status', 'evidence_id', 'unknowns']
   const out = {}
   for (const key of pick) {
-    if (output[key] === undefined) continue
-    const v = output[key]
+    const v = fact(output, key)
+    if (v === undefined) continue
     if (key === 'normalized_result' && v && typeof v === 'object') {
+      const steps = Array.isArray(v.steps) ? v.steps : []
       out[key] = {
         url: v.url ?? null,
         title: v.title ?? null,
         node_count: Array.isArray(v.nodes) ? v.nodes.length : null,
         text_length: typeof v.text === 'string' ? v.text.length : null,
+        step_count: steps.length || null,
+        actions: steps.map((s) => s?.action ?? s?.type ?? null).filter(Boolean).slice(0, 40),
       }
     } else {
       out[key] = v
@@ -656,19 +653,35 @@ function stable(value) {
   }
 }
 
-function normalizeSteps(output) {
-  if (!output || typeof output !== 'object') return []
-  for (const key of ['steps', 'actions', 'events', 'interactions', 'records']) {
-    const v = output[key]
-    if (Array.isArray(v)) {
-      return v.map((s) => ({
-        action: s?.action ?? s?.type ?? s?.kind ?? null,
-        target: s?.target ?? s?.selector ?? s?.url ?? null,
-        status: s?.status ?? s?.result ?? null,
-      }))
+function findArray(output, keys) {
+  for (const scope of [output, output?.normalized_result]) {
+    if (!scope || typeof scope !== 'object' || Array.isArray(scope)) continue
+    for (const key of keys) {
+      const v = scope[key]
+      if (Array.isArray(v)) return v
     }
   }
-  return []
+  return null
+}
+
+/** Read a fact from the record root or from REA's `normalized_result`. */
+function fact(output, key) {
+  if (!output || typeof output !== 'object') return undefined
+  if (key in output) return output[key]
+  const nr = output.normalized_result
+  if (nr && typeof nr === 'object' && key in nr) return nr[key]
+  return undefined
+}
+
+function normalizeSteps(output) {
+  const steps = findArray(output, ['steps', 'actions', 'events', 'interactions', 'records'])
+  if (!steps) return []
+  return steps.map((s) => ({
+    action: s?.action ?? s?.type ?? s?.kind ?? null,
+    // Browser scenario steps carry the resulting URL; process steps carry a target.
+    target: s?.target ?? s?.selector ?? s?.url ?? s?.after_url?.url ?? null,
+    status: s?.status ?? s?.result ?? null,
+  }))
 }
 
 /**
@@ -699,18 +712,20 @@ export function diffObservations(before, after) {
     })
   }
 
-  if ('exit_code' in before || 'exit_code' in after) {
+  const be = fact(before, 'exit_code')
+  const ae = fact(after, 'exit_code')
+  if (be !== undefined || ae !== undefined) {
     dims.push({
       name: 'exit code',
-      status: before.exit_code === after.exit_code ? 'match' : 'changed',
-      before: before.exit_code ?? null,
-      after: after.exit_code ?? null,
-      detail: before.exit_code === after.exit_code ? 'same exit code' : 'exit code differs',
+      status: be === ae ? 'match' : 'changed',
+      before: be ?? null,
+      after: ae ?? null,
+      detail: be === ae ? 'same exit code' : 'exit code differs',
     })
   }
 
-  const bu = before.unknowns
-  const au = after.unknowns
+  const bu = fact(before, 'unknowns')
+  const au = fact(after, 'unknowns')
   if (Array.isArray(bu) || Array.isArray(au)) {
     const bn = Array.isArray(bu) ? bu.length : 0
     const an = Array.isArray(au) ? au.length : 0
