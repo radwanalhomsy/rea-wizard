@@ -490,6 +490,7 @@ function collectEvidence(text, source) {
     if (!state.evidence.has(id)) { state.evidence.set(id, { source, time: Date.now() }); changed = true }
   }
   if (changed) renderEvidence()
+  try { window.cloneRecordEvidence?.(Array.from(new Set(found)), source, text) } catch { }
 }
 
 function renderEvidence() {

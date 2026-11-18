@@ -714,3 +714,86 @@ code, pre, textarea, input, select { font-family: inherit; }
   .console-grid { grid-template-columns: 230px minmax(0, 1fr); }
 }
 
+/* ---------------------------------------------------------- clone projects */
+
+.tabs { overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { font-size: 10.5px; padding: 0 4px; }
+
+.clone-head-actions { display: flex; gap: 4px; }
+.clone-list { display: flex; flex-direction: column; gap: 6px; }
+.clone-card {
+  border: 1px solid var(--line);
+  background: var(--bg-3);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.clone-card:hover { border-color: #33527a; background: var(--bg-4); }
+.clone-card.active { border-color: var(--accent); }
+.clone-card-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.clone-card-name { font-size: 12.5px; color: var(--text); font-weight: 600; }
+.clone-card-sub { font-size: 10.5px; color: var(--text-faint); margin-top: 3px; }
+.clone-pips { display: flex; gap: 3px; margin-top: 7px; }
+.clone-pip { height: 4px; flex: 1; border-radius: 2px; background: var(--bg-4); border: 1px solid var(--line); }
+.clone-pip.complete { background: var(--ok); border-color: var(--ok); }
+.clone-pip.active { background: var(--accent); border-color: var(--accent); }
+.clone-pip.blocked { background: var(--err); border-color: var(--err); }
+
+.clone-detail { display: flex; flex-direction: column; gap: 10px; padding-top: 10px; }
+.clone-detail-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.clone-detail-title { font-size: 13px; color: var(--text); font-weight: 600; }
+.clone-target {
+  font-family: var(--mono); font-size: 10.5px; color: var(--text-dim);
+  background: var(--bg-3); border: 1px solid var(--line-soft); border-radius: 6px;
+  padding: 6px 8px; word-break: break-all; line-height: 1.5;
+}
+.clone-stage {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-3);
+  padding: 8px 10px;
+}
+.clone-stage + .clone-stage { margin-top: 6px; }
+.clone-stage-top { display: flex; align-items: center; gap: 7px; }
+.clone-stage-num {
+  width: 18px; height: 18px; border-radius: 50%; flex: 0 0 auto;
+  display: grid; place-items: center; font-size: 10px;
+  background: var(--bg-4); color: var(--text-faint); border: 1px solid var(--line);
+}
+.clone-stage.complete .clone-stage-num { background: var(--ok); color: #06120c; border-color: var(--ok); }
+.clone-stage.active .clone-stage-num { background: var(--accent); color: #04101f; border-color: var(--accent); }
+.clone-stage.blocked .clone-stage-num { background: var(--err); color: #1a0605; border-color: var(--err); }
+.clone-stage-title { font-size: 12px; color: var(--text); }
+.clone-stage-goal { font-size: 10.5px; color: var(--text-faint); margin-left: auto; }
+.clone-stage-detail { font-size: 10.5px; color: var(--text-faint); line-height: 1.5; margin: 5px 0 0 25px; }
+.clone-stage-actions { display: flex; gap: 4px; margin: 7px 0 0 25px; flex-wrap: wrap; }
+.clone-stage-gate { font-size: 10.5px; color: #f0a3a3; margin: 6px 0 0 25px; line-height: 1.45; }
+
+.clone-section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin-top: 4px;
+}
+.clone-section-head > span { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; }
+.clone-unknown {
+  display: flex; gap: 7px; align-items: flex-start;
+  border: 1px solid var(--line); border-left: 2px solid var(--warn);
+  border-radius: 6px; background: var(--bg-3); padding: 7px 9px;
+  font-size: 11px; line-height: 1.5;
+}
+.clone-unknown.closed { border-left-color: var(--ok); opacity: .68; }
+.clone-unknown.blocking { border-left-color: var(--err); }
+.clone-unknown-body { flex: 1; min-width: 0; }
+.clone-unknown-q { color: var(--text); }
+.clone-unknown-meta { color: var(--text-faint); font-size: 10px; margin-top: 3px; }
+.clone-unknown-actions { display: flex; gap: 3px; flex: 0 0 auto; }
+.clone-unknowns { display: flex; flex-direction: column; gap: 5px; }
+.clone-unknown-form { display: flex; gap: 5px; margin-top: 6px; }
+.clone-unknown-form input {
+  flex: 1; min-width: 0; height: 26px; background: var(--bg-3);
+  border: 1px solid var(--line); border-radius: 6px; color: var(--text);
+  font-size: 11px; padding: 0 8px;
+}
+.clone-empty-note { font-size: 10.5px; color: var(--text-faint); line-height: 1.5; }
+
+

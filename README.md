@@ -185,6 +185,39 @@ continue the current one.
 reloads its transcript, Rename edits the title, Delete removes it (click twice
 to confirm). Deleting the current session starts a clean chat.
 
+## Clone projects
+
+The **Clone** tab keeps a durable, on-disk workspace per target. It exists
+because REA's Windows Ghidra path has no program checkpoint: every new process
+re-imports and re-analyses the target, so anything learned only in chat is lost
+on restart.
+
+A project is a directory under `<workspace>/.rea-clone/<slug>/`:
+
+```
+project.json    target hash, stage state, unknown ledger, evidence index
+evidence/       raw tool output that produced each ev_ ID
+spec/           generated contracts and feature notes
+cases/          recorded journeys
+clone/          generated implementation
+reports/        parity, unknowns, exposure
+```
+
+- **New** creates a project and hashes the chosen target (SHA-256, files up to
+  512 MB).
+- The stage board tracks six gates: Inventory, Behavior, Specification,
+  Implementation, Parity, Provenance. Each stage can be started, blocked,
+  completed, or handed to the agent with **Ask agent**.
+- **Unknowns** are the ledger of open questions. A *blocking* unknown keeps its
+  stage from being marked complete, so a stage cannot quietly "finish" while a
+  question is unanswered.
+- Evidence IDs found in agent answers are snapshotted automatically while a
+  project is selected, so the raw output behind an `ev_` reference survives the
+  session.
+
+All state is plain JSON on disk, so it is diffable, reviewable, and safe to
+commit (the folder is git-ignored by default).
+
 ## REA console
 
 **REA** in the header opens a direct CLI runner:

@@ -31,9 +31,23 @@ contextBridge.exposeInMainWorld('rea', {
   catalog: () => invoke('rea:catalog'),
   reaVersion: () => invoke('rea:version'),
 
+  /* clone projects */
+  cloneList: () => invoke('clone:list'),
+  cloneCreate: (payload) => invoke('clone:create', payload),
+  cloneGet: (payload) => invoke('clone:get', payload),
+  cloneDelete: (payload) => invoke('clone:delete', payload),
+  cloneUpdate: (payload) => invoke('clone:update', payload),
+  cloneSetStage: (payload) => invoke('clone:setStage', payload),
+  cloneSetTarget: (payload) => invoke('clone:setTarget', payload),
+  cloneAddUnknown: (payload) => invoke('clone:addUnknown', payload),
+  cloneUpdateUnknown: (payload) => invoke('clone:updateUnknown', payload),
+  cloneRemoveUnknown: (payload) => invoke('clone:removeUnknown', payload),
+  cloneAddEvidence: (payload) => invoke('clone:addEvidence', payload),
+  cloneCaptureEvidence: (payload) => invoke('clone:captureEvidence', payload),
+  cloneAddCase: (payload) => invoke('clone:addCase', payload),
+
   /* OpenCode */
-  bootstrap: () => invoke('oc:bootstrap'),
-  createSession: (payload) => invoke('oc:create', payload),
+  bootstrap: () => invoke('oc:bootstrap'),  createSession: (payload) => invoke('oc:create', payload),
   prompt: (payload) => invoke('oc:prompt', payload),
   abort: (payload) => invoke('oc:abort', payload),
   messages: (payload) => invoke('oc:messages', payload),

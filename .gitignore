@@ -41,3 +41,7 @@ desktop.ini
 # ---- Temp ----
 *.tmp
 *.bak
+
+# ---- Clone project data ----
+# Clone workspaces live in <workspace>/.rea-clone and are user data, not source.
+.rea-clone/

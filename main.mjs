@@ -5,6 +5,7 @@ import net from 'node:net'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { createOpencodeClient } from '@opencode-ai/sdk/client'
+import * as cloneStore from './cloneStore.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const HOME = process.env.USERPROFILE || ''
@@ -641,6 +642,81 @@ function registerIpc() {
     if (typeof url === 'string' && /^https?:\/\//.test(url)) await shell.openExternal(url)
     return { ok: true }
   })
+
+  /* ------------------------------------------------------- clone projects */
+
+  const cloneGuard = (fn) => async (_e, payload = {}) => {
+    try {
+      return { ok: true, ...(await fn(payload)) }
+    } catch (e) {
+      return { ok: false, error: e?.message || String(e) }
+    }
+  }
+
+  ipcMain.handle('clone:list', cloneGuard(async () => ({
+    root: cloneStore.rootFor(settings.workspace),
+    projects: cloneStore.listProjects(settings.workspace),
+    stages: cloneStore.STAGES,
+  })))
+
+  ipcMain.handle('clone:create', cloneGuard(async ({ name, targetPath, notes } = {}) => ({
+    project: cloneStore.createProject(settings.workspace, { name, targetPath, notes }),
+  })))
+
+  ipcMain.handle('clone:get', cloneGuard(async ({ slug } = {}) => ({
+    project: cloneStore.projectDetail(settings.workspace, slug),
+  })))
+
+  ipcMain.handle('clone:delete', cloneGuard(async ({ slug } = {}) => ({
+    removed: cloneStore.deleteProject(settings.workspace, slug),
+  })))
+
+  ipcMain.handle('clone:update', cloneGuard(async ({ slug, patch } = {}) => ({
+    project: cloneStore.updateProject(settings.workspace, slug, patch || {}),
+  })))
+
+  ipcMain.handle('clone:setStage', cloneGuard(async ({ slug, stage, patch } = {}) => {
+    const current = cloneStore.getProject(settings.workspace, slug)
+    if (!current) throw new Error(`No clone project "${slug}"`)
+    if (patch?.status === 'complete') {
+      const gate = cloneStore.stageGate(current, stage)
+      if (!gate.allowed) {
+        throw new Error(
+          `${gate.blockers.length} blocking unknown(s) must be resolved first: ` +
+            gate.blockers.map((b) => b.question).join('; '),
+        )
+      }
+    }
+    return { project: cloneStore.setStage(settings.workspace, slug, stage, patch || {}) }
+  }))
+
+  ipcMain.handle('clone:setTarget', cloneGuard(async ({ slug, targetPath } = {}) => ({
+    target: await cloneStore.setTarget(settings.workspace, slug, targetPath),
+  })))
+
+  ipcMain.handle('clone:addUnknown', cloneGuard(async ({ slug, unknown } = {}) => ({
+    unknown: cloneStore.addUnknown(settings.workspace, slug, unknown || {}),
+  })))
+
+  ipcMain.handle('clone:updateUnknown', cloneGuard(async ({ slug, id, patch } = {}) => ({
+    unknown: cloneStore.updateUnknown(settings.workspace, slug, id, patch || {}),
+  })))
+
+  ipcMain.handle('clone:removeUnknown', cloneGuard(async ({ slug, id } = {}) => ({
+    removed: cloneStore.removeUnknown(settings.workspace, slug, id),
+  })))
+
+  ipcMain.handle('clone:addEvidence', cloneGuard(async ({ slug, evidence } = {}) => ({
+    evidence: cloneStore.addEvidence(settings.workspace, slug, evidence || {}),
+  })))
+
+  ipcMain.handle('clone:captureEvidence', cloneGuard(async ({ slug, ids, source, raw } = {}) => ({
+    capture: cloneStore.captureEvidence(settings.workspace, slug, { ids, source, raw }),
+  })))
+
+  ipcMain.handle('clone:addCase', cloneGuard(async ({ slug, testCase } = {}) => ({
+    case: cloneStore.addCase(settings.workspace, slug, testCase || {}),
+  })))
 }
 
 /* -------------------------------------------------------------------- boot */

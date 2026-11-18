@@ -113,6 +113,7 @@
       <aside class="inspector">
         <div class="tabs" role="tablist">
           <button class="tab active" data-tab="activity" role="tab">Activity</button>
+          <button class="tab" data-tab="clone" role="tab">Clone</button>
           <button class="tab" data-tab="evidence" role="tab">Evidence</button>
           <button class="tab" data-tab="providers" role="tab">Providers</button>
           <button class="tab" data-tab="guidance" role="tab">Guidance</button>
@@ -187,6 +188,22 @@
             <button id="runDoctor" class="btn btn-tiny">Run</button>
           </div>
           <pre id="doctorOut" class="doctor-out">Not run yet.</pre>
+        </div>
+
+        <div class="tab-panel" data-panel="clone">
+          <div class="panel-head">
+            <span id="cloneCount">0 projects</span>
+            <span class="clone-head-actions">
+              <button id="cloneRefresh" class="btn btn-tiny" title="Reload projects from disk">Refresh</button>
+              <button id="cloneNew" class="btn btn-tiny" title="Create a clone project">New</button>
+            </span>
+          </div>
+          <div id="cloneEmpty" class="panel-empty">
+            No clone projects yet. A project keeps target hash, stage state, evidence and unknowns on disk, so progress
+            survives an app restart.
+          </div>
+          <div id="cloneList" class="clone-list"></div>
+          <div id="cloneDetail" class="clone-detail" hidden></div>
         </div>
       </aside>
     </main>
@@ -394,5 +411,6 @@
   <div id="toast" class="toast" hidden></div>
 
   <script src="app.js"></script>
+<script src="clone.js"></script>
 </body>
 </html>
