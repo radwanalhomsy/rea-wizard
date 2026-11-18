@@ -37,7 +37,7 @@ The app does **not** install or configure any of these; it uses what
 ## Install (Windows MSI)
 
 ```powershell
-msiexec /i "D:\REA\rea-wizard\release\REA-Studio-1.1.0-x64.msi"
+msiexec /i "D:\REA\rea-wizard\release\REA-Studio-1.2.0-x64.msi"
 ```
 
 The wizard offers *per-user* (default, no admin prompt) or *per-machine*
@@ -71,7 +71,9 @@ $env:ELECTRON_BUILDER_BINARIES_MIRROR="https://npmmirror.com/mirrors/electron-bu
 npm run dist
 ```
 
-Output: `release\REA-Studio-<version>-x64.msi`. Electron is taken from
+Output: `release\REA-Studio-<version>-x64.msi` and a single-file
+`release\REA-Studio-<version>-x64.exe` (portable build). The unpacked app also
+lives in `release\win-unpacked\REA Studio.exe`. Electron is taken from
 `node_modules\electron\dist` (`build.electronDist`), so no Electron download is
 needed; WiX 4 is fetched once and cached in `%LOCALAPPDATA%\electron-builder\Cache`.
 `build.icon.ico` is generated from HTML/CSS — the generator lives in `_icongen/`
