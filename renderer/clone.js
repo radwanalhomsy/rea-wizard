@@ -234,23 +234,30 @@ function renderCloneDetail() {
   const cases = (p.cases || []).slice().sort((a, b) => String(b.recordedAt).localeCompare(String(a.recordedAt)))
   const casesHtml = cases.length
     ? cases
-        .map(
-          (c) => `<div class="clone-case" data-case="${c.id}">
+        .map((c) => {
+          const dims = (c.parity?.dims || []).map((d) => `${d.name}: ${d.status} (${d.detail || ''})`).join('\n')
+          const badge = c.parity
+            ? `<span class="clone-parity ${escapeHtml(c.parity.status)}" title="${escapeHtml(
+                [c.parity.note, dims].filter(Boolean).join('\n') || c.parity.status,
+              )}">${escapeHtml(c.parity.status)}</span>`
+            : ''
+          return `<div class="clone-case" data-case="${c.id}">
             <div class="clone-case-body">
               <div class="clone-case-title"><span class="clone-case-kind">${escapeHtml(c.kind)}</span>${escapeHtml(
                 c.title,
-              )}</div>
+              )}${badge}</div>
               <div class="clone-case-meta">${escapeHtml(c.provider)} · ${
                 c.steps?.length || 0
-              } steps${c.parity ? ' · parity ' + escapeHtml(c.parity.status || '') : ''} · ${ago(c.recordedAt)}</div>
+              } steps${c.parity ? ' · checked ' + ago(c.parity.at) : ''} · recorded ${ago(c.recordedAt)}</div>
             </div>
             <div class="clone-case-actions">
+              <button class="btn btn-tiny" data-case-act="replay" data-case="${c.id}" title="Re-run the exact recorded request and diff it against the original">Replay</button>
               <button class="btn btn-tiny" data-case-act="json" data-case="${c.id}" title="Show the recorded case file">JSON</button>
               <button class="btn btn-tiny" data-case-act="copy" data-case="${c.id}" title="Copy the replay request">Copy</button>
               <button class="btn btn-tiny" data-case-act="delete" data-case="${c.id}" title="Delete this journey">✕</button>
             </div>
-          </div>`,
-        )
+          </div>`
+        })
         .join('')
     : '<div class="clone-empty-note">No journeys recorded. Arm <b>Record</b>, then have the agent run a <code>capture_*</code> tool for this target — the exact request is saved for replay.</div>'
 
@@ -353,6 +360,25 @@ function wireCloneDetail(p) {
 }
 
 async function caseAction(id, act, project) {
+  if (act === 'replay') {
+    const btn = document.querySelector(`[data-case-act="replay"][data-case="${id}"]`)
+    if (btn) {
+      btn.disabled = true
+      btn.textContent = 'Running…'
+    }
+    try {
+      const res = await api.cloneReplayCase({ slug: cloneState.current, id })
+      if (!res?.ok) throw new Error(res?.error || 'replay failed')
+      if (res.cliOk) toast('Parity: ' + (res.parity?.status || 'unknown'))
+      else toast('Replay failed: ' + (res.error || res.parity?.note || 'see case file'))
+    } catch (e) {
+      toast('Replay failed: ' + e.message)
+    } finally {
+      await openClone(cloneState.current, true)
+      await loadClone(true)
+    }
+    return
+  }
   if (act === 'delete') {
     if (!confirm('Delete this recorded journey?')) return
     const res = await api.cloneDeleteCase({ slug: cloneState.current, id })

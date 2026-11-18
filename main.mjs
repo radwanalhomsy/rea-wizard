@@ -229,6 +229,38 @@ function resolveRea() {
   return null
 }
 
+/* ------------------------------------------------------- clone replay args */
+
+function buildReplayArgs(project, index, request, requestPath) {
+  const fmt = ['--format', 'json']
+  const input = request || {}
+  switch (index.provider) {
+    case 'capture_browser_scenario':
+      return ['capture-browser-scenario', requestPath, ...fmt]
+    case 'capture_electron_scenario':
+      return ['capture-electron-scenario', requestPath, ...fmt]
+    case 'capture_process_scenario':
+      return ['capture-process', requestPath, ...fmt]
+    case 'capture_native_ui_scenario': {
+      const target = input.path || project.target?.path
+      if (!target) throw new Error('Native UI replay needs a target executable path on the project')
+      const args = ['capture-native-ui-scenario', target, '--steps', JSON.stringify(input.steps || [])]
+      if (input.pid) args.push('--pid', String(input.pid))
+      if (input.window_id) args.push('--window-id', String(input.window_id))
+      if (input.max_nodes) args.push('--max-nodes', String(input.max_nodes))
+      return [...args, ...fmt]
+    }
+    case 'observe_web_session': {
+      if (!input.cdp_endpoint || !input.target_id) {
+        throw new Error('Web session replay needs cdp_endpoint and target_id')
+      }
+      return ['observe-web-session', input.cdp_endpoint, String(input.target_id), ...fmt]
+    }
+    default:
+      throw new Error(`No CLI replay path for ${index.provider}`)
+  }
+}
+
 /* ------------------------------------------------------------- rea cli bridge */
 
 function reaSpawn(args) {
@@ -725,6 +757,69 @@ function registerIpc() {
   ipcMain.handle('clone:deleteCase', cloneGuard(async ({ slug, id } = {}) => ({
     removed: cloneStore.deleteCase(settings.workspace, slug, id),
   })))
+
+  ipcMain.handle('clone:replayCase', cloneGuard(async ({ slug, id } = {}) => {
+    const project = cloneStore.getProject(settings.workspace, slug)
+    if (!project) throw new Error(`No clone project "${slug}"`)
+    const { index, request, record } = cloneStore.readCase(settings.workspace, slug, id)
+    const requestPath = cloneStore.caseFile(settings.workspace, slug, id, '.request.json')
+    const args = buildReplayArgs(project, index, request, requestPath)
+
+    const run = await runRea(args, { timeoutMs: 900000, tag: 'clone' })
+    const parsed = parseJsonLoose(run.stdout) ?? { raw: String(run.stdout || '').slice(0, 20000) }
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const replayPath = cloneStore.caseFile(settings.workspace, slug, id, `.replay-${stamp}.json`)
+    fs.writeFileSync(replayPath, JSON.stringify(parsed, null, 2), 'utf8')
+
+    const diff = cloneStore.diffObservations(record?.observation, parsed)
+
+    let nativeCompare = null
+    if (index.compare && record?.observation && run.ok) {
+      const originalPath = cloneStore.caseFile(settings.workspace, slug, id, '.original.json')
+      if (!fs.existsSync(originalPath)) {
+        fs.writeFileSync(originalPath, JSON.stringify(record.observation, null, 2), 'utf8')
+      }
+      let compareArgs = null
+      if (index.compare === 'compare-process-captures') {
+        compareArgs = ['compare-process-captures', originalPath, replayPath, '--format', 'json']
+      } else if (index.compare === 'compare-web-captures') {
+        compareArgs = ['compare-web-captures', originalPath, replayPath, '--format', 'json']
+      }
+      if (compareArgs) {
+        const cmp = await runRea(compareArgs, { timeoutMs: 300000, tag: 'clone' })
+        nativeCompare = {
+          ok: cmp.ok,
+          exit: cmp.code,
+          result: parseJsonLoose(cmp.stdout) ?? String(cmp.stdout || '').slice(0, 4000),
+          stderr: String(cmp.stderr || '').slice(-2000) || null,
+        }
+      }
+    }
+
+    const failure =
+      !run.ok && parsed && typeof parsed === 'object'
+        ? [parsed.error, parsed.message].filter(Boolean).join(': ')
+        : null
+
+    const parity = cloneStore.setCaseParity(settings.workspace, slug, id, {
+      status: run.ok ? diff.status : 'error',
+      note: run.ok ? diff.note : failure || 'Replay command failed',
+      dims: run.ok ? diff.dims : [],
+      cliOk: run.ok,
+      cliExit: run.code,
+      cliArgs: args,
+      replayFile: path.basename(replayPath),
+      nativeCompare,
+      stderr: String(run.stderr || '').slice(-4000) || null,
+    })
+
+    return {
+      parity,
+      cliOk: run.ok,
+      error: failure,
+      stderr: String(run.stderr || '').slice(-2000) || null,
+    }
+  }))
 }
 
 /* -------------------------------------------------------------------- boot */

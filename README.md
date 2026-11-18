@@ -217,6 +217,14 @@ reports/        parity, unknowns, exposure
 - **Record** arms the journey recorder: every `capture_*` / `observe_web_session`
   call the agent completes is saved as a case, with the exact request JSON kept
   for replay and a step summary for reading. Duplicate call IDs are ignored.
+- **Replay** re-runs a case through the matching REA CLI command
+  (`capture-browser-scenario`, `capture-electron-scenario`, `capture-process`,
+  `capture-native-ui-scenario`, `observe-web-session`), saves the new capture
+  beside the original, and diffs them: steps, exit code, unknowns, and record
+  shape. Each dimension is reported as `match`, `changed`, or absent, so the
+  result never claims more than it checked.
+- Replay needs the provider to be usable on this host. Process capture is
+  Linux/macOS only, and browser/Electron replay needs a local browser or app.
 
 All state is plain JSON on disk, so it is diffable, reviewable, and safe to
 commit (the folder is git-ignored by default).

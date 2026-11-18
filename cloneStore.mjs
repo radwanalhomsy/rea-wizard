@@ -511,6 +511,18 @@ function trimForIndex(value, max = 200_000) {
   return { truncated: true, note: 'Full record is in the case file.' }
 }
 
+/** Keep the value unless its serialized form exceeds `max` bytes. */
+function bounded(value, max) {
+  try {
+    const text = JSON.stringify(value ?? null)
+    if (text === undefined) return null
+    if (text.length <= max) return value
+    return { truncated: true, bytes: text.length, note: 'Observation exceeded the storage cap.' }
+  } catch {
+    return null
+  }
+}
+
 /**
  * Record one agent tool call as a replayable journey. The exact request is
  * written to `<id>.request.json` because replay must be faithful; the index
@@ -540,7 +552,7 @@ export function recordCase(workspace, slug, { tool, input = null, output = null,
     recordedAt,
     status,
     request: input ?? null,
-    observation: trimForIndex(output),
+    observation: bounded(output, 32 * 1024 * 1024),
   })
 
   const record = {
@@ -601,17 +613,142 @@ export function readCase(workspace, slug, id) {
   }
 }
 
-export function deleteCase(workspace, slug, id) {
+/* ------------------------------------------------------------------ parity */
+
+function stable(value) {
+  try {
+    return JSON.stringify(value ?? null)
+  } catch {
+    return 'null'
+  }
+}
+
+function normalizeSteps(output) {
+  if (!output || typeof output !== 'object') return []
+  for (const key of ['steps', 'actions', 'events', 'interactions', 'records']) {
+    const v = output[key]
+    if (Array.isArray(v)) {
+      return v.map((s) => ({
+        action: s?.action ?? s?.type ?? s?.kind ?? null,
+        target: s?.target ?? s?.selector ?? s?.url ?? null,
+        status: s?.status ?? s?.result ?? null,
+      }))
+    }
+  }
+  return []
+}
+
+/**
+ * Deterministic, offline comparison of an original capture against a replay.
+ * It only compares facts that both sides actually carry, and reports which
+ * dimensions it could not check instead of guessing.
+ */
+export function diffObservations(before, after) {
+  const dims = []
+  if (!before || typeof before !== 'object' || !after || typeof after !== 'object') {
+    return { status: 'unavailable', dims, note: 'One side has no structured observation.' }
+  }
+
+  const bs = normalizeSteps(before)
+  const as = normalizeSteps(after)
+  if (bs.length || as.length) {
+    const same = stable(bs) === stable(as)
+    let firstDiff = -1
+    for (let i = 0; i < Math.max(bs.length, as.length); i++) {
+      if (stable(bs[i]) !== stable(as[i])) { firstDiff = i; break }
+    }
+    dims.push({
+      name: 'steps',
+      status: same ? 'match' : 'changed',
+      before: bs.length,
+      after: as.length,
+      detail: same ? 'same actions in the same order' : `first difference at step ${firstDiff + 1}`,
+    })
+  }
+
+  if ('exit_code' in before || 'exit_code' in after) {
+    dims.push({
+      name: 'exit code',
+      status: before.exit_code === after.exit_code ? 'match' : 'changed',
+      before: before.exit_code ?? null,
+      after: after.exit_code ?? null,
+      detail: before.exit_code === after.exit_code ? 'same exit code' : 'exit code differs',
+    })
+  }
+
+  const bu = before.unknowns
+  const au = after.unknowns
+  if (Array.isArray(bu) || Array.isArray(au)) {
+    const bn = Array.isArray(bu) ? bu.length : 0
+    const an = Array.isArray(au) ? au.length : 0
+    dims.push({
+      name: 'unknowns',
+      status: bn === an ? 'match' : an > bn ? 'changed' : 'changed',
+      before: bn,
+      after: an,
+      detail: an > bn ? 'replay produced new unknowns' : bn > an ? 'replay produced fewer unknowns' : 'same count',
+    })
+  }
+
+  const bKeys = Object.keys(before).sort()
+  const aKeys = Object.keys(after).sort()
+  const missing = bKeys.filter((k) => !aKeys.includes(k))
+  const added = aKeys.filter((k) => !bKeys.includes(k))
+  dims.push({
+    name: 'record shape',
+    status: missing.length || added.length ? 'changed' : 'match',
+    before: bKeys.length,
+    after: aKeys.length,
+    detail: missing.length || added.length
+      ? `missing: ${missing.join(', ') || 'none'}; added: ${added.join(', ') || 'none'}`
+      : 'same top-level fields',
+  })
+
+  const changed = dims.filter((d) => d.status !== 'match').length
+  return {
+    status: changed === 0 ? 'match' : 'changed',
+    dims,
+    note: changed === 0 ? 'Every comparable dimension matches.' : `${changed} dimension(s) differ.`,
+  }
+}
+
+/** Persist a replay result and attach the summary to the case index. */
+export function setCaseParity(workspace, slug, id, parity) {
   const project = getProject(workspace, slug)
+  if (!project) throw new Error(`No clone project "${slug}"`)
+  const paths = projectPaths(workspace, slug)
+  const entry = project.cases.find((c) => c.id === id)
+  if (!entry) throw new Error(`No case "${id}"`)
+  const record = { at: nowIso(), ...parity }
+  writeJson(path.join(paths.cases, `${id}.parity.json`), record)
+  entry.parity = {
+    status: record.status,
+    at: record.at,
+    note: record.note ?? '',
+    dims: (record.dims || []).map((d) => ({ name: d.name, status: d.status, detail: d.detail })),
+  }
+  project.updatedAt = nowIso()
+  project.log.push({ at: record.at, event: 'parity', detail: `${entry.title}: ${record.status}`.slice(0, 160) })
+  writeJson(paths.file, project)
+  return record
+}
+
+export function caseFile(workspace, slug, id, suffix) {
+  return path.join(projectPaths(workspace, slug).cases, `${id}${suffix}`)
+}
+
+export function deleteCase(workspace, slug, id) {  const project = getProject(workspace, slug)
   if (!project) throw new Error(`No clone project "${slug}"`)
   const paths = projectPaths(workspace, slug)
   const before = project.cases.length
   project.cases = project.cases.filter((c) => c.id !== id)
   if (project.cases.length === before) return false
-  for (const name of [`${id}.json`, `${id}.request.json`]) {
-    try {
-      fs.rmSync(path.join(paths.cases, name), { force: true })
-    } catch { }
+  for (const name of fs.readdirSync(paths.cases)) {
+    if (name === `${id}.json` || name === `${id}.request.json` || name.startsWith(`${id}.`)) {
+      try {
+        fs.rmSync(path.join(paths.cases, name), { force: true })
+      } catch { }
+    }
   }
   project.updatedAt = nowIso()
   writeJson(paths.file, project)

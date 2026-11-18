@@ -815,5 +815,16 @@ code, pre, textarea, input, select { font-family: inherit; }
 .clone-guide-row { display: flex; flex-wrap: wrap; gap: 4px; }
 .clone-armed { border-color: var(--err) !important; color: #ffd9d7 !important; }
 
+.clone-parity {
+  display: inline-block; margin-left: 6px; font-size: 9.5px; text-transform: uppercase;
+  letter-spacing: .05em; border-radius: 4px; padding: 0 4px; vertical-align: 1px;
+  border: 1px solid var(--line); color: var(--text-faint);
+}
+.clone-parity.match { color: #06120c; background: var(--ok); border-color: var(--ok); }
+.clone-parity.changed { color: #1a0f00; background: var(--warn); border-color: var(--warn); }
+.clone-parity.error { color: #1a0605; background: var(--err); border-color: var(--err); }
+.clone-parity.unavailable { color: var(--text-faint); }
+
+
 
 
