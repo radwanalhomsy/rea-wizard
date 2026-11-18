@@ -45,6 +45,8 @@ contextBridge.exposeInMainWorld('rea', {
   cloneAddEvidence: (payload) => invoke('clone:addEvidence', payload),
   cloneCaptureEvidence: (payload) => invoke('clone:captureEvidence', payload),
   cloneAddCase: (payload) => invoke('clone:addCase', payload),
+  cloneGetCase: (payload) => invoke('clone:getCase', payload),
+  cloneDeleteCase: (payload) => invoke('clone:deleteCase', payload),
 
   /* OpenCode */
   bootstrap: () => invoke('oc:bootstrap'),  createSession: (payload) => invoke('oc:create', payload),

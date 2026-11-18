@@ -13,7 +13,11 @@ const cloneState = {
   creating: false,
   target: null,
   busy: false,
+  armed: false,
+  seenCalls: new Set(),
 }
+
+const RECORDABLE = /^(capture_|observe_web_session$)/
 
 const CLONE_STATUS_LABEL = {
   pending: 'Not started',
@@ -227,6 +231,29 @@ function renderCloneDetail() {
         .join('')
     : '<div class="clone-empty-note">No open questions recorded. Every unresolved finding belongs here so a stage cannot quietly "finish".</div>'
 
+  const cases = (p.cases || []).slice().sort((a, b) => String(b.recordedAt).localeCompare(String(a.recordedAt)))
+  const casesHtml = cases.length
+    ? cases
+        .map(
+          (c) => `<div class="clone-case" data-case="${c.id}">
+            <div class="clone-case-body">
+              <div class="clone-case-title"><span class="clone-case-kind">${escapeHtml(c.kind)}</span>${escapeHtml(
+                c.title,
+              )}</div>
+              <div class="clone-case-meta">${escapeHtml(c.provider)} · ${
+                c.steps?.length || 0
+              } steps${c.parity ? ' · parity ' + escapeHtml(c.parity.status || '') : ''} · ${ago(c.recordedAt)}</div>
+            </div>
+            <div class="clone-case-actions">
+              <button class="btn btn-tiny" data-case-act="json" data-case="${c.id}" title="Show the recorded case file">JSON</button>
+              <button class="btn btn-tiny" data-case-act="copy" data-case="${c.id}" title="Copy the replay request">Copy</button>
+              <button class="btn btn-tiny" data-case-act="delete" data-case="${c.id}" title="Delete this journey">✕</button>
+            </div>
+          </div>`,
+        )
+        .join('')
+    : '<div class="clone-empty-note">No journeys recorded. Arm <b>Record</b>, then have the agent run a <code>capture_*</code> tool for this target — the exact request is saved for replay.</div>'
+
   const evidence = (p.evidence || []).slice(-8).reverse()
   const evidenceHtml = evidence.length
     ? evidence
@@ -245,6 +272,9 @@ function renderCloneDetail() {
     <div class="clone-detail-head">
       <span class="clone-detail-title">${escapeHtml(p.name)}</span>
       <span class="clone-head-actions">
+        <button class="btn btn-tiny${cloneState.armed ? ' clone-armed' : ''}" id="cloneArm" title="Record capture tool calls into this project">${
+          cloneState.armed ? '● Recording' : 'Record'
+        }</button>
         <button class="btn btn-tiny" id="cloneOpenFolder" title="Show the project folder">Folder</button>
         <button class="btn btn-tiny" id="cloneDelete" title="Delete this project folder">Delete</button>
       </span>
@@ -252,6 +282,16 @@ function renderCloneDetail() {
     <div class="clone-target">${targetLine}</div>
     <div class="clone-section-head"><span>Stages</span><span style="font-size:10px">${(p.stageBoard || []).filter((s) => s.status === 'complete').length}/6 done</span></div>
     <div>${stages}</div>
+    <div class="clone-section-head"><span>Journeys</span><span style="font-size:10px">${
+      cases.length
+    } recorded</span></div>
+    <div class="clone-cases">${casesHtml}</div>
+    <div class="clone-guide-row">
+      <button class="btn btn-tiny" data-guide="browser">Browser journey</button>
+      <button class="btn btn-tiny" data-guide="electron">Electron journey</button>
+      <button class="btn btn-tiny" data-guide="native">Native UI journey</button>
+      <button class="btn btn-tiny" data-guide="process">Process journey</button>
+    </div>
     <div class="clone-section-head"><span>Unknowns</span><span style="font-size:10px">${
       (p.unknowns || []).filter((u) => u.status === 'open').length
     } open</span></div>
@@ -278,6 +318,13 @@ function renderCloneDetail() {
 
 function wireCloneDetail(p) {
   $('#cloneOpenFolder')?.addEventListener('click', () => api.reveal(p.paths?.dir || cloneState.root))
+  $('#cloneArm')?.addEventListener('click', toggleArmed)
+  $$('#cloneDetail [data-guide]').forEach((btn) =>
+    btn.addEventListener('click', () => guideJourney(btn.dataset.guide)),
+  )
+  $$('#cloneDetail [data-case-act]').forEach((btn) =>
+    btn.addEventListener('click', () => caseAction(btn.dataset.case, btn.dataset.caseAct, p)),
+  )
   $('#cloneDelete')?.addEventListener('click', async () => {
     if (!confirm(`Delete clone project "${p.name}" and everything in its folder?`)) return
     const res = await api.cloneDelete({ slug: p.slug })
@@ -303,6 +350,26 @@ function wireCloneDetail(p) {
   $$('#cloneDetail [data-un-act]').forEach((btn) => {
     btn.addEventListener('click', () => unknownAction(btn.dataset.un, btn.dataset.unAct))
   })
+}
+
+async function caseAction(id, act, project) {
+  if (act === 'delete') {
+    if (!confirm('Delete this recorded journey?')) return
+    const res = await api.cloneDeleteCase({ slug: cloneState.current, id })
+    if (!res?.ok) return toast('Delete failed: ' + (res?.error || 'unknown'))
+    await openClone(cloneState.current, true)
+    await loadClone(true)
+    return
+  }
+  const res = await api.cloneGetCase({ slug: cloneState.current, id })
+  if (!res?.ok) return toast('Read case failed: ' + (res?.error || 'unknown'))
+  if (act === 'copy') {
+    const text = JSON.stringify(res.case.request ?? {}, null, 2)
+    await copyText(text)
+    return
+  }
+  const dir = project?.paths?.dir || cloneState.root
+  api.reveal(dir + '\\cases\\' + id + '.json')
 }
 
 async function addUnknownFromInput() {
@@ -378,9 +445,85 @@ async function unknownAction(id, act) {
   await loadClone(true)
 }
 
-/* ------------------------------------------------------------------ create */
+/* ---------------------------------------------------------------- recorder */
 
-async function startCreate() {
+function parseOutput(value) {
+  if (value === null || value === undefined) return null
+  if (typeof value === 'object') return value
+  if (typeof value !== 'string') return value
+  const text = value.trim()
+  if (!text || (text[0] !== '{' && text[0] !== '[')) return text.slice(0, 4000)
+  try {
+    return JSON.parse(text)
+  } catch {
+    return text.slice(0, 4000)
+  }
+}
+
+async function handleCloneEvent(raw) {
+  if (!cloneState.armed || !cloneState.current) return
+  const event = raw && raw.payload && raw.payload.type ? raw.payload : raw
+  if (!event || event.type !== 'message.part.updated') return
+  const part = event.properties?.part
+  if (!part || part.type !== 'tool') return
+  const tool = part.tool || ''
+  if (!RECORDABLE.test(tool)) return
+  const st = part.state || {}
+  if (st.status !== 'completed') return
+  const key = part.callID || part.id
+  if (!key || cloneState.seenCalls.has(key)) return
+  cloneState.seenCalls.add(key)
+  try {
+    const res = await api.cloneAddCase({
+      slug: cloneState.current,
+      testCase: { tool, input: st.input ?? null, output: parseOutput(st.output), status: st.status },
+    })
+    if (!res?.ok) throw new Error(res?.error || 'record failed')
+    if (cloneState.detail) {
+      await openClone(cloneState.current, true)
+      await loadClone(true)
+    }
+    toast('Recorded journey: ' + (res.case?.title || tool))
+  } catch (e) {
+    toast('Record failed: ' + e.message)
+  }
+}
+
+function toggleArmed() {
+  if (!cloneState.current) {
+    toast('Open a clone project first')
+    return
+  }
+  cloneState.armed = !cloneState.armed
+  renderCloneDetail(true)
+  toast(cloneState.armed ? 'Recording capture calls into this project' : 'Recording stopped')
+}
+
+function guideJourney(kind) {
+  const p = cloneState.detail
+  if (!p) return
+  const target = p.target?.path
+  const tool =
+    kind === 'browser'
+      ? 'capture_browser_scenario'
+      : kind === 'electron'
+        ? 'capture_electron_scenario'
+        : kind === 'native'
+          ? 'capture_native_ui_scenario'
+          : 'capture_process_scenario'
+  const text = [
+    `Clone project: ${p.name} (${p.slug}).`,
+    target ? `Target: ${target}` : 'Target: not set — ask before choosing one.',
+    `Record one user journey with ${tool}.`,
+    'Keep it bounded: the smallest sequence that covers one meaningful user action end to end.',
+    'The app records your tool call as a replayable case, so pass the exact input you want replayed and report the evidence IDs you get back.',
+    'If something in the journey is unclear or untested, add it to the clone unknown ledger instead of guessing.',
+  ].join('\n\n')
+  activateTab('activity')
+  askAgent(text)
+}
+
+/* ------------------------------------------------------------------ create */async function startCreate() {
   cloneState.creating = true
   cloneState.target = null
   renderCloneList()
@@ -439,6 +582,9 @@ function wireCloneUi() {
   $$('.tab').forEach((tab) => {
     if (tab.dataset.tab === 'clone') tab.addEventListener('click', () => loadClone())
   })
+  try {
+    api.onEvent(handleCloneEvent)
+  } catch { }
 }
 
 /* Called by app.js whenever the agent answer contains ev_ IDs. */

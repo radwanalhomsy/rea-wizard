@@ -447,26 +447,175 @@ export function captureEvidence(workspace, slug, { ids = [], source = '', raw = 
   return { file: rel, added }
 }
 
-/* -------------------------------------------------------------------- cases */export function addCase(workspace, slug, testCase) {
+/* -------------------------------------------------------------------- cases */
+
+/** MCP tool -> CLI subcommand that replays the same input JSON. */
+export const REPLAYABLE = {
+  capture_browser_scenario: { kind: 'browser', cli: 'capture-browser-scenario', compare: 'compare-web-captures' },
+  capture_electron_scenario: { kind: 'electron', cli: 'capture-electron-scenario', compare: null },
+  capture_native_ui_scenario: { kind: 'native_ui', cli: 'capture-native-ui-scenario', compare: null },
+  capture_process_scenario: { kind: 'process', cli: 'capture-process', compare: 'compare-process-captures' },
+  observe_web_session: { kind: 'web_session', cli: 'observe-web-session', compare: 'compare-web-captures' },
+}
+
+const SECRET_KEY = /(secret|token|passw|passwd|cookie|authorization|api[_-]?key|credential)/i
+
+/** Deep copy with secret-looking values replaced, for anything shown or indexed. */
+export function redact(value, depth = 0) {
+  if (depth > 12 || value === null || typeof value !== 'object') return value
+  if (Array.isArray(value)) return value.map((v) => redact(v, depth + 1))
+  const out = {}
+  for (const [k, v] of Object.entries(value)) {
+    if (SECRET_KEY.test(k) && v !== null && typeof v !== 'object') out[k] = '[redacted]'
+    else out[k] = redact(v, depth + 1)
+  }
+  return out
+}
+
+function caseTitle(tool, input) {
+  const i = input || {}
+  if (typeof i.start_url === 'string') return i.start_url
+  if (i.start_url && typeof i.start_url.url === 'string') return i.start_url.url
+  if (typeof i.application_path === 'string') return i.application_path
+  if (typeof i.executable === 'string') return i.executable
+  if (typeof i.executable_path === 'string') return i.executable_path
+  if (i.pid) return `pid ${i.pid} window ${i.window_id ?? '?'}`
+  if (typeof i.path === 'string') return i.path
+  return tool
+}
+
+function extractSteps(output) {
+  if (!output || typeof output !== 'object') return []
+  const candidates = ['steps', 'actions', 'events', 'interactions', 'records', 'observations']
+  for (const key of candidates) {
+    const v = output[key]
+    if (Array.isArray(v) && v.length) {
+      return v.slice(0, 60).map((step, idx) => ({
+        index: idx + 1,
+        action: step?.action ?? step?.type ?? step?.kind ?? null,
+        target: step?.target ?? step?.selector ?? step?.url ?? null,
+        status: step?.status ?? step?.result ?? null,
+      }))
+    }
+  }
+  return []
+}
+
+function trimForIndex(value, max = 200_000) {
+  try {
+    const text = JSON.stringify(value)
+    if (text && text.length <= max) return value
+  } catch {
+    return null
+  }
+  return { truncated: true, note: 'Full record is in the case file.' }
+}
+
+/**
+ * Record one agent tool call as a replayable journey. The exact request is
+ * written to `<id>.request.json` because replay must be faithful; the index
+ * keeps only a redacted summary.
+ */
+export function recordCase(workspace, slug, { tool, input = null, output = null, status = null, title = null } = {}) {
   const project = getProject(workspace, slug)
   if (!project) throw new Error(`No clone project "${slug}"`)
-  const id = String(testCase?.id ?? '').trim() || newId('case')
+  const name = String(tool ?? '').trim()
+  if (!name) throw new Error('A recorded case needs a tool name')
+
+  const paths = projectPaths(workspace, slug)
+  ensureDir(paths.cases)
+  const id = newId('case')
+  const meta = REPLAYABLE[name] || { kind: 'tool', cli: null, compare: null }
+  const recordedAt = nowIso()
+
+  const requestFile = path.join(paths.cases, `${id}.request.json`)
+  const caseFile = path.join(paths.cases, `${id}.json`)
+  writeJson(requestFile, input ?? null)
+  writeJson(caseFile, {
+    id,
+    tool: name,
+    kind: meta.kind,
+    cli: meta.cli,
+    compare: meta.compare,
+    recordedAt,
+    status,
+    request: input ?? null,
+    observation: trimForIndex(output),
+  })
+
   const record = {
     id,
-    title: String(testCase?.title ?? 'Untitled journey'),
-    kind: String(testCase?.kind ?? 'unknown'),
-    provider: String(testCase?.provider ?? ''),
-    recordedAt: nowIso(),
-    steps: Array.isArray(testCase?.steps) ? testCase.steps : [],
-    expected: testCase?.expected ?? null,
-    source: String(testCase?.source ?? ''),
-    file: testCase?.file ?? null,
+    title: String(title || caseTitle(name, input)),
+    kind: meta.kind,
+    provider: name,
+    cli: meta.cli,
+    compare: meta.compare,
+    recordedAt,
+    steps: extractSteps(output),
+    status,
+    expected: summarizeExpectation(output),
+    source: 'agent',
+    file: `cases/${id}.json`,
+    requestFile: `cases/${id}.request.json`,
     parity: null,
   }
-  project.cases = project.cases.filter((c) => c.id !== id).concat(record)
+  project.cases.push(record)
   project.updatedAt = nowIso()
-  writeJson(projectPaths(workspace, slug).file, project)
+  project.log.push({ at: recordedAt, event: 'case', detail: `${meta.kind}: ${record.title}`.slice(0, 160) })
+  writeJson(paths.file, project)
   return record
+}
+
+/** Stable, comparable facts from a capture output, for parity checks later. */
+function summarizeExpectation(output) {
+  if (!output || typeof output !== 'object') return null
+  const pick = ['normalized_result', 'summary', 'exit_code', 'status', 'evidence_id', 'unknowns']
+  const out = {}
+  for (const key of pick) {
+    if (output[key] === undefined) continue
+    const v = output[key]
+    if (key === 'normalized_result' && v && typeof v === 'object') {
+      out[key] = {
+        url: v.url ?? null,
+        title: v.title ?? null,
+        node_count: Array.isArray(v.nodes) ? v.nodes.length : null,
+        text_length: typeof v.text === 'string' ? v.text.length : null,
+      }
+    } else {
+      out[key] = v
+    }
+  }
+  return Object.keys(out).length ? out : null
+}
+
+export function readCase(workspace, slug, id) {
+  const paths = projectPaths(workspace, slug)
+  const project = getProject(workspace, slug)
+  if (!project) throw new Error(`No clone project "${slug}"`)
+  const index = project.cases.find((c) => c.id === id)
+  if (!index) throw new Error(`No case "${id}"`)
+  return {
+    index,
+    request: readJson(path.join(paths.cases, `${id}.request.json`), null),
+    record: readJson(path.join(paths.cases, `${id}.json`), null),
+  }
+}
+
+export function deleteCase(workspace, slug, id) {
+  const project = getProject(workspace, slug)
+  if (!project) throw new Error(`No clone project "${slug}"`)
+  const paths = projectPaths(workspace, slug)
+  const before = project.cases.length
+  project.cases = project.cases.filter((c) => c.id !== id)
+  if (project.cases.length === before) return false
+  for (const name of [`${id}.json`, `${id}.request.json`]) {
+    try {
+      fs.rmSync(path.join(paths.cases, name), { force: true })
+    } catch { }
+  }
+  project.updatedAt = nowIso()
+  writeJson(paths.file, project)
+  return true
 }
 
 /* -------------------------------------------------------------- target hash */

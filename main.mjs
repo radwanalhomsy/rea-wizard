@@ -715,7 +715,15 @@ function registerIpc() {
   })))
 
   ipcMain.handle('clone:addCase', cloneGuard(async ({ slug, testCase } = {}) => ({
-    case: cloneStore.addCase(settings.workspace, slug, testCase || {}),
+    case: cloneStore.recordCase(settings.workspace, slug, testCase || {}),
+  })))
+
+  ipcMain.handle('clone:getCase', cloneGuard(async ({ slug, id } = {}) => ({
+    case: cloneStore.readCase(settings.workspace, slug, id),
+  })))
+
+  ipcMain.handle('clone:deleteCase', cloneGuard(async ({ slug, id } = {}) => ({
+    removed: cloneStore.deleteCase(settings.workspace, slug, id),
   })))
 }
 

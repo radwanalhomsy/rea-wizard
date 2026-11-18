@@ -214,6 +214,9 @@ reports/        parity, unknowns, exposure
 - Evidence IDs found in agent answers are snapshotted automatically while a
   project is selected, so the raw output behind an `ev_` reference survives the
   session.
+- **Record** arms the journey recorder: every `capture_*` / `observe_web_session`
+  call the agent completes is saved as a case, with the exact request JSON kept
+  for replay and a step summary for reading. Duplicate call IDs are ignored.
 
 All state is plain JSON on disk, so it is diffable, reviewable, and safe to
 commit (the folder is git-ignored by default).

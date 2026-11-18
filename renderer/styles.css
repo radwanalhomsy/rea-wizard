@@ -796,4 +796,24 @@ code, pre, textarea, input, select { font-family: inherit; }
 }
 .clone-empty-note { font-size: 10.5px; color: var(--text-faint); line-height: 1.5; }
 
+.clone-cases { display: flex; flex-direction: column; gap: 5px; }
+.clone-case {
+  display: flex; gap: 7px; align-items: flex-start;
+  border: 1px solid var(--line); border-left: 2px solid var(--accent-2);
+  border-radius: 6px; background: var(--bg-3); padding: 7px 9px;
+  font-size: 11px; line-height: 1.5;
+}
+.clone-case-body { flex: 1; min-width: 0; }
+.clone-case-title { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clone-case-kind {
+  display: inline-block; font-size: 9.5px; text-transform: uppercase; letter-spacing: .05em;
+  color: #b9a6ff; border: 1px solid #3a2f63; background: #1d1830;
+  border-radius: 4px; padding: 0 4px; margin-right: 6px; vertical-align: 1px;
+}
+.clone-case-meta { color: var(--text-faint); font-size: 10px; margin-top: 3px; }
+.clone-case-actions { display: flex; gap: 3px; flex: 0 0 auto; }
+.clone-guide-row { display: flex; flex-wrap: wrap; gap: 4px; }
+.clone-armed { border-color: var(--err) !important; color: #ffd9d7 !important; }
+
+
 
