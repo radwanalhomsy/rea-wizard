@@ -43,6 +43,7 @@
     "files": [
       "main.mjs",
       "cloneStore.mjs",
+      "cloneSpec.mjs",
       "preload.cjs",
       "renderer/**/*",
       "package.json"

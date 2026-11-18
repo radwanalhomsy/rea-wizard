@@ -226,6 +226,42 @@ reports/        parity, unknowns, exposure
 - Replay needs the provider to be usable on this host. Process capture is
   Linux/macOS only, and browser/Electron replay needs a local browser or app.
 
+### Spec and scaffold
+
+**Compile spec** and **Scaffold** are offline and deterministic: the same
+project state produces byte-identical files, so generated output is safe to
+review and commit.
+
+**Compile spec** writes into `spec/` and `reports/`:
+
+```
+spec/features.md                 target, stage state, every journey with its evidence IDs
+spec/contracts/<case>.json       replay command, request, expected shape, parity
+spec/state-machines/<case>.mmd   Mermaid diagram of the recorded steps
+spec/tests/<case>.test.mjs       test skeleton, skipped unless CLONE_REPLAY is set
+spec/unknowns.md                 the open/closed ledger, with what is still unresolved
+reports/parity.md                per-case dimensions; "not checked" is never a pass
+reports/exposure.md              provenance checklist, not a legal opinion
+```
+
+**Scaffold** writes a `clone/` skeleton in TypeScript or Python: package files,
+one module per observed feature area, a contract per case, a parity manifest,
+and tests that are skipped unless `CLONE_REPLAY` is set. Every generated
+function throws `not implemented` and carries a `TODO(case_…)` comment naming
+the case that defines it. It is a skeleton to fill in, not a working clone.
+
+The artifact list under **Spec & build** shows every generated file; click one
+to reveal it in the file manager.
+
+### Limitations
+
+- Windows has no PTY process capture, so `capture-process` replay fails with a
+  `capability_unavailable` error. Use Linux, WSL for Linux commands, or macOS.
+- Browser and Electron replay need the corresponding local runtime; a replay
+  that cannot run is reported as `error`, not as parity.
+- Parity compares only what both captures carry. A dimension that could not be
+  produced is shown as `not checked`.
+
 All state is plain JSON on disk, so it is diffable, reviewable, and safe to
 commit (the folder is git-ignored by default).
 

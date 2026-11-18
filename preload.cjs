@@ -48,6 +48,10 @@ contextBridge.exposeInMainWorld('rea', {
   cloneGetCase: (payload) => invoke('clone:getCase', payload),
   cloneDeleteCase: (payload) => invoke('clone:deleteCase', payload),
   cloneReplayCase: (payload) => invoke('clone:replayCase', payload),
+  cloneCompileSpec: (payload) => invoke('clone:compileSpec', payload),
+  cloneScaffold: (payload) => invoke('clone:scaffold', payload),
+  cloneArtifacts: (payload) => invoke('clone:artifacts', payload),
+  cloneOpenArtifact: (payload) => invoke('clone:openArtifact', payload),
 
   /* OpenCode */
   bootstrap: () => invoke('oc:bootstrap'),  createSession: (payload) => invoke('oc:create', payload),

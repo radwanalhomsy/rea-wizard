@@ -15,6 +15,9 @@ const cloneState = {
   busy: false,
   armed: false,
   seenCalls: new Set(),
+  artifacts: [],
+  language: 'typescript',
+  generating: null, // 'spec' | 'scaffold' while a run is in flight
 }
 
 const RECORDABLE = /^(capture_|observe_web_session$)/
@@ -128,10 +131,11 @@ function renderCloneList() {
 
 async function openClone(slug, keepScroll = false) {
   try {
-    const res = await api.cloneGet({ slug })
+    const [res, arts] = await Promise.all([api.cloneGet({ slug }), api.cloneArtifacts({ slug })])
     if (!res?.ok || !res.project) throw new Error(res?.error || 'project not found')
     cloneState.current = slug
     cloneState.detail = res.project
+    cloneState.artifacts = arts?.ok ? arts.artifacts || [] : []
     renderCloneList()
     renderCloneDetail(keepScroll)
   } catch (e) {
@@ -261,6 +265,20 @@ function renderCloneDetail() {
         .join('')
     : '<div class="clone-empty-note">No journeys recorded. Arm <b>Record</b>, then have the agent run a <code>capture_*</code> tool for this target — the exact request is saved for replay.</div>'
 
+  const artifacts = cloneState.artifacts || []
+  const artifactHtml = artifacts.length
+    ? artifacts
+        .map(
+          (a) => `<button class="clone-artifact" data-artifact="${escapeHtml(a.path)}" title="${escapeHtml(
+            a.path,
+          )}"><span class="clone-artifact-area">${escapeHtml(a.area || 'file')}</span><span class="clone-artifact-path">${escapeHtml(
+            a.path,
+          )}</span><span class="clone-artifact-size">${bytes(a.bytes)}</span></button>`,
+        )
+        .join('')
+    : '<div class="clone-empty-note">Nothing generated yet. <b>Compile spec</b> writes features, contracts, state machines, tests and reports; <b>Scaffold</b> writes a code skeleton with explicit TODOs.</div>'
+
+  const generating = cloneState.generating
   const evidence = (p.evidence || []).slice(-8).reverse()
   const evidenceHtml = evidence.length
     ? evidence
@@ -299,6 +317,22 @@ function renderCloneDetail() {
       <button class="btn btn-tiny" data-guide="native">Native UI journey</button>
       <button class="btn btn-tiny" data-guide="process">Process journey</button>
     </div>
+    <div class="clone-section-head"><span>Spec &amp; build</span><span style="font-size:10px">${
+      artifacts.length
+    } files</span></div>
+    <div class="clone-deliverable-actions">
+      <button class="btn btn-tiny" id="cloneCompile" ${
+        generating ? 'disabled' : ''
+      }>${generating === 'spec' ? 'Compiling…' : 'Compile spec'}</button>
+      <select id="cloneLang" class="clone-lang" title="Scaffold language" ${generating ? 'disabled' : ''}>
+        <option value="typescript"${cloneState.language === 'typescript' ? ' selected' : ''}>TypeScript</option>
+        <option value="python"${cloneState.language === 'python' ? ' selected' : ''}>Python</option>
+      </select>
+      <button class="btn btn-tiny" id="cloneScaffold" ${
+        generating ? 'disabled' : ''
+      }>${generating === 'scaffold' ? 'Scaffolding…' : 'Scaffold'}</button>
+    </div>
+    <div class="clone-artifacts">${artifactHtml}</div>
     <div class="clone-section-head"><span>Unknowns</span><span style="font-size:10px">${
       (p.unknowns || []).filter((u) => u.status === 'open').length
     } open</span></div>
@@ -326,6 +360,14 @@ function renderCloneDetail() {
 function wireCloneDetail(p) {
   $('#cloneOpenFolder')?.addEventListener('click', () => api.reveal(p.paths?.dir || cloneState.root))
   $('#cloneArm')?.addEventListener('click', toggleArmed)
+  $('#cloneCompile')?.addEventListener('click', () => generate('spec'))
+  $('#cloneScaffold')?.addEventListener('click', () => generate('scaffold'))
+  $('#cloneLang')?.addEventListener('change', (e) => {
+    cloneState.language = e.target.value
+  })
+  $$('#cloneDetail [data-artifact]').forEach((btn) =>
+    btn.addEventListener('click', () => openArtifact(btn.dataset.artifact)),
+  )
   $$('#cloneDetail [data-guide]').forEach((btn) =>
     btn.addEventListener('click', () => guideJourney(btn.dataset.guide)),
   )
@@ -357,6 +399,36 @@ function wireCloneDetail(p) {
   $$('#cloneDetail [data-un-act]').forEach((btn) => {
     btn.addEventListener('click', () => unknownAction(btn.dataset.un, btn.dataset.unAct))
   })
+}
+
+async function generate(kind) {
+  if (!cloneState.current || cloneState.generating) return
+  cloneState.generating = kind
+  renderCloneDetail(true)
+  try {
+    const res =
+      kind === 'spec'
+        ? await api.cloneCompileSpec({ slug: cloneState.current })
+        : await api.cloneScaffold({ slug: cloneState.current, language: cloneState.language })
+    if (!res?.ok) throw new Error(res?.error || kind + ' failed')
+    const count = res.result?.written?.length ?? 0
+    toast(
+      kind === 'spec'
+        ? `Spec compiled: ${count} file${count === 1 ? '' : 's'}`
+        : `Scaffolded ${res.result?.language || cloneState.language}: ${count} file${count === 1 ? '' : 's'}`,
+    )
+  } catch (e) {
+    toast((kind === 'spec' ? 'Compile spec failed: ' : 'Scaffold failed: ') + e.message)
+  } finally {
+    cloneState.generating = null
+    await openClone(cloneState.current, true)
+  }
+}
+
+async function openArtifact(file) {
+  if (!file) return
+  const res = await api.cloneOpenArtifact({ slug: cloneState.current, file })
+  if (!res?.ok) toast('Open artifact failed: ' + (res?.error || 'unknown'))
 }
 
 async function caseAction(id, act, project) {

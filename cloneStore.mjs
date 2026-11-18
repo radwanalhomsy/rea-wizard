@@ -117,6 +117,19 @@ function uniqueSlug(root, wanted) {
   return slug
 }
 
+const TRASH_MARK = '.deleting-'
+
+/** Best-effort removal of folders left behind by an interrupted delete. */
+function sweepTrash(root) {
+  if (!fs.existsSync(root)) return
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !entry.name.includes(TRASH_MARK)) continue
+    try {
+      fs.rmSync(path.join(root, entry.name), { recursive: true, force: true, maxRetries: 3, retryDelay: 100 })
+    } catch { }
+  }
+}
+
 /* ------------------------------------------------------------------- paths */
 
 export function projectPaths(workspace, slug) {
@@ -187,9 +200,10 @@ function normalizeProject(project) {
 export function listProjects(workspace) {
   const root = rootFor(workspace)
   if (!fs.existsSync(root)) return []
+  sweepTrash(root)
   const out = []
   for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue
+    if (!entry.isDirectory() || entry.name.includes(TRASH_MARK)) continue
     const file = path.join(root, entry.name, 'project.json')
     const project = readJson(file, null)
     if (!project || typeof project !== 'object') continue
@@ -228,6 +242,7 @@ export function getProject(workspace, slug) {
 export function createProject(workspace, { name, targetPath = null, notes = '' } = {}) {
   const root = rootFor(workspace)
   ensureDir(root)
+  sweepTrash(root)
   const displayName = String(name || (targetPath ? path.basename(targetPath) : 'Untitled target')).trim()
   const slug = uniqueSlug(root, slugify(displayName))
   const paths = projectPaths(workspace, slug)
@@ -275,7 +290,22 @@ export function updateProject(workspace, slug, patch = {}) {
 export function deleteProject(workspace, slug) {
   const { dir } = projectPaths(workspace, slug)
   if (!fs.existsSync(dir)) return false
-  fs.rmSync(dir, { recursive: true, force: true })
+  sweepTrash(path.dirname(dir))
+
+  // Rename first: the project disappears from listings immediately even if a
+  // Windows handle (Explorer preview, antivirus) blocks removal of the folder.
+  const trash = `${dir}${TRASH_MARK}${process.pid}-${Date.now()}`
+  try {
+    fs.renameSync(dir, trash)
+  } catch {
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 120 })
+    return true
+  }
+  try {
+    fs.rmSync(trash, { recursive: true, force: true, maxRetries: 5, retryDelay: 120 })
+  } catch {
+    // Leftover trash is swept by the next list/create; the project is already gone.
+  }
   return true
 }
 
@@ -566,6 +596,9 @@ export function recordCase(workspace, slug, { tool, input = null, output = null,
     steps: extractSteps(output),
     status,
     expected: summarizeExpectation(output),
+    evidenceIds: Array.from(
+      new Set(String(JSON.stringify(output ?? '')).match(/ev_[A-Za-z0-9]{4,}/g) || []),
+    ).slice(0, 50),
     source: 'agent',
     file: `cases/${id}.json`,
     requestFile: `cases/${id}.request.json`,

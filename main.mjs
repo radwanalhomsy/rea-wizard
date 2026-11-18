@@ -6,6 +6,7 @@ import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { createOpencodeClient } from '@opencode-ai/sdk/client'
 import * as cloneStore from './cloneStore.mjs'
+import * as cloneSpec from './cloneSpec.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const HOME = process.env.USERPROFILE || ''
@@ -758,8 +759,7 @@ function registerIpc() {
     removed: cloneStore.deleteCase(settings.workspace, slug, id),
   })))
 
-  ipcMain.handle('clone:replayCase', cloneGuard(async ({ slug, id } = {}) => {
-    const project = cloneStore.getProject(settings.workspace, slug)
+  ipcMain.handle('clone:replayCase', cloneGuard(async ({ slug, id } = {}) => {    const project = cloneStore.getProject(settings.workspace, slug)
     if (!project) throw new Error(`No clone project "${slug}"`)
     const { index, request, record } = cloneStore.readCase(settings.workspace, slug, id)
     const requestPath = cloneStore.caseFile(settings.workspace, slug, id, '.request.json')
@@ -819,6 +819,28 @@ function registerIpc() {
       error: failure,
       stderr: String(run.stderr || '').slice(-2000) || null,
     }
+  }))
+
+  ipcMain.handle('clone:compileSpec', cloneGuard(async ({ slug } = {}) => ({
+    result: cloneSpec.compileSpec(settings.workspace, slug),
+  })))
+
+  ipcMain.handle('clone:scaffold', cloneGuard(async ({ slug, language } = {}) => ({
+    result: cloneSpec.scaffold(settings.workspace, slug, { language }),
+  })))
+
+  ipcMain.handle('clone:artifacts', cloneGuard(async ({ slug } = {}) => ({
+    artifacts: cloneSpec.listArtifacts(settings.workspace, slug),
+  })))
+
+  ipcMain.handle('clone:openArtifact', cloneGuard(async ({ slug, file } = {}) => {
+    const base = cloneStore.projectPaths(settings.workspace, slug).dir
+    const abs = path.resolve(base, String(file || ''))
+    const root = path.resolve(base)
+    if (!abs.startsWith(root + path.sep)) throw new Error('Artifact path escapes the project folder')
+    if (!fs.existsSync(abs)) throw new Error('Artifact does not exist')
+    shell.showItemInFolder(abs)
+    return { path: abs }
   }))
 }
 
