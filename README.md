@@ -37,7 +37,7 @@ The app does **not** install or configure any of these; it uses what
 ## Install (Windows MSI)
 
 ```powershell
-msiexec /i "D:\REA\rea-wizard\release\REA-Studio-1.2.1-x64.msi"
+msiexec /i "D:\REA\rea-wizard\release\REA-Studio-1.2.2-x64.msi"
 ```
 
 The wizard offers *per-user* (default, no admin prompt) or *per-machine*
@@ -273,6 +273,50 @@ to reveal it in the file manager.
 All state is plain JSON on disk, so it is diffable, reviewable, and safe to
 commit (the folder is git-ignored by default).
 
+## IDA
+
+REA Studio detects an installed IDA and shows it in the **Providers** tab.
+
+**IDA Free is a companion, not an analysis engine.** IDA Free has no `-S`
+script switch, no IDAPython and no idalib, so it cannot be scripted or attached
+to REA's `ida` provider. The app still:
+
+- shows the detected executable and which automation surfaces exist
+- opens the current clone target, or a chosen file, in the IDA GUI with
+  **Open target**; the Clone tab also has an **IDA** button on the target card
+- lets you choose a different `ida.exe` when IDA is installed elsewhere
+
+**IDA Home / Pro / Classroom 9.4+** can back the agent. Install the official
+Hex-Rays IDA MCP:
+
+```
+uvx ida-hcli mcp install
+```
+
+or write the registration manually:
+
+```json
+{
+  "mcpServers": {
+    "ida-pro-mcp": {
+      "command": "uvx",
+      "args": ["ida-mcp", "stdio", "--agent=rea"],
+      "mode": "attached"
+    }
+  }
+}
+```
+
+Save it as `%USERPROFILE%\.config\opencode\ida-mcp.json`, then set
+`REA_IDA_MCP_CONFIG` in `mcp.rea.environment` inside
+`%USERPROFILE%\.config\opencode\opencode.jsonc`. The Providers tab can also
+point at the file directly (**Set registration…**); that path is passed to every
+REA CLI call the app makes, and the IDA card shows the transport and mode. The
+agent's own MCP process only sees the variable after OpenCode restarts, so add
+it to `opencode.jsonc` as well.
+
+Ghidra remains the working automated backend on Windows; IDA is additive.
+
 ## REA console
 
 **REA** in the header opens a direct CLI runner:
@@ -350,7 +394,9 @@ save transcript (Markdown), new session.
   `unsupported_host`. First import of a large binary can take minutes.
 - Everything REA cannot do on this host (Hopper, IDA, JADX, Frida, gdb, firmware
   extraction) still fails the same way it does in the CLI; the health panel and
-  the agent's reason codes are the source of truth.
+  the agent's reason codes are the source of truth. IDA Free specifically cannot
+  be automated at all; only IDA Home/Pro/Classroom 9.4+ with the official IDA
+  MCP can serve the `ida` provider.
 
 ## Files
 

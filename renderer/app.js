@@ -1001,6 +1001,7 @@ async function runDoctor() {
 async function refreshCapabilities(force = false) {
   const body = $('#capBody')
   body.innerHTML = '<div class="panel-empty">Running rea capabilities…</div>'
+  refreshIdaCard()
   const res = await api.capabilities(force)
   if (!res.ok) {
     body.innerHTML = `<div class="panel-empty">${escapeHtml(res.error || 'Could not read capabilities')}</div>`

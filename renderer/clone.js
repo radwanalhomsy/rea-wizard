@@ -395,6 +395,7 @@ function renderCloneProjectDetail() {
     <div class="clone-detail-head">
       <span class="clone-detail-title">${escapeHtml(p.name)}</span>
       <span class="clone-head-actions">
+        <button class="btn btn-tiny" id="cloneOpenIda" ${p.target ? '' : 'disabled'} title="Open the target in the IDA GUI">IDA</button>
         <button class="btn btn-tiny" id="cloneOpenFolder" title="Show the project folder">Folder</button>
         <button class="btn btn-tiny" id="cloneDelete" title="Delete this project folder">Delete</button>
       </span>
@@ -419,6 +420,7 @@ function renderCloneProjectDetail() {
 
 function wireCloneProjectDetail(p) {
   $('#cloneOpenFolder')?.addEventListener('click', () => api.reveal(p.paths?.dir || cloneState.root))
+  $('#cloneOpenIda')?.addEventListener('click', () => openTargetInIda(p.target?.path))
   $('#cloneDelete')?.addEventListener('click', async () => {
     if (!confirm(`Delete clone project "${p.name}" and everything in its folder?`)) return
     const res = await api.cloneDelete({ slug: p.slug })

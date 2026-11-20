@@ -1,7 +1,7 @@
 {
   "name": "rea-wizard",
   "productName": "REA Studio",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Wizard-style desktop client for the OpenCode agent and the REA reverse-engineering toolkit",
   "main": "main.mjs",
   "type": "module",

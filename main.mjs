@@ -77,7 +77,106 @@ function readOpencodeConfig() {
 function reaEnvironment() {
   const cfg = readOpencodeConfig()
   const env = cfg?.mcp?.rea?.environment
-  return env && typeof env === 'object' ? env : {}
+  const out = env && typeof env === 'object' ? { ...env } : {}
+  // The app-level registration wins for CLI calls so a valid IDA Home/Pro
+  // bridge can be tested here before the agent's MCP process is restarted.
+  if (settings.idaMcpConfig && fs.existsSync(settings.idaMcpConfig)) {
+    out.REA_IDA_MCP_CONFIG = settings.idaMcpConfig
+  }
+  return out
+}
+
+/* ---------------------------------------------------------------- ida free */
+
+const IDA_EXE_NAMES = ['ida.exe', 'ida64.exe', 'idat.exe', 'idat64.exe']
+const IDA_SEARCH_ROOTS = [
+  'C:\\Program Files',
+  'C:\\Program Files (x86)',
+  'D:\\Program Files',
+  'D:\\Program Files (x86)',
+  'D:\\',
+  'C:\\',
+]
+
+/** Find an installed IDA by scanning the usual install roots one level deep. */
+function detectIda() {
+  for (const root of IDA_SEARCH_ROOTS) {
+    let entries = []
+    try { entries = fs.readdirSync(root, { withFileTypes: true }) } catch { continue }
+    for (const entry of entries) {
+      if (!entry.isDirectory() || !/^IDA\b/i.test(entry.name)) continue
+      const dir = path.join(root, entry.name)
+      for (const name of IDA_EXE_NAMES) {
+        const exe = path.join(dir, name)
+        if (fs.existsSync(exe)) return exe
+      }
+    }
+  }
+  return null
+}
+
+function idaEdition(exe) {
+  if (/IDA[\s_-]*Free/i.test(exe)) return 'free'
+  if (/IDA[\s_-]*Home/i.test(exe)) return 'home'
+  if (/IDA[\s_-]*Pro/i.test(exe)) return 'pro'
+  if (/IDA[\s_-]*Classroom/i.test(exe)) return 'classroom'
+  return 'unknown'
+}
+
+/** What this edition can actually automate. Free/Home lack -S, Python and idalib. */
+function idaAutomation(exe, edition) {
+  const dir = path.dirname(exe)
+  const has = (rel) => fs.existsSync(path.join(dir, rel))
+  const pluginDirs = [path.join(dir, 'plugins'), path.join(APPDATA, 'Hex-Rays', 'IDA Pro', 'plugins')]
+  return {
+    script: edition === 'pro' || edition === 'unknown',
+    python: has('python3.dll') || has('python311.dll') || has('python312.dll') || has('idapyswitch.exe') || has('python'),
+    idalib: has('idalib') || has('python\\idalib'),
+    mcpPlugin: pluginDirs.some((d) => fs.existsSync(path.join(d, 'ida-mcp')) || fs.existsSync(path.join(d, 'ida_mcp_plugin.py'))),
+  }
+}
+
+function idaMcpConfigPath() {
+  return settings.idaMcpConfig || process.env.REA_IDA_MCP_CONFIG || reaEnvironment().REA_IDA_MCP_CONFIG || null
+}
+
+/** Mirror REA's registration rules: stdio command/args or local http url. */
+function inspectIdaRegistration(file) {
+  if (!file) return { path: null, configured: false, valid: false, transport: null, mode: null, error: null }
+  try {
+    const raw = JSON.parse(fs.readFileSync(file, 'utf8'))
+    const reg = raw?.mcpServers?.['ida-pro-mcp'] ?? raw
+    const transport = typeof reg?.command === 'string' && reg.command ? 'stdio' : typeof reg?.url === 'string' && reg.url ? 'http' : null
+    if (!transport) {
+      return { path: file, configured: true, valid: false, transport: null, mode: null, error: 'Registration needs a command/args pair or a local url.' }
+    }
+    if (transport === 'http' && !/^http:\/\/(localhost|127\.0\.0\.1|\[::1\]|host\.docker\.internal|host\.containers\.internal)(:|\/)/i.test(reg.url)) {
+      return { path: file, configured: true, valid: false, transport, mode: null, error: 'HTTP registration must point at a local loopback endpoint.' }
+    }
+    const mode = reg.mode === 'headless' ? 'headless' : 'attached'
+    return { path: file, configured: true, valid: true, transport, mode, error: null }
+  } catch (e) {
+    return { path: file, configured: true, valid: false, transport: null, mode: null, error: e.message }
+  }
+}
+
+function idaStatus() {
+  const configured = typeof settings.idaPath === 'string' && settings.idaPath ? settings.idaPath : null
+  const exe = configured && fs.existsSync(configured) ? configured : detectIda()
+  if (!exe) {
+    return { ok: true, path: null, dir: null, edition: null, source: null, automation: null, mcp: inspectIdaRegistration(idaMcpConfigPath()), stale: false }
+  }
+  const edition = idaEdition(exe)
+  return {
+    ok: true,
+    path: exe,
+    dir: path.dirname(exe),
+    edition,
+    source: configured && exe === configured ? 'settings' : 'detected',
+    stale: Boolean(configured && exe !== configured),
+    automation: idaAutomation(exe, edition),
+    mcp: inspectIdaRegistration(idaMcpConfigPath()),
+  }
 }
 
 /* -------------------------------------------------------------- server boot */
@@ -412,6 +511,8 @@ function registerIpc() {
     agent: settings.agent,
     configPath: OPENCODE_CONFIG,
     settingsPath: SETTINGS_PATH,
+    idaPath: settings.idaPath || detectIda(),
+    idaMcpConfig: settings.idaMcpConfig || null,
   }))
 
   ipcMain.handle('app:setWorkspace', (_e, dir) => {
@@ -674,6 +775,50 @@ function registerIpc() {
   ipcMain.handle('shell:openExternal', async (_e, url) => {
     if (typeof url === 'string' && /^https?:\/\//.test(url)) await shell.openExternal(url)
     return { ok: true }
+  })
+
+  /* ---------------------------------------------------------------- ida free */
+
+  ipcMain.handle('ida:status', () => idaStatus())
+
+  ipcMain.handle('ida:setPath', (_e, { idaPath } = {}) => {
+    if (idaPath === null || idaPath === '') {
+      delete settings.idaPath
+      saveSettings()
+      return idaStatus()
+    }
+    if (typeof idaPath !== 'string' || !fs.existsSync(idaPath)) return { ok: false, error: 'That IDA executable does not exist' }
+    if (!/\.exe$/i.test(idaPath)) return { ok: false, error: 'Choose an IDA executable such as ida.exe' }
+    settings.idaPath = idaPath
+    saveSettings()
+    return idaStatus()
+  })
+
+  ipcMain.handle('ida:setMcpConfig', (_e, { file } = {}) => {
+    if (file === null || file === '') {
+      delete settings.idaMcpConfig
+      saveSettings()
+      return { ok: true, mcp: inspectIdaRegistration(idaMcpConfigPath()) }
+    }
+    if (typeof file !== 'string' || !fs.existsSync(file)) return { ok: false, error: 'That registration file does not exist' }
+    const check = inspectIdaRegistration(file)
+    if (!check.valid) return { ok: false, error: check.error || 'Not a valid IDA MCP registration' }
+    settings.idaMcpConfig = file
+    saveSettings()
+    return { ok: true, mcp: check }
+  })
+
+  ipcMain.handle('ida:open', (_e, { target, idaPath } = {}) => {
+    const exe = (typeof idaPath === 'string' && idaPath) || (settings.idaPath && fs.existsSync(settings.idaPath) ? settings.idaPath : detectIda())
+    if (!exe || !fs.existsSync(exe)) return { ok: false, error: 'No IDA executable found. Choose ida.exe in the Providers tab.' }
+    if (typeof target !== 'string' || !target || !fs.existsSync(target)) return { ok: false, error: 'Target file does not exist' }
+    try {
+      const child = spawn(exe, [target], { detached: true, stdio: 'ignore', windowsHide: false, cwd: path.dirname(target) })
+      child.unref()
+      return { ok: true, idaPath: exe, target }
+    } catch (e) {
+      return { ok: false, error: e.message }
+    }
   })
 
   /* ------------------------------------------------------- clone projects */

@@ -20,6 +20,12 @@ contextBridge.exposeInMainWorld('rea', {
   openExternal: (url) => invoke('shell:openExternal', url),
   saveTranscript: (payload) => invoke('transcript:save', payload),
 
+  /* IDA (GUI companion + optional Home/Pro MCP registration) */
+  idaStatus: () => invoke('ida:status'),
+  idaOpen: (payload) => invoke('ida:open', payload),
+  idaSetPath: (payload) => invoke('ida:setPath', payload),
+  idaSetMcpConfig: (payload) => invoke('ida:setMcpConfig', payload),
+
   /* REA */
   health: () => invoke('rea:health'),
   doctor: () => invoke('rea:doctor'),
