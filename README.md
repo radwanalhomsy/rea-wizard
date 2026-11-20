@@ -411,3 +411,15 @@ rea-wizard/
    ├─ styles.css
    └─ app.js             cards, wizard, transcript, console, sessions, health
 ```
+
+## Releases
+
+Prebuilt Windows binaries are on the
+[Releases page](https://github.com/radwanalhomsy/rea-wizard/releases).
+The current release is **1.2.2**, with both an installer
+(`REA-Studio-1.2.2-x64.msi`) and a portable build
+(`REA-Studio-1.2.2-x64.exe`).
+
+## License
+
+MIT — free to use, modify, and redistribute for anyone. See [LICENSE](LICENSE).
