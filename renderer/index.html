@@ -110,6 +110,11 @@
                 <span class="task-body"><span class="task-title">Explore target</span>
                   <span class="task-sub">Hash and parse PE headers, sections, imports, exports and strings</span></span>
               </button>
+              <button class="task-card" data-clone-tool="formats">
+                <span class="task-ico">FM</span>
+                <span class="task-body"><span class="task-title">Format inference</span>
+                  <span class="task-sub">Infer file layouts from observed artifacts and data side effects</span></span>
+              </button>
             </div>
           </div>
 
@@ -173,6 +178,7 @@
           <button class="tab" data-tab="uimap" role="tab" title="Accessibility-tree UI inventory">UI Map</button>
           <button class="tab" data-tab="artifacts" role="tab" title="Filesystem, registry and process diff">Artifacts</button>
           <button class="tab" data-tab="explore" role="tab" title="Target inventory and PE analysis">Explore</button>
+          <button class="tab" data-tab="formats" role="tab" title="Inferred data formats">Formats</button>
           <button class="tab" data-tab="evidence" role="tab">Evidence</button>
           <button class="tab" data-tab="providers" role="tab">Providers</button>
           <button class="tab" data-tab="guidance" role="tab">Guidance</button>
@@ -328,6 +334,14 @@
             <select class="clone-project-pick" data-pick="explore" title="Clone project"></select>
           </div>
           <div id="cloneExplore" class="clone-detail"></div>
+        </div>
+
+        <div class="tab-panel" data-panel="formats">
+          <div class="panel-head">
+            <span>Format inference</span>
+            <select class="clone-project-pick" data-pick="formats" title="Clone project"></select>
+          </div>
+          <div id="cloneFormats" class="clone-detail"></div>
         </div>
       </aside>
     </main>

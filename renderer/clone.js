@@ -21,7 +21,9 @@ const cloneState = {
   uiMap: null,
   persistence: null,
   inventory: null,
+  formats: [],
   exploreBusy: false,
+  formatsBusy: false,
   scoreBusy: false,
   factsBusy: false,
   uiBusy: false,
@@ -142,7 +144,7 @@ function renderCloneList() {
 
 async function openClone(slug, keepScroll = false) {
   try {
-    const [res, arts, score, facts, uiMap, persistence, inventory] = await Promise.all([
+    const [res, arts, score, facts, uiMap, persistence, inventory, formats] = await Promise.all([
       api.cloneGet({ slug }),
       api.cloneArtifacts({ slug }),
       api.fidelityGet({ slug }),
@@ -150,6 +152,7 @@ async function openClone(slug, keepScroll = false) {
       api.uimapGet({ slug }),
       api.artifactsGet({ slug }),
       api.exploreGet({ slug }),
+      api.formatsList({ slug }),
     ])
     if (!res?.ok || !res.project) throw new Error(res?.error || 'project not found')
     cloneState.current = slug
@@ -160,6 +163,7 @@ async function openClone(slug, keepScroll = false) {
     cloneState.uiMap = uiMap?.ok ? uiMap.map : null
     cloneState.persistence = persistence?.ok ? persistence.diff : null
     cloneState.inventory = inventory?.ok ? inventory.inventory : null
+    cloneState.formats = formats?.ok ? formats.formats || [] : []
     renderCloneList()
     renderCloneDetail(keepScroll)
   } catch (e) {
@@ -946,6 +950,69 @@ function wireExploreTool() {
   })
 }
 
+/* -------------------------------------------------------------- formats */
+
+function renderFormatsTool() {
+  const box = $('#cloneFormats')
+  if (!box) return
+  if (!cloneState.detail) {
+    box.innerHTML = emptyProjectNote('format inference')
+    return
+  }
+  const formats = cloneState.formats || []
+  box.innerHTML = `
+    <div class="clone-empty-note">Infer data layouts from files observed in the artifact diff. Known magic gets named
+    fields; unknown bytes stay unknown with observed offsets and strings instead of a guessed schema.</div>
+    <div class="clone-deliverable-actions">
+      <button class="btn btn-tiny" id="fmtFromArtifacts" ${cloneState.formatsBusy ? 'disabled' : ''}>
+        ${cloneState.formatsBusy ? 'Inferring...' : 'Infer from artifacts'}
+      </button>
+      <span style="font-size:10px;color:var(--text-faint)">${formats.length} skeleton(s)</span>
+    </div>
+    <div class="clone-capture-form">
+      <label>File path<input id="fmtPath" placeholder="absolute path to a sample file" /></label>
+      <label>Label<input id="fmtLabel" placeholder="optional name" /></label>
+      <button class="btn btn-tiny" id="fmtInfer" ${cloneState.formatsBusy ? 'disabled' : ''}>Infer file</button>
+    </div>
+    <div class="clone-facts-list">${formats.length ? formats.map((f) => `
+      <div class="clone-fact">
+        <div class="clone-fact-head"><span class="clone-fact-id">${escapeHtml(f.name)}</span>
+          <span class="clone-fact-kind">${escapeHtml(f.label)}</span>
+          <span class="clone-fact-conf">${f.confidence}</span></div>
+        <div class="clone-fact-claim">${escapeHtml(f.magic || 'no magic')} · entropy ${f.entropy} · ${f.fields.length} fields</div>
+        <div class="clone-fact-value">${escapeHtml((f.strings || []).slice(0, 4).map((s) => s.value).join(' · '))}</div>
+        <div class="clone-fact-src">${escapeHtml(f.source?.path || '')}</div>
+      </div>`).join('') : '<div class="clone-empty-note">No format skeletons yet.</div>'}</div>`
+  wireFormatsTool()
+}
+
+function wireFormatsTool() {
+  const run = async (fn) => {
+    if (!cloneState.current || cloneState.formatsBusy) return
+    cloneState.formatsBusy = true
+    renderFormatsTool()
+    try {
+      const r = await fn()
+      if (!r?.ok) throw new Error(r?.error || 'format inference failed')
+      cloneState.formats = (await api.formatsList({ slug: cloneState.current })).formats || []
+      cloneState.formatsBusy = false
+      await loadClone(true)
+      renderFormatsTool()
+      toast(`Formats: ${r.formats?.length ?? 1} skeleton(s)`)
+    } catch (e) {
+      cloneState.formatsBusy = false
+      renderFormatsTool()
+      toast('Formats: ' + e.message)
+    }
+  }
+  $('#fmtFromArtifacts')?.addEventListener('click', () => run(() => api.formatsFromArtifacts({ slug: cloneState.current })))
+  $('#fmtInfer')?.addEventListener('click', () => {
+    const filePath = $('#fmtPath')?.value?.trim()
+    if (!filePath) { toast('Formats: enter a file path'); return }
+    run(() => api.formatsInfer({ slug: cloneState.current, path: filePath, label: $('#fmtLabel')?.value?.trim() || null }))
+  })
+}
+
 function renderCloneDetail() {
   renderCloneProjectDetail()
   renderRecorderDetail()
@@ -956,6 +1023,7 @@ function renderCloneDetail() {
   renderUiMapTool()
   renderArtifactsTool()
   renderExploreTool()
+  renderFormatsTool()
   renderClonePickers()
 }
 
@@ -1236,7 +1304,7 @@ function wireCloneUi() {
     if (card) openClone(card.dataset.slug)
   })
   $$('.tab').forEach((tab) => {
-    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts', 'explore'].includes(tab.dataset.tab)) {
+    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts', 'explore', 'formats'].includes(tab.dataset.tab)) {
       tab.addEventListener('click', () => loadClone())
     }
   })

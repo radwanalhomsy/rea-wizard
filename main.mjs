@@ -11,6 +11,7 @@ import * as cloneFacts from './cloneFacts.mjs'
 import * as cloneFidelity from './cloneFidelity.mjs'
 import * as cloneCapture from './cloneCapture.mjs'
 import * as cloneExplore from './cloneExplore.mjs'
+import * as cloneFormats from './cloneFormats.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const HOME = process.env.USERPROFILE || ''
@@ -1050,6 +1051,20 @@ function registerIpc() {
 
   ipcMain.handle('explore:get', cloneGuard(async ({ slug } = {}) => ({
     inventory: cloneExplore.readInventory(settings.workspace, slug),
+  })))
+
+  /* ------------------------------------------------------------- formats */
+
+  ipcMain.handle('formats:fromArtifacts', cloneGuard(async ({ slug, limit } = {}) =>
+    cloneFormats.inferFromArtifacts(settings.workspace, slug, { limit }),
+  ))
+
+  ipcMain.handle('formats:infer', cloneGuard(async ({ slug, path: filePath, label } = {}) =>
+    cloneFormats.inferFile(settings.workspace, slug, filePath, label),
+  ))
+
+  ipcMain.handle('formats:list', cloneGuard(async ({ slug } = {}) => ({
+    formats: cloneFormats.listFormats(settings.workspace, slug),
   })))
 }
 

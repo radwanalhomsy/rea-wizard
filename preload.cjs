@@ -35,6 +35,9 @@ contextBridge.exposeInMainWorld('rea', {
   artifactsGet: (payload) => invoke('artifacts:get', payload),
   exploreRun: (payload) => invoke('explore:run', payload),
   exploreGet: (payload) => invoke('explore:get', payload),
+  formatsFromArtifacts: (payload) => invoke('formats:fromArtifacts', payload),
+  formatsInfer: (payload) => invoke('formats:infer', payload),
+  formatsList: (payload) => invoke('formats:list', payload),
 
   /* IDA (GUI companion + optional Home/Pro MCP registration) */
   idaStatus: () => invoke('ida:status'),
