@@ -30,6 +30,8 @@ const cloneState = {
   oracleBusy: false,
   repair: null,
   repairBusy: false,
+  gaps: null,
+  gapsBusy: false,
   exploreBusy: false,
   formatsBusy: false,
   protocolBusy: false,
@@ -153,7 +155,7 @@ function renderCloneList() {
 
 async function openClone(slug, keepScroll = false) {
   try {
-    const [res, arts, score, facts, uiMap, persistence, inventory, formats, protocol, ir, irValidation, oracle, repair] = await Promise.all([
+    const [res, arts, score, facts, uiMap, persistence, inventory, formats, protocol, ir, irValidation, oracle, repair, gaps] = await Promise.all([
       api.cloneGet({ slug }),
       api.cloneArtifacts({ slug }),
       api.fidelityGet({ slug }),
@@ -167,6 +169,7 @@ async function openClone(slug, keepScroll = false) {
       api.irValidate({ slug }),
       api.oracleList({ slug }),
       api.repairGet({ slug }),
+      api.gapsGet({ slug }),
     ])
     if (!res?.ok || !res.project) throw new Error(res?.error || 'project not found')
     cloneState.current = slug
@@ -183,6 +186,7 @@ async function openClone(slug, keepScroll = false) {
     cloneState.irValidation = irValidation?.ok ? irValidation : null
     cloneState.oracle = oracle?.ok ? oracle : null
     cloneState.repair = repair?.ok ? repair : null
+    cloneState.gaps = gaps?.ok ? gaps : null
     renderCloneList()
     renderCloneDetail(keepScroll)
   } catch (e) {
@@ -1358,6 +1362,87 @@ function wireRepairTool() {
   }
 }
 
+/* -------------------------------------------------------------- gap planner */
+
+function renderGapsTool() {
+  const box = $('#cloneGaps')
+  if (!box) return
+  if (!cloneState.detail) {
+    box.innerHTML = emptyProjectNote('gap planning')
+    return
+  }
+  const data = cloneState.gaps || {}
+  const plan = data.plan || null
+  const summary = plan?.summary || { total: 0, blocking: 0, tier: null, measured: 0, byKind: {}, byTool: {} }
+  const next = plan?.next || []
+  const gaps = plan?.gaps || []
+  box.innerHTML = `
+    <div class="clone-empty-note">Every item below was produced by a measurement — a parity diff, an unmeasured
+    fidelity dimension, a blocking unknown, an uncited IR node or an unimplemented stub. Only re-measuring closes one.</div>
+    <div class="clone-actions-row">
+      <button class="btn btn-tiny" id="gapsReplan" ${cloneState.gapsBusy ? 'disabled' : ''}>
+        ${cloneState.gapsBusy ? 'Working...' : 'Re-plan gaps'}
+      </button>
+      <button class="btn btn-tiny" id="gapsCopy">Copy plan</button>
+    </div>
+    <div class="clone-inv-grid">
+      <div><strong>Gaps</strong><span>${summary.total}</span></div>
+      <div><strong>Blocking</strong><span>${summary.blocking}</span></div>
+      <div><strong>Tier</strong><span>${escapeHtml(summary.tier || '—')}</span></div>
+      <div><strong>Measured</strong><span>${Math.round((summary.measured || 0) * 100)}%</span></div>
+    </div>
+    <div class="clone-section-head"><span>Do next (${next.length})</span></div>
+    <div class="clone-control-list">${next.length ? next.map((n) => `
+      <div class="clone-control">
+        <span class="clone-control-type">${n.rank}. ${escapeHtml(n.tool)}</span>
+        <span class="clone-control-name">${escapeHtml(n.title)}</span>
+        <span class="clone-control-parent">${escapeHtml(n.action)}</span>
+        <span class="clone-control-actions">
+          <button class="btn btn-tiny" data-gap-open="${escapeHtml(n.tool)}" title="Open the ${escapeHtml(n.tool)} tab">Open</button>
+        </span>
+      </div>`).join('') : '<div class="clone-empty-note">No gaps queued. Re-plan to measure the current state.</div>'}</div>
+    <div class="clone-section-head"><span>All gaps (${gaps.length})</span></div>
+    <div class="clone-control-list">${gaps.length ? gaps.map((g) => `
+      <div class="clone-control">
+        <span class="clone-control-type">${g.severity}${g.blocking ? ' !' : ''}</span>
+        <span class="clone-control-name">${escapeHtml(g.title)}</span>
+        <span class="clone-control-parent">${escapeHtml(g.kind)} · ${escapeHtml(g.tool)}${g.evidence?.length ? ' · ' + g.evidence.length + ' evidence' : ''}</span>
+      </div>`).join('') : '<div class="clone-empty-note">Nothing measured yet.</div>'}</div>`
+  wireGapsTool()
+}
+
+function wireGapsTool() {
+  const busy = async (fn) => {
+    if (!cloneState.current || cloneState.gapsBusy) return
+    cloneState.gapsBusy = true
+    renderGapsTool()
+    try {
+      const r = await fn()
+      if (!r?.ok && r !== true) throw new Error(r?.error || 'gap planning failed')
+      cloneState.gapsBusy = false
+      await openClone(cloneState.current, true)
+      renderGapsTool()
+      toast('Gaps: ' + (r?.summary?.total ?? 'done'))
+    } catch (e) {
+      cloneState.gapsBusy = false
+      renderGapsTool()
+      toast('Gaps: ' + e.message)
+    }
+  }
+  $('#gapsReplan')?.addEventListener('click', () => busy(() => api.gapsAnalyze({ slug: cloneState.current })))
+  $('#gapsCopy')?.addEventListener('click', () => {
+    const plan = cloneState.gaps?.plan || {}
+    copyText(JSON.stringify({ summary: plan.summary, next: plan.next, gaps: plan.gaps }, null, 2))
+  })
+  for (const btn of document.querySelectorAll('#cloneGaps [data-gap-open]')) {
+    btn.addEventListener('click', () => {
+      const tab = document.querySelector(`.tab[data-tab="${btn.dataset.gapOpen}"]`)
+      if (tab) tab.click()
+      else toast('Gaps: no tab for ' + btn.dataset.gapOpen)
+    })
+  }
+}
+
 function renderCloneDetail() {
   renderCloneProjectDetail()
   renderRecorderDetail()
@@ -1373,6 +1458,7 @@ function renderCloneDetail() {
   renderIRTool()
   renderOracleTool()
   renderRepairTool()
+  renderGapsTool()
   renderClonePickers()
 }
 
@@ -1653,7 +1739,7 @@ function wireCloneUi() {
     if (card) openClone(card.dataset.slug)
   })
   $$('.tab').forEach((tab) => {
-    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts', 'explore', 'formats', 'protocol', 'ir', 'oracle', 'repair'].includes(tab.dataset.tab)) {
+    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts', 'explore', 'formats', 'protocol', 'ir', 'oracle', 'repair', 'gaps'].includes(tab.dataset.tab)) {
       tab.addEventListener('click', () => loadClone())
     }
   })

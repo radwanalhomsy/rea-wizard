@@ -53,6 +53,10 @@ contextBridge.exposeInMainWorld('rea', {
   repairApply: (payload) => invoke('repair:apply', payload),
   repairStatus: (payload) => invoke('repair:status', payload),
   repairGet: (payload) => invoke('repair:get', payload),
+  gapsAnalyze: (payload) => invoke('gaps:analyze', payload),
+  gapsNext: (payload) => invoke('gaps:next', payload),
+  gapsStatus: (payload) => invoke('gaps:status', payload),
+  gapsGet: (payload) => invoke('gaps:get', payload),
 
   /* IDA (GUI companion + optional Home/Pro MCP registration) */
   idaStatus: () => invoke('ida:status'),

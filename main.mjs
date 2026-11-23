@@ -16,6 +16,7 @@ import * as cloneProtocol from './cloneProtocol.mjs'
 import * as cloneIR from './cloneIR.mjs'
 import * as cloneOracle from './cloneOracle.mjs'
 import * as cloneRepair from './cloneRepair.mjs'
+import * as cloneGaps from './cloneGaps.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const HOME = process.env.USERPROFILE || ''
@@ -1137,6 +1138,24 @@ function registerIpc() {
 
   ipcMain.handle('repair:get', cloneGuard(async ({ slug } = {}) =>
     cloneRepair.repairGet(settings.workspace, slug),
+  ))
+
+  /* ----------------------------------------------------------- gap planner */
+
+  ipcMain.handle('gaps:analyze', cloneGuard(async ({ slug, limit } = {}) =>
+    cloneGaps.analyzeGaps(settings.workspace, slug, { limit }),
+  ))
+
+  ipcMain.handle('gaps:next', cloneGuard(async ({ slug, limit } = {}) =>
+    cloneGaps.planNext(settings.workspace, slug, { limit }),
+  ))
+
+  ipcMain.handle('gaps:status', cloneGuard(async ({ slug } = {}) =>
+    cloneGaps.gapStatus(settings.workspace, slug),
+  ))
+
+  ipcMain.handle('gaps:get', cloneGuard(async ({ slug } = {}) =>
+    cloneGaps.gapGet(settings.workspace, slug),
   ))
 }
 
