@@ -116,14 +116,15 @@ export function computeFidelity(workspace, slug) {
   const cases = project.cases || []
   const evidence = project.evidence || []
 
-  const staticFacts = facts.filter((f) => ['target', 'ui', 'artifacts', 'protocol', 'format'].includes(f.kind))
+  const staticFacts = facts.filter((f) => ['target', 'inventory', 'ui', 'artifacts', 'protocol', 'format'].includes(f.kind))
+  const inventoryFacts = facts.filter((f) => f.kind === 'inventory')
   const inventory = dimension(
     'inventory',
-    (project.target?.sha256 ? 1 : 0) + (evidence.length ? 1 : 0) + (staticFacts.length ? 1 : 0),
+    (project.target?.sha256 ? 1 : 0) + (evidence.length ? 1 : 0) + (inventoryFacts.length ? 1 : 0),
     3,
     Boolean(project.target || evidence.length),
     `target hash ${project.target?.sha256 ? 'yes' : 'no'}, ${evidence.length} evidence records, ` +
-      `${staticFacts.length} static facts`,
+      `${inventoryFacts.length} inventory facts`,
     project,
   )
 

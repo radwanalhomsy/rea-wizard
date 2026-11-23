@@ -33,6 +33,8 @@ contextBridge.exposeInMainWorld('rea', {
   artifactsCapture: (payload) => invoke('artifacts:capture', payload),
   uimapGet: (payload) => invoke('uimap:get', payload),
   artifactsGet: (payload) => invoke('artifacts:get', payload),
+  exploreRun: (payload) => invoke('explore:run', payload),
+  exploreGet: (payload) => invoke('explore:get', payload),
 
   /* IDA (GUI companion + optional Home/Pro MCP registration) */
   idaStatus: () => invoke('ida:status'),

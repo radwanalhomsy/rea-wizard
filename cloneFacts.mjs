@@ -18,6 +18,7 @@ import { getProject, projectPaths, readCase, addUnknown } from './cloneStore.mjs
 
 const SOURCE_CONFIDENCE = {
   target: 0.95,
+  inventory: 0.95,
   case: 0.75,
   evidence: 0.6,
   ui: 0.8,
@@ -135,6 +136,38 @@ function collectCaseFacts(facts, workspace, slug, record) {
 }
 
 function collectStructuredFacts(facts, paths) {
+  const inventory = readJson(path.join(paths.spec, 'inventory.json'))
+  if (inventory?.file) {
+    push(facts, {
+      kind: 'inventory',
+      claim: `inventory:sha256:${inventory.file.sha256 || 'none'}`,
+      value: { path: inventory.file.path, size: inventory.file.size, kind: inventory.file.kind },
+      sources: ['explore'],
+      note: 'Hashed and parsed target identity.',
+    })
+    for (const imp of inventory.pe?.imports || []) {
+      for (const fn of imp.functions || []) {
+        const name = fn.name || `#${fn.ordinal}`
+        push(facts, {
+          kind: 'inventory',
+          claim: `import:${imp.dll || '?'}:${name}`,
+          value: { dll: imp.dll || '', name: fn.name || null, ordinal: fn.ordinal ?? null },
+          sources: ['explore-imports'],
+          note: 'Imported symbol observed in the target binary.',
+        })
+      }
+    }
+    for (const s of inventory.pe?.sections || []) {
+      push(facts, {
+        kind: 'inventory',
+        claim: `section:${s.name}`,
+        value: { virtualAddress: s.virtualAddress, virtualSize: s.virtualSize, rawSize: s.rawSize },
+        sources: ['explore-sections'],
+        note: 'PE section header from the target binary.',
+      })
+    }
+  }
+
   const ui = readJson(path.join(paths.spec, 'ui-map.json'))
   if (ui?.controls) {
     for (const control of ui.controls) {

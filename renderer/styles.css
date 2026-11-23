@@ -957,6 +957,16 @@ code, pre, textarea, input, select { font-family: inherit; }
 .clone-control-name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .clone-control-parent { color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* Explore / target inventory */
+.clone-inv-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; margin-bottom: 8px;
+  border: 1px solid var(--line-soft); border-radius: 6px; background: var(--bg-3); padding: 7px;
+}
+.clone-inv-grid > div { display: flex; justify-content: space-between; gap: 6px; font-size: 9.5px; }
+.clone-inv-grid span { color: var(--text-faint); }
+.clone-inv-grid code { color: var(--text); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+.clone-inv-error { font-size: 10px; color: var(--warn); border: 1px solid var(--warn); border-radius: 5px; padding: 4px 6px; margin-bottom: 6px; }
+
 
 
 

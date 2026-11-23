@@ -10,6 +10,7 @@ import * as cloneSpec from './cloneSpec.mjs'
 import * as cloneFacts from './cloneFacts.mjs'
 import * as cloneFidelity from './cloneFidelity.mjs'
 import * as cloneCapture from './cloneCapture.mjs'
+import * as cloneExplore from './cloneExplore.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const HOME = process.env.USERPROFILE || ''
@@ -1040,6 +1041,16 @@ function registerIpc() {
     const file = path.join(dir, 'persistence.json')
     return { diff: fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null }
   }))
+
+  /* ---------------------------------------------------------- exploration */
+
+  ipcMain.handle('explore:run', cloneGuard(async ({ slug, targetPath } = {}) =>
+    cloneExplore.exploreTarget(settings.workspace, slug, { targetPath }),
+  ))
+
+  ipcMain.handle('explore:get', cloneGuard(async ({ slug } = {}) => ({
+    inventory: cloneExplore.readInventory(settings.workspace, slug),
+  })))
 }
 
 /* -------------------------------------------------------------------- boot */

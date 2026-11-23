@@ -22,7 +22,7 @@
     "ghidra"
   ],
   "author": "REA Studio",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@opencode-ai/sdk": "^1.19.5"
   },
@@ -42,8 +42,7 @@
     },
     "files": [
       "main.mjs",
-      "cloneStore.mjs",
-      "cloneSpec.mjs",
+      "clone*.mjs",
       "preload.cjs",
       "renderer/**/*",
       "package.json"

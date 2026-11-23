@@ -20,6 +20,8 @@ const cloneState = {
   facts: [],
   uiMap: null,
   persistence: null,
+  inventory: null,
+  exploreBusy: false,
   scoreBusy: false,
   factsBusy: false,
   uiBusy: false,
@@ -140,13 +142,14 @@ function renderCloneList() {
 
 async function openClone(slug, keepScroll = false) {
   try {
-    const [res, arts, score, facts, uiMap, persistence] = await Promise.all([
+    const [res, arts, score, facts, uiMap, persistence, inventory] = await Promise.all([
       api.cloneGet({ slug }),
       api.cloneArtifacts({ slug }),
       api.fidelityGet({ slug }),
       api.factsList({ slug }),
       api.uimapGet({ slug }),
       api.artifactsGet({ slug }),
+      api.exploreGet({ slug }),
     ])
     if (!res?.ok || !res.project) throw new Error(res?.error || 'project not found')
     cloneState.current = slug
@@ -156,6 +159,7 @@ async function openClone(slug, keepScroll = false) {
     cloneState.facts = facts?.ok ? facts.facts || [] : []
     cloneState.uiMap = uiMap?.ok ? uiMap.map : null
     cloneState.persistence = persistence?.ok ? persistence.diff : null
+    cloneState.inventory = inventory?.ok ? inventory.inventory : null
     renderCloneList()
     renderCloneDetail(keepScroll)
   } catch (e) {
@@ -868,6 +872,80 @@ function wireArtifactsTool() {
   })
 }
 
+/* -------------------------------------------------------------- explore */
+
+function renderExploreTool() {
+  const box = $('#cloneExplore')
+  if (!box) return
+  if (!cloneState.detail) {
+    box.innerHTML = emptyProjectNote('target exploration')
+    return
+  }
+  const p = cloneState.detail
+  const inv = cloneState.inventory
+  const pe = inv?.pe
+  box.innerHTML = `
+    <div class="clone-empty-note">Offline analysis of the target binary. Computes the canonical SHA-256, parses PE
+    headers, sections, imports and exports, and extracts bounded strings — no network or Ghidra required.</div>
+    <div class="clone-capture-form">
+      <label>Target<input id="exploreTarget" value="${escapeHtml(inv?.file?.path || p.target?.path || '')}" placeholder="path to executable" /></label>
+      <button class="btn btn-tiny" id="exploreRun" ${cloneState.exploreBusy ? 'disabled' : ''}>
+        ${cloneState.exploreBusy ? 'Analyzing...' : 'Analyze target'}
+      </button>
+    </div>
+    ${inv ? `
+      <div class="clone-inv-grid">
+        <div><span>SHA-256</span><code>${escapeHtml((inv.file.sha256 || 'none').slice(0, 32))}…</code></div>
+        <div><span>Size</span><code>${Number(inv.file.size || 0).toLocaleString()} B</code></div>
+        <div><span>Format</span><code>${escapeHtml(pe ? `${pe.format} ${pe.arch} ${pe.bits}-bit` : inv.file.kind || 'unknown')}</code></div>
+        <div><span>Entry</span><code>${escapeHtml(pe ? `${pe.imageBase}+${pe.entryPointRva}` : '—')}</code></div>
+        <div><span>Sections</span><code>${inv.stats.sectionCount}</code></div>
+        <div><span>Imports</span><code>${inv.stats.importCount}</code></div>
+        <div><span>Exports</span><code>${inv.stats.exportCount}</code></div>
+        <div><span>Strings</span><code>${inv.strings.length}</code></div>
+      </div>
+      ${inv.parseError ? `<div class="clone-inv-error">${escapeHtml(inv.parseError)}</div>` : ''}
+      <div class="clone-section-head"><span>Sections</span></div>
+      <div class="clone-control-list">${(pe?.sections || []).map((s) => `
+        <div class="clone-control"><span class="clone-control-type">0x${s.virtualAddress.toString(16)}</span>
+          <span class="clone-control-name">${escapeHtml(s.name)}</span>
+          <span class="clone-control-parent">raw 0x${s.rawSize.toString(16)} · VA 0x${s.virtualSize.toString(16)}</span></div>`).join('')}</div>
+      <div class="clone-section-head"><span>Imports</span></div>
+      <div class="clone-control-list">${(pe?.imports || []).slice(0, 200).map((i) => `
+        <div class="clone-control"><span class="clone-control-type">DLL</span>
+          <span class="clone-control-name">${escapeHtml(i.dll || '?')}</span>
+          <span class="clone-control-parent">${i.count} symbols</span></div>`).join('') || '<div class="clone-empty-note">No imports parsed.</div>'}</div>
+      <div class="clone-section-head"><span>Notable strings</span></div>
+      <div class="clone-control-list">${inv.strings.slice(0, 120).map((s) => `
+        <div class="clone-control"><span class="clone-control-type">${escapeHtml(s.offset)}</span>
+          <span class="clone-control-name">${escapeHtml(s.value)}</span>
+          <span class="clone-control-parent"></span></div>`).join('')}</div>`
+      : '<div class="clone-empty-note">No inventory yet. Click <b>Analyze target</b> to explore it.</div>'}`
+  wireExploreTool()
+}
+
+function wireExploreTool() {
+  $('#exploreRun')?.addEventListener('click', async () => {
+    if (!cloneState.current || cloneState.exploreBusy) return
+    const targetPath = $('#exploreTarget')?.value?.trim() || null
+    cloneState.exploreBusy = true
+    renderExploreTool()
+    try {
+      const r = await api.exploreRun({ slug: cloneState.current, targetPath })
+      if (!r?.ok) throw new Error(r?.error || 'exploration failed')
+      cloneState.inventory = (await api.exploreGet({ slug: cloneState.current })).inventory
+      cloneState.exploreBusy = false
+      await loadClone(true)
+      renderExploreTool()
+      toast(`Explored ${r.file.sha256 ? r.file.sha256.slice(0, 12) : 'target'}`)
+    } catch (e) {
+      cloneState.exploreBusy = false
+      renderExploreTool()
+      toast('Explore: ' + e.message)
+    }
+  })
+}
+
 function renderCloneDetail() {
   renderCloneProjectDetail()
   renderRecorderDetail()
@@ -877,6 +955,7 @@ function renderCloneDetail() {
   renderFactsDetail()
   renderUiMapTool()
   renderArtifactsTool()
+  renderExploreTool()
   renderClonePickers()
 }
 
@@ -1157,7 +1236,7 @@ function wireCloneUi() {
     if (card) openClone(card.dataset.slug)
   })
   $$('.tab').forEach((tab) => {
-    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts'].includes(tab.dataset.tab)) {
+    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts', 'explore'].includes(tab.dataset.tab)) {
       tab.addEventListener('click', () => loadClone())
     }
   })

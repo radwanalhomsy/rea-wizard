@@ -105,6 +105,11 @@
                 <span class="task-body"><span class="task-title">Artifact diff</span>
                   <span class="task-sub">Files, registry and processes changed by running the target</span></span>
               </button>
+              <button class="task-card" data-clone-tool="explore">
+                <span class="task-ico">EX</span>
+                <span class="task-body"><span class="task-title">Explore target</span>
+                  <span class="task-sub">Hash and parse PE headers, sections, imports, exports and strings</span></span>
+              </button>
             </div>
           </div>
 
@@ -167,6 +172,7 @@
           <button class="tab" data-tab="facts" role="tab" title="Citable semantic fact ledger">Facts</button>
           <button class="tab" data-tab="uimap" role="tab" title="Accessibility-tree UI inventory">UI Map</button>
           <button class="tab" data-tab="artifacts" role="tab" title="Filesystem, registry and process diff">Artifacts</button>
+          <button class="tab" data-tab="explore" role="tab" title="Target inventory and PE analysis">Explore</button>
           <button class="tab" data-tab="evidence" role="tab">Evidence</button>
           <button class="tab" data-tab="providers" role="tab">Providers</button>
           <button class="tab" data-tab="guidance" role="tab">Guidance</button>
@@ -314,6 +320,14 @@
             <select class="clone-project-pick" data-pick="artifacts" title="Clone project"></select>
           </div>
           <div id="cloneArtifactsTool" class="clone-detail"></div>
+        </div>
+
+        <div class="tab-panel" data-panel="explore">
+          <div class="panel-head">
+            <span>Target inventory</span>
+            <select class="clone-project-pick" data-pick="explore" title="Clone project"></select>
+          </div>
+          <div id="cloneExplore" class="clone-detail"></div>
         </div>
       </aside>
     </main>
