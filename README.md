@@ -471,9 +471,16 @@ rea-wizard/
 
 Prebuilt Windows binaries are on the
 [Releases page](https://github.com/radwanalhomsy/rea-wizard/releases).
-The current release is **1.2.7**, with both an installer
-(`REA-Studio-1.2.7-x64.msi`) and a portable build
-(`REA-Studio-1.2.7-x64.exe`). Version 1.2.7 adds a real **GUI cloner**: it walks
+The current release is **1.2.8**, with both an installer
+(`REA-Studio-1.2.8-x64.msi`) and a portable build
+(`REA-Studio-1.2.8-x64.exe`). Version 1.2.8 adds an evidence-driven **per-element
+behavior layer** to the GUI clone. Real UI Automation pattern capabilities and
+bounded executed actions are written to `spec/gui-behavior.json`; each generated
+element carries an honest `verified`, `observed`, `declared` or `static` status.
+Only verified/observed behaviors replay locally in the browser clone, with
+declared/static elements explicitly not executed. The verifier and fidelity
+scorecard now measure recorded interactive behavior instead of claiming it.
+Version 1.2.7 adds a real **GUI cloner**: it walks
 the live accessibility tree, opens real menus and context menus, selects every
 tab, expands tree nodes and submenus, writes durable evidence, and generates a
 deterministic browser-renderable structural clone under `clone/gui/`. The

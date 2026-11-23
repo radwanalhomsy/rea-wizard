@@ -266,9 +266,11 @@ export async function runAutoClone(workspace, options = {}, emit = () => {}) {
         target: targetPath, seconds, closeAfter: true, max: 4000, depth: 12,
       })
       const g = generateGuiClone(workspace, slug)
+      const b = r.behavior || {}
       return {
-        detail: `${r.summary.nodes} nodes, ${r.summary.menus} menu(s), ${r.summary.submenus} submenu nodes, ` +
-          `${r.summary.tabs} tab(s); clone ${g.verification?.completeness ?? 0}`,
+        detail: `${r.summary.nodes} nodes, ${r.summary.menuSurfaces} menu(s), ${r.summary.submenus} submenu nodes, ` +
+          `${r.summary.tabs} tab(s); behavior ${b.verified || 0} verified + ${b.observed || 0} observed / ` +
+          `${b.interactive || 0} interactive; clone ${g.verification?.completeness ?? 0}`,
         evidence: [r.evidence],
         files: [...r.files, ...g.files],
       }

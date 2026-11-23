@@ -167,14 +167,28 @@ export function computeFidelity(workspace, slug) {
   const checked = cases.filter((c) => c.parity && c.parity.status !== 'not checked')
   const passing = checked.filter((c) => c.parity.status === 'pass' || c.parity.status === 'match')
   const withSteps = cases.filter((c) => (c.steps || []).length > 0)
-  const behavior = dimension(
-    'behavior',
-    passing.length + withSteps.length,
-    cases.length * 2,
-    cases.length > 0,
-    `${cases.length} journeys, ${withSteps.length} with steps, ${passing.length}/${checked.length} parity cases passing`,
-    project,
-  )
+  const journeyDetail = `${cases.length} journeys, ${withSteps.length} with steps, ` +
+    `${passing.length}/${checked.length} parity cases passing`
+  const recordedBehavior = guiVerification?.behavior
+  const behavior = recordedBehavior && recordedBehavior.interactive > 0
+    ? dimension(
+        'behavior',
+        recordedBehavior.recorded || 0,
+        recordedBehavior.interactive,
+        true,
+        `${recordedBehavior.verified || 0} verified + ${recordedBehavior.observed || 0} observed of ` +
+          `${recordedBehavior.interactive} interactive elements; ` +
+          `${recordedBehavior.declared || 0} declared, ${recordedBehavior.static || 0} static; ${journeyDetail}`,
+        project,
+      )
+    : dimension(
+        'behavior',
+        passing.length + withSteps.length,
+        cases.length * 2,
+        cases.length > 0,
+        journeyDetail,
+        project,
+      )
 
   const actionFacts = facts.filter((f) => f.kind === 'case' && f.claim.startsWith('action:'))
   const actionKeys = new Set(actionFacts.map((f) => f.claim))

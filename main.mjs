@@ -1054,6 +1054,7 @@ function registerIpc() {
 
   ipcMain.handle('gui:get', cloneGuard(async ({ slug } = {}) => ({
     tree: cloneGui.readGuiTree(settings.workspace, slug),
+    behavior: cloneGui.readGuiBehavior(settings.workspace, slug),
     manifest: cloneGui.readGuiClone(settings.workspace, slug),
   })))
 

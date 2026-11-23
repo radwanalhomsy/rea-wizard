@@ -211,6 +211,59 @@ function Close-ModalDialogs {
 }
 $steps = New-Object 'System.Collections.Generic.List[object]'
 $collapsibles = New-Object 'System.Collections.Generic.List[object]'
+$behaviors = New-Object 'System.Collections.Generic.List[object]'
+function Get-Core($c) {
+  $r = $c.BoundingRectangle
+  return ('{0}|{1}|{2}|{3}|{4}|{5}|{6}|{7}' -f @([string]$c.Name, [string]$c.ControlType.ProgrammaticName.Replace('ControlType.', ''), [string]$c.AutomationId, [string]$c.ClassName, [int]$r.X, [int]$r.Y, [int]$r.Width, [int]$r.Height))
+}
+function Get-State($element) {
+  $state = [pscustomobject]@{ enabled = $false; offscreen = $false; toggle = ''; selected = ''; expand = ''; value = '' }
+  try {
+    $c = $element.Current
+    $state.enabled = [bool]$c.IsEnabled
+    $state.offscreen = [bool]$c.IsOffscreen
+  } catch { }
+  $p = $null
+  try {
+    if ($element.TryGetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern, [ref]$p)) {
+      $state.toggle = [string]$p.Current.ToggleState
+    }
+  } catch { }
+  try {
+    if ($element.TryGetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern, [ref]$p)) {
+      $state.selected = [string]$p.Current.IsSelected
+    }
+  } catch { }
+  try {
+    if ($element.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$p)) {
+      $state.expand = [string]$p.Current.ExpandCollapseState
+    }
+  } catch { }
+  try {
+    if ($element.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$p)) {
+      $v = [string]$p.Current.Value
+      $state.value = $v.Substring(0, [Math]::Min(200, $v.Length))
+    }
+  } catch { }
+  return $state
+}
+function Add-Behavior($element, $action, $pattern, $before, $after, $status, $effect, $detail) {
+  try {
+    $c = $element.Current
+    $behaviors.Add([pscustomobject]@{
+      core = Get-Core $c
+      name = [string]$c.Name
+      type = [string]$c.ControlType.ProgrammaticName.Replace('ControlType.', '')
+      action = $action
+      pattern = $pattern
+      before = $before
+      after = $after
+      status = $status
+      effect = $effect
+      detail = $detail
+    })
+  } catch { }
+}
 foreach ($w in $windows) {
   $windowTitle = [string]$w.Current.Name
   Add-Nodes $w ('window:' + $windowTitle) '' ([Math]::Min($Depth, 12)) $false
@@ -246,8 +299,11 @@ foreach ($tab in $tabItems) {
   try {
     $c = $tab.Current
     if (-not $c.IsEnabled -or $c.IsOffscreen -or [string]::IsNullOrWhiteSpace($c.Name)) { continue }
+    $beforeState = Get-State $tab
     $sel = $null
+    $usedPattern = 'InvokePattern'
     if ($tab.TryGetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern, [ref]$sel)) {
+      $usedPattern = 'SelectionItemPattern'
       if ($sel.Current.IsSelected) { $selectedTab = $sel }
       $sel.Select()
     } else {
@@ -255,6 +311,10 @@ foreach ($tab in $tabItems) {
       if ($tab.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$invoke)) { $invoke.Invoke() }
     }
     Start-Sleep -Milliseconds $DelayMs
+    $afterState = Get-State $tab
+    $effect = if ($afterState.selected -eq 'True') { 'selected' } else { 'invoked' }
+    $status = if ($afterState.selected -eq 'True' -or $usedPattern -eq 'InvokePattern') { 'verified' } else { 'observed' }
+    Add-Behavior $tab 'select' $usedPattern $beforeState $afterState $status $effect ('surface tab:' + $c.Name)
     $steps.Add([pscustomobject]@{ action = 'select-tab'; target = $c.Name; status = 'ok' })
     Add-Nodes $primary ('tab:' + $c.Name) ('tab/' + $c.Name) $Depth $false
   } catch {
@@ -270,6 +330,7 @@ foreach ($item in $menuCandidates) {
     $beforeHandles = @(Get-WindowHandles)
     $r = $c.BoundingRectangle
     if ($r.Width -le 0 -or $r.Height -le 0) { continue }
+    $beforeState = Get-State $item
     [GuiInput]::Focus([IntPtr]$primaryHandle)
     [GuiInput]::Click([int]($r.X + $r.Width / 2), [int]($r.Y + $r.Height / 2))
     Start-Sleep -Milliseconds $DelayMs
@@ -289,6 +350,8 @@ foreach ($item in $menuCandidates) {
     }
     foreach ($w in $popups) {
       Add-Nodes $w $surface ('menu/' + $name) ([Math]::Min($Depth, 8)) $true
+      $afterState = Get-State $item
+      Add-Behavior $item 'invoke' 'mouse-click' $beforeState $afterState 'verified' ('opened-surface:' + $surface) ('popup windows=' + $popups.Count)
       $steps.Add([pscustomobject]@{ action = 'open-menu'; target = $name; status = 'ok' })
       $subItems = $w.FindAll([System.Windows.Automation.TreeScope]::Descendants, $menuItemCondition)
       foreach ($mi in $subItems) {
@@ -298,8 +361,11 @@ foreach ($item in $menuCandidates) {
           $ec = $null
           if (-not $mi.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$ec)) { continue }
           if ($ec.Current.ExpandCollapseState -eq [System.Windows.Automation.ExpandCollapseState]::Expanded) { continue }
+          $subBefore = Get-State $mi
           $ec.Expand()
           Start-Sleep -Milliseconds $DelayMs
+          $subAfter = Get-State $mi
+          Add-Behavior $mi 'expand' 'ExpandCollapsePattern' $subBefore $subAfter 'verified' 'expanded-submenu' ('item ' + $mc.Name)
           $collapsibles.Add(@{ p = $ec; n = $mc.Name })
           $steps.Add([pscustomobject]@{ action = 'expand-submenu'; target = $mc.Name; status = 'ok' })
           Add-Nodes $mi ($surface + '/' + $mc.Name) ('menu/' + $name + '/' + $mc.Name) ([Math]::Min($Depth, 6)) $true
@@ -328,6 +394,7 @@ foreach ($t in ($contextTargets | Select-Object -First 3)) {
   try {
     $tc = $t.Current
     $tr = $tc.BoundingRectangle
+    $contextBefore = Get-State $t
     [GuiInput]::Focus([IntPtr]$primaryHandle)
     [GuiInput]::RightClick([int]($tr.X + $tr.Width / 2), [int]($tr.Y + $tr.Height / 2))
     Start-Sleep -Milliseconds $DelayMs
@@ -341,6 +408,8 @@ foreach ($t in ($contextTargets | Select-Object -First 3)) {
         $cSurface = 'context:' + ($tc.Name -replace '[^A-Za-z0-9 ]', '_').Trim()
         if ([string]::IsNullOrWhiteSpace($cSurface)) { $cSurface = 'context:' + $tc.ControlType.ProgrammaticName }
         Add-Nodes $w $cSurface ('context/' + $tc.ControlType.ProgrammaticName) ([Math]::Min($Depth, 8)) $true
+        $contextAfter = Get-State $t
+        Add-Behavior $t 'context-menu' 'mouse-right-click' $contextBefore $contextAfter 'verified' ('opened-surface:' + $cSurface) ('context target ' + $tc.ControlType.ProgrammaticName)
         $steps.Add([pscustomobject]@{ action = 'open-context-menu'; target = $tc.ControlType.ProgrammaticName; status = 'ok' })
         $subItems = $w.FindAll([System.Windows.Automation.TreeScope]::Descendants, $menuItemCondition)
         foreach ($mi in $subItems) {
@@ -377,15 +446,40 @@ foreach ($item in $treeItems) {
     $pat = $null
     if ($item.TryGetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$pat)) {
       if ($pat.Current.ExpandCollapseState -ne [System.Windows.Automation.ExpandCollapseState]::Expanded) {
+        $treeBefore = Get-State $item
         $pat.Expand()
         $collapsibles.Add(@{ p = $pat; n = $c.Name })
         Start-Sleep -Milliseconds $DelayMs
+        $treeAfter = Get-State $item
+        Add-Behavior $item 'expand' 'ExpandCollapsePattern' $treeBefore $treeAfter 'verified' 'expanded-tree' ('node ' + $c.Name)
         $steps.Add([pscustomobject]@{ action = 'expand-tree'; target = $c.Name; status = 'ok' })
         Add-Nodes $item ('tree:' + $c.Name) ('tree/' + $c.Name) ([Math]::Min($Depth, 8)) $true
       }
     }
   } catch {
     $failures += ('tree: ' + $_.Exception.Message)
+  }
+}
+# Bounded, reversible toggle probe. Every checkbox is restored to its original state.
+$checkboxes = Find-ByType $primary 'CheckBox' ([Math]::Min(100, $MaxTrees))
+foreach ($cb in $checkboxes) {
+  try {
+    $cc = $cb.Current
+    if (-not $cc.IsEnabled -or $cc.IsOffscreen -or [string]::IsNullOrWhiteSpace($cc.Name)) { continue }
+    if ([string]$cc.Name -match '(?i)delete|remove|erase|format|exit|quit|apply|save') { continue }
+    $tp = $null
+    if (-not $cb.TryGetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern, [ref]$tp)) { continue }
+    $toggleBefore = Get-State $cb
+    $tp.Toggle()
+    Start-Sleep -Milliseconds ([Math]::Max(30, [int]($DelayMs / 2)))
+    $toggleAfter = Get-State $cb
+    $tp.Toggle()
+    Start-Sleep -Milliseconds ([Math]::Max(30, [int]($DelayMs / 2)))
+    $toggleRestored = Get-State $cb
+    $toggleStatus = if ($toggleAfter.toggle -ne $toggleBefore.toggle -and $toggleRestored.toggle -eq $toggleBefore.toggle) { 'verified' } else { 'observed' }
+    Add-Behavior $cb 'toggle' 'TogglePattern' $toggleBefore $toggleAfter $toggleStatus 'toggled' ('restored=' + $toggleRestored.toggle)
+  } catch {
+    $failures += ('toggle: ' + $_.Exception.Message)
   }
 }
 for ($i = $collapsibles.Count - 1; $i -ge 0; $i--) {
@@ -399,6 +493,7 @@ $result = [pscustomobject]@{
   nodes = @($nodes.ToArray())
   surfaces = $surfaceList
   steps = @($steps.ToArray())
+  behaviors = @($behaviors.ToArray())
   failures = @($failures | Select-Object -First 50)
 }
 $result | ConvertTo-Json -Depth 10 -Compress | Set-Content -Path $Output -Encoding UTF8
@@ -456,6 +551,143 @@ function normalizeNode(node, index) {
       : String(node.patterns || '').split(',').map((p) => p.trim()).filter(Boolean),
     depth: Number(node.depth) || 0,
   }
+}
+
+const PATTERN_CAPABILITY = {
+  'InvokePatternIdentifiers.Pattern': 'invoke',
+  'ValuePatternIdentifiers.Pattern': 'value',
+  'TogglePatternIdentifiers.Pattern': 'toggle',
+  'SelectionItemPatternIdentifiers.Pattern': 'select',
+  'ExpandCollapsePatternIdentifiers.Pattern': 'expand',
+  'WindowPatternIdentifiers.Pattern': 'window',
+  'GridPatternIdentifiers.Pattern': 'grid',
+  'TablePatternIdentifiers.Pattern': 'grid',
+  'GridItemPatternIdentifiers.Pattern': 'grid-item',
+  'TableItemPatternIdentifiers.Pattern': 'grid-item',
+  'TransformPatternIdentifiers.Pattern': 'transform',
+}
+
+function coreOf(node) {
+  const b = node.bounds || {}
+  return [
+    node.name, node.type, node.automationId || '', node.className || '',
+    b.x || 0, b.y || 0, b.width || 0, b.height || 0,
+  ].join('|')
+}
+
+const KIND_FOR_TYPE = {
+  TabItem: 'select',
+  MenuItem: 'invoke',
+  Button: 'invoke',
+  CheckBox: 'toggle',
+  TreeItem: 'expand',
+  Edit: 'value',
+  ComboBox: 'value',
+  Text: 'inspect',
+  Image: 'inspect',
+  Group: 'inspect',
+  Window: 'window',
+  Header: 'inspect',
+}
+
+/** Build a per-element behavior model: real patterns declare, real actions verify. */
+function normalizeBehaviors(rawBehaviors, nodes, steps, evidence, caseId) {
+  const executed = new Map()
+  for (const record of Array.isArray(rawBehaviors) ? rawBehaviors : []) {
+    const core = String(record.core || '')
+    if (!core) continue
+    if (!executed.has(core)) executed.set(core, [])
+    const stepAction = {
+      select: 'select-tab',
+      invoke: 'open-menu',
+      'context-menu': 'open-context-menu',
+      expand: ['expand-submenu', 'expand-tree'],
+      toggle: null,
+    }[record.action]
+    const actions = Array.isArray(stepAction) ? stepAction : stepAction ? [stepAction] : []
+    const step = actions.length
+      ? steps.find((s) => actions.includes(s.action) && s.target === record.name)
+      : null
+    executed.get(core).push({
+      action: String(record.action || 'invoke'),
+      pattern: String(record.pattern || ''),
+      status: String(record.status || 'observed'),
+      effect: String(record.effect || ''),
+      detail: String(record.detail || ''),
+      before: record.before || null,
+      after: record.after || null,
+      step: step ? step.index : null,
+      evidence,
+      case: caseId,
+    })
+  }
+
+  const elements = nodes.map((node) => {
+    const capabilities = []
+    const patterns = Array.isArray(node.patterns) ? node.patterns : []
+    for (const p of patterns) {
+      const cap = PATTERN_CAPABILITY[p]
+      if (cap && !capabilities.includes(cap)) capabilities.push(cap)
+    }
+    const core = coreOf(node)
+    const runs = executed.get(core) || []
+    const primary = runs[0] || null
+    const kind = primary
+      ? primary.action
+      : KIND_FOR_TYPE[node.type] || (capabilities.includes('invoke') ? 'invoke' : 'inspect')
+    const interactive = capabilities.some((c) =>
+      ['invoke', 'value', 'toggle', 'select', 'expand'].includes(c))
+    const status = primary
+      ? (runs.some((r) => r.status === 'verified') ? 'verified' : 'observed')
+      : interactive ? 'declared' : 'static'
+    return {
+      id: node.id,
+      core,
+      name: node.name,
+      type: node.type,
+      surface: node.surface,
+      path: node.path,
+      capabilities,
+      behavior: {
+        kind,
+        status,
+        pattern: primary ? primary.pattern : (patterns[0] || ''),
+        effect: primary ? primary.effect : '',
+        detail: primary ? primary.detail : '',
+        before: primary ? primary.before : null,
+        after: primary ? primary.after : null,
+        step: primary ? primary.step : null,
+        evidence: primary ? primary.evidence : evidence,
+        case: primary ? primary.case : caseId,
+        runs,
+      },
+    }
+  })
+
+  const summary = {
+    total: elements.length,
+    interactive: elements.filter((e) => e.capabilities.some((c) =>
+      ['invoke', 'value', 'toggle', 'select', 'expand'].includes(c))).length,
+    verified: elements.filter((e) => e.behavior.status === 'verified').length,
+    observed: elements.filter((e) => e.behavior.status === 'observed').length,
+    declared: elements.filter((e) => e.behavior.status === 'declared').length,
+    static: elements.filter((e) => e.behavior.status === 'static').length,
+    executedActions: runsCount(executed),
+  }
+  return {
+    schema: 1,
+    at: new Date().toISOString(),
+    evidence,
+    case: caseId,
+    summary,
+    elements,
+  }
+}
+
+function runsCount(executed) {
+  let n = 0
+  for (const runs of executed.values()) n += runs.length
+  return n
 }
 
 function summarize(nodes, surfaces) {
@@ -546,6 +778,10 @@ export async function captureGuiTree(workspace, slug, options = {}) {
       status: String(s.status || 'ok'),
     }))
     const evidence = `ev_gui_${hash(JSON.stringify({ title: raw.title, nodes, surfaces }))}`
+    const behavior = normalizeBehaviors(raw.behaviors, nodes, steps, evidence, null)
+    const behaviorFile = path.join(paths.spec, 'gui-behavior.json')
+    fs.mkdirSync(paths.spec, { recursive: true })
+    fs.writeFileSync(behaviorFile, JSON.stringify(behavior, null, 2) + '\n', 'utf8')
 
     fs.mkdirSync(paths.evidence, { recursive: true })
     const rawFile = path.join(paths.evidence, `gui-tree-${stamp()}.json`)
@@ -564,6 +800,7 @@ export async function captureGuiTree(workspace, slug, options = {}) {
       nodes,
       steps,
       summary,
+      behavior: behavior.summary,
       failures: Array.isArray(raw.failures) ? raw.failures : [],
     }
     fs.mkdirSync(paths.spec, { recursive: true })
@@ -602,7 +839,7 @@ export async function captureGuiTree(workspace, slug, options = {}) {
       id: evidence,
       source: 'gui-tree',
       stage: 'behavior',
-      note: `Deep GUI tree: ${nodes.length} nodes, ${surfaces.length} surfaces (${summary.menuSurfaces} menus, ${summary.tabSurfaces} tabs)`,
+      note: `Deep GUI tree: ${nodes.length} nodes, ${surfaces.length} surfaces (${summary.menuSurfaces} menus, ${summary.tabSurfaces} tabs); behavior ${behavior.summary.verified} verified / ${behavior.summary.interactive} interactive`,
       file: tree.rawFile,
     })
 
@@ -627,17 +864,26 @@ export async function captureGuiTree(workspace, slug, options = {}) {
         surfaces,
         summary,
         steps,
+        behavior: behavior.summary,
       },
     })
+
+    behavior.case = recorded.id
+    for (const element of behavior.elements) {
+      element.behavior.case = recorded.id
+      for (const run of element.behavior.runs) run.case = recorded.id
+    }
+    fs.writeFileSync(behaviorFile, JSON.stringify(behavior, null, 2) + '\n', 'utf8')
 
     return {
       title: tree.title,
       processId: tree.processId,
       evidence,
       summary,
+      behavior: behavior.summary,
       steps: steps.length,
       case: recorded.id,
-      files: ['spec/ui-tree.json', 'spec/ui-map.json', tree.rawFile],
+      files: ['spec/ui-tree.json', 'spec/ui-map.json', 'spec/gui-behavior.json', tree.rawFile],
     }
   } finally {
     try { fs.rmSync(script, { force: true }) } catch { }
@@ -654,6 +900,15 @@ export function readGuiTree(workspace, slug) {
   const paths = projectPaths(workspace, slug)
   try {
     return JSON.parse(fs.readFileSync(path.join(paths.spec, 'ui-tree.json'), 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+export function readGuiBehavior(workspace, slug) {
+  const paths = projectPaths(workspace, slug)
+  try {
+    return JSON.parse(fs.readFileSync(path.join(paths.spec, 'gui-behavior.json'), 'utf8'))
   } catch {
     return null
   }
@@ -681,9 +936,65 @@ const GUI_APP = `
 const tree = window.__GUI_TREE__
 const nodes = tree.nodes || []
 const byId = new Map(nodes.map(function (n) { return [n.id, n] }))
+const behavior = tree.behavior || { elements: [] }
+const behaviorById = new Map((behavior.elements || []).map(function (e) { return [e.id, e] }))
+const replayEvents = []
+const replayState = new Map()
+const toggled = new Set()
 const root = document.getElementById('guiRoot')
 const list = document.getElementById('guiControlList')
 const count = document.getElementById('guiCount')
+function showInspector(n) {
+  document.querySelectorAll('.gui-selected').forEach(function (x) { x.classList.remove('gui-selected') })
+  const el = elements.get(n.id)
+  if (el) el.classList.add('gui-selected')
+  const bh = behaviorById.get(n.id)
+  const box = document.getElementById('guiBehavior')
+  if (box) {
+    box.textContent = bh
+      ? JSON.stringify({
+          id: bh.id,
+          capabilities: bh.capabilities,
+          behavior: bh.behavior,
+          replay: replayState.get(n.id) || null,
+        }, null, 2)
+      : 'No behavior record was captured for this element.'
+  }
+  document.getElementById('guiDetail').textContent = JSON.stringify(n, null, 2)
+}
+function renderBehaviorSummary() {
+  const el = document.getElementById('guiBehaviorSummary')
+  if (!el) return
+  const s = behavior.summary || {}
+  const applied = replayEvents.filter(function (e) { return e.applied }).length
+  const skipped = replayEvents.length - applied
+  el.textContent = 'Recorded ' + (s.interactive || 0) + ' interactive / ' + (s.total || 0) +
+    ' elements · verified ' + (s.verified || 0) + ', observed ' + (s.observed || 0) +
+    ', declared ' + (s.declared || 0) + ', static ' + (s.static || 0) +
+    ' · replay ' + applied + ' applied, ' + skipped + ' skipped (local only)'
+}
+function recordReplay(id, applied, note, extra) {
+  const n = byId.get(id)
+  const bh = behaviorById.get(id)
+  const rec = {
+    id: id,
+    name: n ? n.name : '',
+    kind: bh ? bh.behavior.kind : 'inspect',
+    status: bh ? bh.behavior.status : 'static',
+    recordedEffect: bh ? bh.behavior.effect : '',
+    applied: Boolean(applied),
+    localOnly: true,
+    note: note,
+    at: new Date().toISOString(),
+  }
+  if (extra) Object.keys(extra).forEach(function (k) { rec[k] = extra[k] })
+  replayEvents.push(rec)
+  replayState.set(id, rec)
+  const el = elements.get(id)
+  if (el) el.setAttribute('data-replayed', applied ? 'applied' : 'no-effect')
+  renderBehaviorSummary()
+  return rec
+}
 const bounds = (function () {
   const boxes = nodes.filter(function (n) { return n.bounds && n.bounds.width > 0 && n.bounds.height > 0 })
   if (!boxes.length) return { x: 0, y: 0, width: 1280, height: 800 }
@@ -707,7 +1018,12 @@ nodes.forEach(function (n) {
   el.setAttribute('data-path', n.path)
   el.setAttribute('data-parent-path', n.parentPath)
   el.setAttribute('data-name', n.name)
-  el.title = n.type + ': ' + n.name + ' [' + n.surface + ']'
+  const bh = behaviorById.get(n.id)
+  const behaviorStatus = bh ? bh.behavior.status : 'static'
+  const behaviorKind = bh ? bh.behavior.kind : 'inspect'
+  el.setAttribute('data-behavior', behaviorStatus)
+  el.setAttribute('data-behavior-kind', behaviorKind)
+  el.title = n.type + ': ' + n.name + ' [' + n.surface + '] · ' + behaviorStatus
   const b = n.bounds || {}
   if (b.width > 0 && b.height > 0) {
     el.style.left = (b.x - bounds.x) + 'px'
@@ -721,17 +1037,21 @@ nodes.forEach(function (n) {
     el.textContent = n.label || n.name
     el.classList.add('gui-actionable')
   }
+  if (bh) {
+    const badge = document.createElement('span')
+    badge.className = 'gui-badge gui-badge-' + behaviorStatus
+    badge.textContent = behaviorStatus
+    badge.setAttribute('data-behavior-badge', behaviorStatus)
+    el.appendChild(badge)
+  }
   surface.appendChild(el)
   elements.set(n.id, el)
   const item = document.createElement('div')
   item.className = 'gui-list-item'
   item.setAttribute('data-list-node', n.id)
-  item.textContent = n.type + ' · ' + n.name + ' · ' + n.surface
-  item.addEventListener('click', function () {
-    document.querySelectorAll('.gui-selected').forEach(function (x) { x.classList.remove('gui-selected') })
-    el.classList.add('gui-selected')
-    document.getElementById('guiDetail').textContent = JSON.stringify(n, null, 2)
-  })
+  item.setAttribute('data-behavior', behaviorStatus)
+  item.textContent = n.type + ' · ' + n.name + ' · ' + n.surface + ' · ' + behaviorStatus
+  item.addEventListener('click', function () { showInspector(n) })
   list.appendChild(item)
 })
 const tabSurfaces = Array.from(new Set(nodes.map(function (n) { return n.surface }).filter(function (s) { return s.indexOf('tab:') === 0 })))
@@ -740,7 +1060,7 @@ const openMenus = new Set()
 const openTrees = new Set()
 function groupOf(surface) {
   if (surface.indexOf('tab:') === 0) return 'tab'
-  if (surface.indexOf('menu:') === 0) return 'menu'
+  if (surface.indexOf('menu:') === 0 || surface.indexOf('context:') === 0) return 'menu'
   if (surface.indexOf('tree:') === 0) return 'tree'
   return 'base'
 }
@@ -754,6 +1074,8 @@ function refresh() {
     if (g === 'menu') visible = openMenus.has(n.surface)
     if (g === 'tree') visible = openTrees.has(n.surface)
     el.style.visibility = visible ? 'visible' : 'hidden'
+    el.classList.toggle('gui-toggled', toggled.has(n.id))
+    el.classList.toggle('gui-replayed', replayState.has(n.id))
   })
   document.querySelectorAll('[data-surface]').forEach(function (el) {
     if (el.classList.contains('gui-tab-button')) el.classList.toggle('gui-active', el.getAttribute('data-surface') === activeTab)
@@ -765,7 +1087,8 @@ nodes.filter(function (n) { return n.type === 'TabItem' && n.surface.indexOf('ta
   btn.className = 'gui-tab-button'
   btn.textContent = n.name
   btn.setAttribute('data-surface', 'tab:' + n.name)
-  btn.addEventListener('click', function () { activeTab = 'tab:' + n.name; refresh() })
+  btn.setAttribute('data-behavior', behaviorById.has(n.id) ? behaviorById.get(n.id).behavior.status : 'static')
+  btn.addEventListener('click', function () { replay(n.id) })
   document.getElementById('guiTabs').appendChild(btn)
 })
 nodes.filter(function (n) { return n.type === 'MenuItem' && n.surface.indexOf('menu:') !== 0 }).forEach(function (n) {
@@ -773,31 +1096,106 @@ nodes.filter(function (n) { return n.type === 'MenuItem' && n.surface.indexOf('m
   btn.className = 'gui-menu-button'
   btn.textContent = n.name
   btn.setAttribute('data-surface', 'menu:' + n.name)
-  btn.addEventListener('click', function () {
-    const key = 'menu:' + n.name
-    if (openMenus.has(key)) openMenus.delete(key); else openMenus.add(key)
-    refresh()
-  })
+  btn.setAttribute('data-behavior', behaviorById.has(n.id) ? behaviorById.get(n.id).behavior.status : 'static')
+  btn.addEventListener('click', function () { replay(n.id) })
   document.getElementById('guiMenus').appendChild(btn)
 })
+function replay(id, value) {
+  const n = byId.get(id)
+  if (!n) return null
+  const bh = behaviorById.get(id)
+  const b = bh ? bh.behavior : null
+  const status = b ? b.status : 'static'
+  if (!b || status === 'declared' || status === 'static') {
+    return recordReplay(id, false, 'not executed: ' + status + ' (no recorded effect)')
+  }
+  const kind = b.kind
+  const effect = String(b.effect || '')
+  const detail = String(b.detail || '')
+  let changed = false
+  let note = ''
+  if (kind === 'select') {
+    const recorded = detail.indexOf('surface ') === 0 ? detail.slice(8) : null
+    const key = recorded || (n.surface.indexOf('tab:') === 0 ? n.surface : 'tab:' + n.name)
+    if ((tree.surfaces || []).indexOf(key) !== -1) {
+      activeTab = key
+      changed = true
+      note = 'local tab activation: ' + key
+    } else {
+      note = 'recorded select, but surface was not captured; no state changed'
+    }
+  } else if (kind === 'invoke' || kind === 'context-menu') {
+    const recorded = effect.indexOf('opened-surface:') === 0 ? effect.slice(15) : null
+    const key = recorded || (n.surface.indexOf('menu:') === 0 || n.surface.indexOf('context:') === 0 || n.surface.indexOf('tree:') === 0 ? n.surface : null)
+    if (key && key.indexOf('tree:') === 0) {
+      if (openTrees.has(key)) { openTrees.delete(key); note = 'local tree surface closed: ' + key }
+      else { openTrees.add(key); changed = true; note = 'local tree surface opened: ' + key }
+    } else if (key && (key.indexOf('menu:') === 0 || key.indexOf('context:') === 0)) {
+      if (openMenus.has(key)) { openMenus.delete(key); note = 'local menu surface closed: ' + key }
+      else { openMenus.add(key); changed = true; note = 'local menu surface opened: ' + key }
+    } else {
+      note = 'recorded invoke, but no opened surface was captured; no state changed'
+    }
+  } else if (kind === 'expand') {
+    const key = n.surface
+    const set = key.indexOf('tree:') === 0 ? openTrees : openMenus
+    if (key && (key.indexOf('tree:') === 0 || key.indexOf('menu:') === 0 || key.indexOf('context:') === 0)) {
+      if (set.has(key)) { set.delete(key); note = 'local expansion closed: ' + key }
+      else { set.add(key); changed = true; note = 'local expansion opened: ' + key }
+    } else {
+      note = 'recorded expand, but no expandable surface was captured; no state changed'
+    }
+  } else if (kind === 'toggle') {
+    if (toggled.has(id)) { toggled.delete(id); note = 'local checkbox state restored' }
+    else { toggled.add(id); changed = true; note = 'local checkbox state flipped (target not affected)' }
+  } else if (kind === 'value') {
+    const el = elements.get(id)
+    const text = value === undefined || value === null ? String(effect || 'local value edit') : String(value)
+    if (el) {
+      el.setAttribute('data-local-value', text)
+      changed = true
+      note = 'local value set: ' + text + ' (target not affected)'
+    } else {
+      note = 'recorded value, but no element to edit; no state changed'
+    }
+  } else {
+    note = 'no replay mapping for kind ' + kind + '; no state changed'
+  }
+  refresh()
+  return recordReplay(id, changed, note)
+}
 surface.addEventListener('click', function (event) {
+  if (event.target && event.target.getAttribute && event.target.getAttribute('data-behavior-badge')) {
+    const host = event.target.parentElement
+    if (host) {
+      const node = byId.get(host.getAttribute('data-node-id'))
+      if (node) { showInspector(node); replay(node.id); showInspector(node) }
+    }
+    return
+  }
   const el = event.target.closest('[data-node-id]')
   if (!el) return
   const n = byId.get(el.getAttribute('data-node-id'))
   if (!n) return
-  document.getElementById('guiDetail').textContent = JSON.stringify(n, null, 2)
-  if (n.type === 'MenuItem' && n.surface.indexOf('menu:') === 0) {
-    const key = n.surface
-    if (openMenus.has(key)) openMenus.delete(key); else openMenus.add(key)
-  }
-  if (n.type === 'TabItem' && n.surface.indexOf('tab:') !== 0) activeTab = 'tab:' + n.name
-  if (n.type === 'TreeItem') {
-    const key = n.surface
-    if (openTrees.has(key)) openTrees.delete(key); else openTrees.add(key)
-  }
-  refresh()
+  showInspector(n)
+  replay(n.id)
+  showInspector(n)
 })
+window.__GUI_BEHAVIOR_REPLAY__ = {
+  events: replayEvents,
+  state: replayState,
+  replay: replay,
+  summary: function () {
+    return {
+      recorded: behavior.summary || null,
+      applied: replayEvents.filter(function (e) { return e.applied }).length,
+      skipped: replayEvents.filter(function (e) { return !e.applied }).length,
+      events: replayEvents.slice(),
+    }
+  },
+}
 window.__GUI_RENDERED__ = nodes.length
+renderBehaviorSummary()
 refresh()
 `
 
@@ -807,6 +1205,7 @@ export function generateGuiClone(workspace, slug) {
   if (!project) throw new Error(`No clone project "${slug}"`)
   const tree = readGuiTree(workspace, slug)
   if (!tree) throw new Error('No deep GUI tree captured for this project')
+  const behavior = readGuiBehavior(workspace, slug)
   const paths = projectPaths(workspace, slug)
   const dir = path.join(paths.clone, 'gui')
   fs.mkdirSync(dir, { recursive: true })
@@ -820,6 +1219,7 @@ export function generateGuiClone(workspace, slug) {
     surfaces: tree.surfaces,
     nodes: tree.nodes,
     steps: tree.steps,
+    behavior: behavior,
   }
   fs.writeFileSync(path.join(dir, 'data.js'), `window.__GUI_TREE__ = ${JSON.stringify(data)}\n`, 'utf8')
   fs.writeFileSync(path.join(dir, 'app.js'), GUI_APP, 'utf8')
@@ -834,6 +1234,15 @@ body { margin: 0; background: #0f1420; color: #d8e2f2; font: 12px/1.4 Segoe UI, 
 .gui-button, .gui-menuitem, .gui-tabitem, .gui-checkbox { background: #f5f7fb; }
 .gui-actionable { cursor: pointer; }
 .gui-node.gui-selected { outline: 2px solid #d64b4b; z-index: 5; }
+.gui-node.gui-toggled { background: #b7e3ff; border-color: #2878b5; }
+.gui-node.gui-replayed[data-replayed="no-effect"] { opacity: 0.7; }
+.gui-badge { position: absolute; right: 0; top: 0; padding: 0 3px; font: 9px/1.3 Consolas, monospace; background: #24304a; color: #d8e2f2; pointer-events: none; }
+.gui-badge-verified { background: #1d6b43; }
+.gui-badge-observed { background: #775c16; }
+.gui-badge-declared { background: #38527d; }
+.gui-badge-static { background: #4a4a4a; }
+#guiBehaviorSummary { color: #9fc5ff; margin: 6px 0; }
+#guiBehavior { white-space: pre-wrap; font: 10px/1.3 Consolas, monospace; color: #b7d8a8; max-height: 240px; overflow: auto; }
 #guiInspector { width: 320px; border-left: 1px solid #2b3550; padding: 10px; overflow: auto; background: #141b2b; }
 #guiTabs, #guiMenus { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
 #guiTabs button, #guiMenus button { background: #24304a; color: #d8e2f2; border: 1px solid #3c4a68; border-radius: 4px; padding: 3px 7px; cursor: pointer; }
@@ -859,10 +1268,12 @@ body { margin: 0; background: #0f1420; color: #d8e2f2; font: 12px/1.4 Segoe UI, 
     <aside id="guiInspector">
       <h3>${esc(tree.title || 'GUI clone')}</h3>
       <div id="guiCount">loading…</div>
+      <div id="guiBehaviorSummary">behavior model loading…</div>
       <div><b>Tabs</b><div id="guiTabs"></div></div>
       <div><b>Menus</b><div id="guiMenus"></div></div>
       <div><b>All controls</b><div id="guiControlList"></div></div>
       <pre id="guiDetail">Select a control to inspect its captured data.</pre>
+      <div><b>Recorded behavior</b><pre id="guiBehavior">Select a control to inspect its recorded behavior.</pre></div>
     </aside>
   </div>
   <script src="data.js"></script>
@@ -874,10 +1285,16 @@ body { margin: 0; background: #0f1420; color: #d8e2f2; font: 12px/1.4 Segoe UI, 
   fs.writeFileSync(path.join(dir, 'README.md'), [
     `# ${tree.title || 'Target'} — captured GUI clone`,
     '',
-    'Generated from `spec/ui-tree.json` and evidence `' + tree.evidence + '`.',
+    'Generated from `spec/ui-tree.json`, `spec/gui-behavior.json` and evidence `' + tree.evidence + '`.',
     'Open `index.html` in a browser. Tabs, menus, submenus and tree nodes are',
     'built from the real accessibility tree and can be toggled in the inspector.',
     '',
+    'Each element carries a status badge: `verified` = a real before/after effect was',
+    'recorded, `observed` = the action ran without a confirmed state change,',
+    '`declared` = the UI Automation pattern exists but was not executed, and',
+    '`static` = no actionable pattern. Only verified/observed elements replay locally;',
+    'declared/static elements are shown but not executed. Replay affects only the',
+    'browser clone and never the target application.', '',
     'This is a structural and interaction clone of the observed GUI. It is not',
     'a binary replacement and does not implement application logic.',
     '',
@@ -890,6 +1307,8 @@ body { margin: 0; background: #0f1420; color: #d8e2f2; font: 12px/1.4 Segoe UI, 
     title: tree.title,
     evidence: tree.evidence,
     source: 'spec/ui-tree.json',
+    behaviorSource: 'spec/gui-behavior.json',
+    behavior: behavior ? behavior.summary : null,
     counts: tree.summary,
     verification: null,
     files: ['index.html', 'data.js', 'app.js', 'styles.css', 'README.md'],
@@ -924,6 +1343,27 @@ export function verifyGuiClone(workspace, slug) {
   const missing = (data.nodes || []).filter((n) => !n.id).map((n) => n.name || 'unnamed')
   const rendered = ids.size
   const completeness = total > 0 ? Number(Math.min(1, rendered / total).toFixed(4)) : 0
+  const rawBehavior = data.behavior || null
+  const elements = Array.isArray(rawBehavior && rawBehavior.elements) ? rawBehavior.elements : []
+  const actionable = (e) => Array.isArray(e.capabilities) && e.capabilities.some((c) =>
+    ['invoke', 'value', 'toggle', 'select', 'expand'].includes(c))
+  const knownElements = elements.filter((e) => e && e.id && ids.has(e.id))
+  const orphanElements = elements.filter((e) => !e || !e.id || !ids.has(e.id)).map((e) => e && e.id || 'unnamed')
+  const behaviorCounts = {
+    total: knownElements.length,
+    interactive: knownElements.filter(actionable).length,
+    verified: knownElements.filter((e) => e.behavior?.status === 'verified').length,
+    observed: knownElements.filter((e) => e.behavior?.status === 'observed').length,
+    declared: knownElements.filter((e) => e.behavior?.status === 'declared').length,
+    static: knownElements.filter((e) => e.behavior?.status === 'static').length,
+    executedActions: Number(rawBehavior?.summary?.executedActions) || 0,
+    orphanElements,
+  }
+  behaviorCounts.recorded = behaviorCounts.verified + behaviorCounts.observed
+  behaviorCounts.coverage = behaviorCounts.interactive > 0
+    ? Number(Math.min(1, behaviorCounts.recorded / behaviorCounts.interactive).toFixed(4))
+    : 0
+  behaviorCounts.complete = knownElements.length === rendered && orphanElements.length === 0
   manifest.verification = {
     checkedAt: new Date().toISOString(),
     totalNodes: total,
@@ -932,11 +1372,13 @@ export function verifyGuiClone(workspace, slug) {
     completeness,
     missing,
     evidence: data.evidence || null,
+    behavior: behaviorCounts,
   }
   fs.writeFileSync(manifestFile, JSON.stringify(manifest, null, 2) + '\n', 'utf8')
   return {
     status: completeness === 1 ? 'match' : 'changed',
     verification: manifest.verification,
-    detail: `${rendered}/${total} captured nodes represented in the generated GUI clone`,
+    detail: `${rendered}/${total} captured nodes represented; behavior ${behaviorCounts.recorded}/${behaviorCounts.interactive} interactive elements recorded ` +
+      `(${behaviorCounts.verified} verified, ${behaviorCounts.observed} observed, ${behaviorCounts.declared} declared, ${behaviorCounts.static} static)`,
   }
 }
