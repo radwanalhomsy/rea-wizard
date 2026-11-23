@@ -19,6 +19,7 @@ import * as cloneRepair from './cloneRepair.mjs'
 import * as cloneGaps from './cloneGaps.mjs'
 import * as cloneRecipes from './cloneRecipes.mjs'
 import * as cloneFingerprint from './cloneFingerprint.mjs'
+import * as cloneGui from './cloneGui.mjs'
 import * as cloneAuto from './cloneAuto.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -1043,6 +1044,33 @@ function registerIpc() {
     const dir = cloneStore.projectPaths(settings.workspace, slug).spec
     const file = path.join(dir, 'ui-map.json')
     return { map: fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null }
+  }))
+
+  /* ------------------------------------------------------------ deep GUI clone */
+
+  ipcMain.handle('gui:capture', cloneGuard(async ({ slug, ...opts } = {}) =>
+    cloneGui.captureGuiTree(settings.workspace, slug, opts),
+  ))
+
+  ipcMain.handle('gui:get', cloneGuard(async ({ slug } = {}) => ({
+    tree: cloneGui.readGuiTree(settings.workspace, slug),
+    manifest: cloneGui.readGuiClone(settings.workspace, slug),
+  })))
+
+  ipcMain.handle('gui:generate', cloneGuard(async ({ slug } = {}) =>
+    cloneGui.generateGuiClone(settings.workspace, slug),
+  ))
+
+  ipcMain.handle('gui:verify', cloneGuard(async ({ slug } = {}) =>
+    cloneGui.verifyGuiClone(settings.workspace, slug),
+  ))
+
+  ipcMain.handle('gui:open', cloneGuard(async ({ slug } = {}) => {
+    const dir = path.join(cloneStore.projectPaths(settings.workspace, slug).clone, 'gui')
+    const file = path.join(dir, 'index.html')
+    if (!fs.existsSync(file)) throw new Error('Generate the GUI clone first')
+    await shell.openPath(file)
+    return { path: file }
   }))
 
   ipcMain.handle('artifacts:get', cloneGuard(async ({ slug } = {}) => {

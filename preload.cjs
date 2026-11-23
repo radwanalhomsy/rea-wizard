@@ -28,6 +28,11 @@ contextBridge.exposeInMainWorld('rea', {
 
   /* Clone capture tools */
   uimapCapture: (payload) => invoke('uimap:capture', payload),
+  guiCapture: (payload) => invoke('gui:capture', payload),
+  guiGet: (payload) => invoke('gui:get', payload),
+  guiGenerate: (payload) => invoke('gui:generate', payload),
+  guiVerify: (payload) => invoke('gui:verify', payload),
+  guiOpen: (payload) => invoke('gui:open', payload),
   artifactsSnapshot: (payload) => invoke('artifacts:snapshot', payload),
   artifactsDiff: (payload) => invoke('artifacts:diff', payload),
   artifactsCapture: (payload) => invoke('artifacts:capture', payload),

@@ -19,6 +19,9 @@ const cloneState = {
   fidelity: null,
   facts: [],
   uiMap: null,
+  guiTree: null,
+  guiManifest: null,
+  guiBusy: false,
   persistence: null,
   inventory: null,
   formats: [],
@@ -163,12 +166,13 @@ function renderCloneList() {
 
 async function openClone(slug, keepScroll = false) {
   try {
-    const [res, arts, score, facts, uiMap, persistence, inventory, formats, protocol, ir, irValidation, oracle, repair, gaps, recipes, fingerprint] = await Promise.all([
+    const [res, arts, score, facts, uiMap, gui, persistence, inventory, formats, protocol, ir, irValidation, oracle, repair, gaps, recipes, fingerprint] = await Promise.all([
       api.cloneGet({ slug }),
       api.cloneArtifacts({ slug }),
       api.fidelityGet({ slug }),
       api.factsList({ slug }),
       api.uimapGet({ slug }),
+      api.guiGet({ slug }),
       api.artifactsGet({ slug }),
       api.exploreGet({ slug }),
       api.formatsList({ slug }),
@@ -188,6 +192,8 @@ async function openClone(slug, keepScroll = false) {
     cloneState.fidelity = score?.ok ? score.score : null
     cloneState.facts = facts?.ok ? facts.facts || [] : []
     cloneState.uiMap = uiMap?.ok ? uiMap.map : null
+    cloneState.guiTree = gui?.ok ? gui.tree : null
+    cloneState.guiManifest = gui?.ok ? gui.manifest : null
     cloneState.persistence = persistence?.ok ? persistence.diff : null
     cloneState.inventory = inventory?.ok ? inventory.inventory : null
     cloneState.formats = formats?.ok ? formats.formats || [] : []
@@ -849,6 +855,118 @@ function wireUiMapTool() {
       toast('UI map: ' + e.message)
     }
   })
+}
+
+/* -------------------------------------------------------------- GUI cloner */
+
+function renderGuiTool() {
+  const box = $('#cloneGui')
+  if (!box) return
+  if (!cloneState.detail) {
+    box.innerHTML = emptyProjectNote('GUI cloner')
+    return
+  }
+  const p = cloneState.detail
+  const tree = cloneState.guiTree
+  const manifest = cloneState.guiManifest
+  const counts = tree?.summary || null
+  const verification = manifest?.verification || null
+  const surfaces = tree?.surfaces || []
+  box.innerHTML = `
+    <div class="clone-empty-note">Opens the real accessibility tree, expands menus, submenus, tabs and tree nodes,
+    then writes a deterministic browser clone under <code>clone/gui/</code>. Only controls actually exposed by
+    UI Automation become nodes.</div>
+    <div class="clone-capture-form">
+      <label>Target<input id="guiTarget" value="${escapeHtml(p.target?.path || '')}" placeholder="path to executable" /></label>
+      <label>PID<input id="guiPid" type="number" min="0" value="" placeholder="running process" /></label>
+      <label>Window title<input id="guiTitle" value="" placeholder="partial title" /></label>
+      <label>Wait (s)<input id="guiSeconds" type="number" min="1" max="30" value="5" /></label>
+      <label>Max nodes<input id="guiMax" type="number" min="100" max="12000" value="4000" /></label>
+      <label>Depth<input id="guiDepth" type="number" min="1" max="20" value="12" /></label>
+      <label class="clone-check"><input id="guiClose" type="checkbox" /> Close after capture</label>
+      <button class="btn btn-tiny" id="guiCapture" ${cloneState.guiBusy ? 'disabled' : ''}>
+        ${cloneState.guiBusy ? 'Reading GUI...' : 'Capture full GUI'}
+      </button>
+    </div>
+    ${tree ? `
+      <div class="clone-capture-summary">${escapeHtml(tree.title || 'window')} · ${tree.nodes?.length || 0} nodes ·
+        ${surfaces.length} surfaces · ${escapeHtml(tree.evidence || '')}</div>
+      <div class="clone-section-head"><span>Measured surface</span></div>
+      <div class="clone-capture-summary">
+        ${counts?.windows || 0} windows · ${counts?.menuSurfaces || 0} menus ·
+        ${counts?.submenus || 0} submenu nodes · ${counts?.tabSurfaces || 0} tab surfaces ·
+        ${counts?.treeItems || 0} tree items
+      </div>
+      <div class="clone-recorder-head" style="margin-top:8px">
+        <button class="btn btn-tiny" id="guiGenerate" ${cloneState.guiBusy ? 'disabled' : ''}>Generate GUI clone</button>
+        <button class="btn btn-tiny" id="guiVerify" ${cloneState.guiBusy ? 'disabled' : ''}>Verify</button>
+        <button class="btn btn-tiny" id="guiOpen" ${cloneState.guiBusy ? 'disabled' : ''}>Open clone</button>
+      </div>
+      ${verification ? `<div class="clone-capture-summary">Verification: ${escapeHtml(String(verification.completeness ?? 0))} ·
+        ${verification.renderedNodes || 0}/${verification.totalNodes || 0} nodes represented</div>` : ''}
+      <div class="clone-section-head"><span>Surfaces</span></div>
+      <div class="clone-control-list">${surfaces.slice(0, 200).map((s) => `
+        <div class="clone-control"><span class="clone-control-type">${escapeHtml(s.split(':')[0] || 'surface')}</span>
+          <span class="clone-control-name">${escapeHtml(s)}</span></div>`).join('')}</div>
+      <div class="clone-section-head"><span>Captured nodes</span></div>
+      <div class="clone-control-list">${(tree.nodes || []).slice(0, 300).map((n) => `
+        <div class="clone-control"><span class="clone-control-type">${escapeHtml(n.type || '')}</span>
+          <span class="clone-control-name">${escapeHtml(n.label || n.name || '')}</span>
+          <span class="clone-control-parent">${escapeHtml(n.surface || '')}</span></div>`).join('')}</div>`
+      : '<div class="clone-empty-note">No deep GUI tree captured for this project yet.</div>'}`
+  wireGuiTool()
+}
+
+function guiBusyRun(fn) {
+  if (!cloneState.current || cloneState.guiBusy) return
+  cloneState.guiBusy = true
+  renderGuiTool()
+  return Promise.resolve()
+    .then(fn)
+    .then(async (r) => {
+      if (r && r.ok === false) throw new Error(r.error || 'GUI operation failed')
+      cloneState.guiBusy = false
+      await openClone(cloneState.current, true)
+      renderGuiTool()
+      return r
+    })
+    .catch((e) => {
+      cloneState.guiBusy = false
+      renderGuiTool()
+      toast('GUI cloner: ' + e.message)
+      return null
+    })
+}
+
+function wireGuiTool() {
+  $('#guiCapture')?.addEventListener('click', () => guiBusyRun(async () => {
+    const r = await api.guiCapture({
+      slug: cloneState.current,
+      target: $('#guiTarget')?.value?.trim() || null,
+      pid: Number($('#guiPid')?.value) || 0,
+      windowTitle: $('#guiTitle')?.value?.trim() || '',
+      seconds: Number($('#guiSeconds')?.value) || 5,
+      max: Number($('#guiMax')?.value) || 4000,
+      depth: Number($('#guiDepth')?.value) || 12,
+      closeAfter: Boolean($('#guiClose')?.checked),
+    })
+    toast(`GUI: ${r?.summary?.nodes || 0} nodes across ${r?.summary?.surfaces || 0} surfaces`)
+    return r
+  }))
+  $('#guiGenerate')?.addEventListener('click', () => guiBusyRun(async () => {
+    const r = await api.guiGenerate({ slug: cloneState.current })
+    toast(`GUI clone: ${r?.verification?.renderedNodes || 0}/${r?.verification?.totalNodes || 0} nodes`)
+    return r
+  }))
+  $('#guiVerify')?.addEventListener('click', () => guiBusyRun(async () => {
+    const r = await api.guiVerify({ slug: cloneState.current })
+    toast(`GUI verify: ${r?.detail || r?.status || 'done'}`)
+    return r
+  }))
+  $('#guiOpen')?.addEventListener('click', () => guiBusyRun(async () => {
+    const r = await api.guiOpen({ slug: cloneState.current })
+    return r
+  }))
 }
 
 /* ------------------------------------------------------------- artifacts */
@@ -1645,6 +1763,7 @@ function renderCloneDetail() {
   renderScoreDetail()
   renderFactsDetail()
   renderUiMapTool()
+  renderGuiTool()
   renderArtifactsTool()
   renderExploreTool()
   renderFormatsTool()

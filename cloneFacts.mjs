@@ -183,7 +183,8 @@ function collectStructuredFacts(facts, paths, project) {
       const name = control.name || control.id || control.label || 'control'
       const b = control.bounds || {}
       const identity = [
-        control.screen || 'root',
+        control.surface || control.screen || 'root',
+        control.path || '',
         name,
         control.type || 'unknown',
         control.automationId || '',
@@ -193,8 +194,14 @@ function collectStructuredFacts(facts, paths, project) {
       push(facts, {
         kind: 'ui',
         claim: `ui:${identity}`,
-        value: { label: control.label || name, type: control.type || 'unknown', enabled: control.enabled ?? null },
-        sources: ['ui-map'],
+        value: {
+          label: control.label || name,
+          type: control.type || 'unknown',
+          enabled: control.enabled ?? null,
+          surface: control.surface || control.screen || 'root',
+          path: control.path || '',
+        },
+        sources: ui.source === 'gui-tree' ? ['gui-tree'] : ['ui-map'],
         evidence: ui.evidence ? [ui.evidence] : [],
         note: 'Control enumerated from the accessibility tree.',
       })

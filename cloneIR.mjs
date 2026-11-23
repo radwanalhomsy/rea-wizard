@@ -40,19 +40,33 @@ function citations(facts, claim) {
   }
 }
 
+function controlClaim(c) {
+  const b = c.bounds || {}
+  return [
+    c.surface || c.screen || 'root',
+    c.path || '',
+    c.name || c.label || 'control',
+    c.type || 'unknown',
+    c.automationId || '',
+    c.className || '',
+    [b.x, b.y, b.width, b.height].map((n) => Number(n) || 0).join(','),
+  ].join('|')
+}
+
 function stableControls(map, facts) {
   const controls = (map?.controls || []).slice().sort((a, b) =>
-    `${a.screen || ''}|${a.name || ''}`.localeCompare(`${b.screen || ''}|${b.name || ''}`),
+    controlClaim(a).localeCompare(controlClaim(b)),
   )
   return controls.map((c) => ({
-    id: id('ctl_', `${c.screen || 'root'}:${c.name || c.label}`),
-    screen: c.screen || 'root',
+    id: id('ctl_', controlClaim(c)),
+    screen: c.surface || c.screen || 'root',
+    path: c.path || '',
     label: c.label || c.name || 'control',
     type: c.type || 'unknown',
     enabled: Boolean(c.enabled),
     bounds: c.bounds || null,
     source: map?.source || 'ui-map',
-    citations: citations(facts, `ui:${c.screen || 'root'}:${c.name || c.label || 'control'}`),
+    citations: citations(facts, `ui:${controlClaim(c)}`),
   }))
 }
 

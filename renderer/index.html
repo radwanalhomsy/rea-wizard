@@ -105,6 +105,11 @@
                 <span class="task-body"><span class="task-title">UI map</span>
                   <span class="task-sub">Enumerate controls from a target window's accessibility tree</span></span>
               </button>
+              <button class="task-card" data-clone-tool="gui">
+                <span class="task-ico">GC</span>
+                <span class="task-body"><span class="task-title">GUI cloner</span>
+                  <span class="task-sub">Expand menus, submenus and tabs, then generate a structural GUI clone</span></span>
+              </button>
               <button class="task-card" data-clone-tool="artifacts">
                 <span class="task-ico">AF</span>
                 <span class="task-body"><span class="task-title">Artifact diff</span>
@@ -217,6 +222,7 @@
           <button class="tab" data-tab="score" role="tab" title="Measure clone fidelity by dimension">Score</button>
           <button class="tab" data-tab="facts" role="tab" title="Citable semantic fact ledger">Facts</button>
           <button class="tab" data-tab="uimap" role="tab" title="Accessibility-tree UI inventory">UI Map</button>
+          <button class="tab" data-tab="gui" role="tab" title="Deep GUI reader and structural clone">GUI Cloner</button>
           <button class="tab" data-tab="artifacts" role="tab" title="Filesystem, registry and process diff">Artifacts</button>
           <button class="tab" data-tab="explore" role="tab" title="Target inventory and PE analysis">Explore</button>
           <button class="tab" data-tab="formats" role="tab" title="Inferred data formats">Formats</button>
@@ -373,6 +379,14 @@
             <select class="clone-project-pick" data-pick="uimap" title="Clone project"></select>
           </div>
           <div id="cloneUiMap" class="clone-detail"></div>
+        </div>
+
+        <div class="tab-panel" data-panel="gui">
+          <div class="panel-head">
+            <span>Deep GUI reader</span>
+            <select class="clone-project-pick" data-pick="gui" title="Clone project"></select>
+          </div>
+          <div id="cloneGui" class="clone-detail"></div>
         </div>
 
         <div class="tab-panel" data-panel="artifacts">

@@ -471,16 +471,23 @@ rea-wizard/
 
 Prebuilt Windows binaries are on the
 [Releases page](https://github.com/radwanalhomsy/rea-wizard/releases).
-The current release is **1.2.6**, with both an installer
-(`REA-Studio-1.2.6-x64.msi`) and a portable build
-(`REA-Studio-1.2.6-x64.exe`). Version 1.2.6 gives repeated UI controls unique
-fact identities, so duplicate labels in a real accessibility tree no longer
-create false conflicts in the fact ledger. Version 1.2.5 fixed live-window UI
+The current release is **1.2.7**, with both an installer
+(`REA-Studio-1.2.7-x64.msi`) and a portable build
+(`REA-Studio-1.2.7-x64.exe`). Version 1.2.7 adds a real **GUI cloner**: it walks
+the live accessibility tree, opens real menus and context menus, selects every
+tab, expands tree nodes and submenus, writes durable evidence, and generates a
+deterministic browser-renderable structural clone under `clone/gui/`. The
+fidelity scorecard now counts rendered GUI nodes against captured nodes, so
+`interface` coverage is measured instead of estimated. Version 1.2.6 gives
+repeated UI controls unique fact identities, so duplicate labels in a real
+accessibility tree no longer create false conflicts in the fact ledger.
+Version 1.2.5 fixed live-window UI
 capture for complex accessibility trees such as IDA by using a bounded UI
 Automation walker with a raw-view fallback. Version 1.2.4 added one-click
 **Auto clone**, which runs the measured reconstruction toolkit (Explore, UI map,
-Artifacts, Protocol, Formats, Oracle/shadow, Repair, Fingerprint/drift, Clone
-IR, Score, Spec, Scaffold and Gaps) in dependency order with per-step honesty.
+Full GUI clone, Artifacts, Protocol, Formats, Oracle/shadow, Repair,
+Fingerprint/drift, Clone IR, Score, Spec, Scaffold and Gaps) in dependency order
+with per-step honesty.
 
 ## License
 

@@ -2,8 +2,8 @@
  * Auto Clone — one-click, bounded orchestration of the measured clone steps.
  *
  * The order is dependency-driven, not cosmetic:
- *   create → explore → uimap → artifacts → protocol → formats → oracle
- *   → self-check → repair → verify → fingerprint → drift → facts → IR
+ *   create → explore → uimap → full GUI clone → artifacts → protocol → formats
+ *   → oracle → self-check → repair → verify → fingerprint → drift → facts → IR
  *   → fidelity → stages → spec → scaffold → gaps
  *
  * Every step is recorded with its own status. A tool that cannot observe the
@@ -18,6 +18,7 @@ import path from 'node:path'
 import * as store from './cloneStore.mjs'
 import { exploreTarget } from './cloneExplore.mjs'
 import { captureUiMap, captureArtifacts } from './cloneCapture.mjs'
+import { captureGuiTree, generateGuiClone } from './cloneGui.mjs'
 import { captureNetstat } from './cloneProtocol.mjs'
 import { inferFromArtifacts } from './cloneFormats.mjs'
 import { recordOracle, runShadow } from './cloneOracle.mjs'
@@ -38,6 +39,7 @@ const STEP_DEFS = [
   { id: 'create', title: 'Create project and hash target', tool: 'cloneStore', stage: 'inventory', critical: true },
   { id: 'explore', title: 'Inventory target', tool: 'explore', stage: 'inventory' },
   { id: 'uimap', title: 'Capture UI map', tool: 'uimap', stage: 'behavior' },
+  { id: 'gui', title: 'Read full GUI and generate clone', tool: 'gui', stage: 'build' },
   { id: 'artifacts', title: 'Capture artifact diff', tool: 'artifacts', stage: 'behavior' },
   { id: 'protocol', title: 'Watch network endpoints', tool: 'protocol', stage: 'behavior' },
   { id: 'formats', title: 'Infer data formats', tool: 'formats', stage: null },
@@ -260,6 +262,19 @@ export async function runAutoClone(workspace, options = {}, emit = () => {}) {
     })
 
     await step(STEP_DEFS[3], async () => {
+      const r = await captureGuiTree(workspace, slug, {
+        target: targetPath, seconds, closeAfter: true, max: 4000, depth: 12,
+      })
+      const g = generateGuiClone(workspace, slug)
+      return {
+        detail: `${r.summary.nodes} nodes, ${r.summary.menus} menu(s), ${r.summary.submenus} submenu nodes, ` +
+          `${r.summary.tabs} tab(s); clone ${g.verification?.completeness ?? 0}`,
+        evidence: [r.evidence],
+        files: [...r.files, ...g.files],
+      }
+    })
+
+    await step(STEP_DEFS[4], async () => {
       const r = await captureArtifacts(workspace, slug, {
         target: targetPath, seconds, closeAfter: true, label: 'auto-artifacts',
       })
@@ -270,7 +285,7 @@ export async function runAutoClone(workspace, options = {}, emit = () => {}) {
       }
     })
 
-    await step(STEP_DEFS[4], async () => {
+    await step(STEP_DEFS[5], async () => {
       const r = await captureNetstat(workspace, slug, {
         target: targetPath, seconds: protocolSeconds, intervalMs: 1000, closeAfter: true,
       })
@@ -281,7 +296,7 @@ export async function runAutoClone(workspace, options = {}, emit = () => {}) {
       }
     })
 
-    await step(STEP_DEFS[5], async () => {
+    await step(STEP_DEFS[6], async () => {
       const r = inferFromArtifacts(workspace, slug, { limit: 24 })
       return {
         detail: `${r.formats.length} format(s) inferred from observed artifacts`,
@@ -290,7 +305,7 @@ export async function runAutoClone(workspace, options = {}, emit = () => {}) {
       }
     })
 
-    await step(STEP_DEFS[6], async () => {
+    await step(STEP_DEFS[7], async () => {
       const r = await recordOracle(workspace, slug, {
         target: targetPath,
         timeoutMs,
@@ -306,7 +321,7 @@ export async function runAutoClone(workspace, options = {}, emit = () => {}) {
       }
     })
 
-    await step(STEP_DEFS[7], async () => {
+    await step(STEP_DEFS[8], async () => {
       if (!oracleCase) return { status: 'unavailable', detail: 'No Oracle case was recorded' }
       const r = await runShadow(workspace, slug, oracleCase, { selfCheck: true })
       deterministic = r.diff?.status === 'match' && r.parity?.status === 'match'
@@ -320,7 +335,7 @@ export async function runAutoClone(workspace, options = {}, emit = () => {}) {
     })
 
     let repairResult = null
-    await step(STEP_DEFS[8], async () => {
+    await step(STEP_DEFS[9], async () => {
       repairResult = applyRepairs(workspace, slug, { caseIds: oracleCase ? [oracleCase] : null })
       if (!deterministic) {
         return {
@@ -338,7 +353,7 @@ export async function runAutoClone(workspace, options = {}, emit = () => {}) {
       }
     })
 
-    await step(STEP_DEFS[9], async () => {
+    await step(STEP_DEFS[10], async () => {
       if (!oracleCase || !repairResult?.applied?.includes(oracleCase)) {
         return { status: 'unavailable', detail: 'No verified repair fixture exists for this case' }
       }
@@ -353,7 +368,7 @@ export async function runAutoClone(workspace, options = {}, emit = () => {}) {
       }
     })
 
-    await step(STEP_DEFS[10], async () => {
+    await step(STEP_DEFS[11], async () => {
       const r = buildFingerprint(workspace, slug)
       return {
         detail: `${r.fingerprint.summary.cases} case(s), ${r.fingerprint.summary.steps} step(s), digest ${shortHash(r.fingerprint.digest)}`,
@@ -362,7 +377,7 @@ export async function runAutoClone(workspace, options = {}, emit = () => {}) {
       }
     })
 
-    await step(STEP_DEFS[11], async () => {
+    await step(STEP_DEFS[12], async () => {
       const r = await checkDrift(workspace, slug)
       return {
         measurement: r.status,
@@ -372,7 +387,7 @@ export async function runAutoClone(workspace, options = {}, emit = () => {}) {
       }
     })
 
-    await step(STEP_DEFS[12], async () => {
+    await step(STEP_DEFS[13], async () => {
       const r = extractFacts(workspace, slug)
       return {
         detail: `${r.count} fact(s), ${r.promoted} promoted, ${r.conflicts} conflict(s)`,
@@ -380,7 +395,7 @@ export async function runAutoClone(workspace, options = {}, emit = () => {}) {
       }
     })
 
-    await step(STEP_DEFS[13], async () => {
+    await step(STEP_DEFS[14], async () => {
       const r = compileIR(workspace, slug)
       return {
         detail: `${r.summary.nodes} node(s), ${r.summary.cited} cited`,
@@ -388,7 +403,7 @@ export async function runAutoClone(workspace, options = {}, emit = () => {}) {
       }
     })
 
-    await step(STEP_DEFS[14], async () => {
+    await step(STEP_DEFS[15], async () => {
       score = computeFidelity(workspace, slug)
       return {
         detail: `${(score.score * 100).toFixed(1)}% ${score.tier?.id || 'L0'}, ${Math.round(score.measuredWeight * 100)}% of rubric measured`,
@@ -396,9 +411,9 @@ export async function runAutoClone(workspace, options = {}, emit = () => {}) {
       }
     })
 
-    await step(STEP_DEFS[15], () => applyStages())
+    await step(STEP_DEFS[16], () => applyStages())
 
-    await step(STEP_DEFS[16], async () => {
+    await step(STEP_DEFS[17], async () => {
       const r = compileSpec(workspace, slug)
       return {
         detail: `${r.written.length} spec file(s)`,
@@ -406,7 +421,7 @@ export async function runAutoClone(workspace, options = {}, emit = () => {}) {
       }
     })
 
-    await step(STEP_DEFS[17], async () => {
+    await step(STEP_DEFS[18], async () => {
       const r = scaffold(workspace, slug, { language })
       const current = store.getProject(workspace, slug)
       if (current && current.stages.build.status !== 'complete') {
@@ -421,7 +436,7 @@ export async function runAutoClone(workspace, options = {}, emit = () => {}) {
       }
     })
 
-    await step(STEP_DEFS[18], async () => {
+    await step(STEP_DEFS[19], async () => {
       gaps = analyzeGaps(workspace, slug, { limit: 8 })
       return {
         detail: `${gaps.summary.total} gap(s), ${gaps.summary.blocking} blocking`,

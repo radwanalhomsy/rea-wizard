@@ -134,14 +134,35 @@ export function computeFidelity(workspace, slug) {
     const name = String(f.value?.label || f.claim.split(':').pop() || '')
     return (f.cases?.length || 0) > 0 || (name && stepsText.toLowerCase().includes(name.toLowerCase()))
   }).length
-  const interfaceDim = dimension(
-    'interface',
-    uiCovered,
-    uiFacts.length,
-    uiFacts.length > 0,
-    uiFacts.length ? `${uiCovered} of ${uiFacts.length} enumerated controls exercised` : 'no UI map captured yet',
-    project,
+
+  let guiManifest = null
+  try {
+    guiManifest = JSON.parse(fs.readFileSync(path.join(paths.clone, 'gui', 'manifest.json'), 'utf8'))
+  } catch { /* no generated GUI clone yet */ }
+
+  const guiVerification = guiManifest?.verification
+  const useGuiVerification = Boolean(
+    guiVerification && guiVerification.totalNodes > 0 && guiVerification.completeness !== undefined,
   )
+  const interfaceDim = useGuiVerification
+    ? dimension(
+        'interface',
+        guiVerification.renderedNodes || 0,
+        guiVerification.totalNodes,
+        true,
+        `${guiVerification.renderedNodes}/${guiVerification.totalNodes} captured GUI nodes rendered; ` +
+          `${guiManifest.counts?.menuSurfaces || 0} menus, ${guiManifest.counts?.submenus || 0} submenu nodes, ` +
+          `${guiManifest.counts?.tabSurfaces || 0} tab surfaces`,
+        project,
+      )
+    : dimension(
+        'interface',
+        uiCovered,
+        uiFacts.length,
+        uiFacts.length > 0,
+        uiFacts.length ? `${uiCovered} of ${uiFacts.length} enumerated controls exercised` : 'no UI map captured yet',
+        project,
+      )
 
   const checked = cases.filter((c) => c.parity && c.parity.status !== 'not checked')
   const passing = checked.filter((c) => c.parity.status === 'pass' || c.parity.status === 'match')
