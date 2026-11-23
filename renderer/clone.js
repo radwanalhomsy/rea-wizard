@@ -26,6 +26,8 @@ const cloneState = {
   ir: null,
   irValidation: null,
   irBusy: false,
+  oracle: null,
+  oracleBusy: false,
   exploreBusy: false,
   formatsBusy: false,
   protocolBusy: false,
@@ -149,7 +151,7 @@ function renderCloneList() {
 
 async function openClone(slug, keepScroll = false) {
   try {
-    const [res, arts, score, facts, uiMap, persistence, inventory, formats, protocol, ir, irValidation] = await Promise.all([
+    const [res, arts, score, facts, uiMap, persistence, inventory, formats, protocol, ir, irValidation, oracle] = await Promise.all([
       api.cloneGet({ slug }),
       api.cloneArtifacts({ slug }),
       api.fidelityGet({ slug }),
@@ -161,6 +163,7 @@ async function openClone(slug, keepScroll = false) {
       api.protocolGet({ slug }),
       api.irGet({ slug }),
       api.irValidate({ slug }),
+      api.oracleList({ slug }),
     ])
     if (!res?.ok || !res.project) throw new Error(res?.error || 'project not found')
     cloneState.current = slug
@@ -175,6 +178,7 @@ async function openClone(slug, keepScroll = false) {
     cloneState.protocol = protocol?.ok ? protocol.protocol : null
     cloneState.ir = ir?.ok ? ir.ir : null
     cloneState.irValidation = irValidation?.ok ? irValidation : null
+    cloneState.oracle = oracle?.ok ? oracle : null
     renderCloneList()
     renderCloneDetail(keepScroll)
   } catch (e) {
@@ -358,11 +362,13 @@ function caseListHtml(p, opts = {}) {
             }`,
         )
         .join('<br>')
+      const isOracle = String(c.provider || '').startsWith('oracle_')
+      const replayBtn = isOracle ? '' : `<button class="btn btn-tiny" data-case-act="replay" data-case="${c.id}" title="Re-run the exact recorded request and diff it against the original">Replay</button>`
       const actions = parityMode
-        ? `<button class="btn btn-tiny" data-case-act="replay" data-case="${c.id}" title="Re-run the exact recorded request and diff it against the original">Replay</button>
+        ? `${replayBtn}
            <button class="btn btn-tiny" data-case-act="json" data-case="${c.id}" title="Show the recorded case file">JSON</button>
            <button class="btn btn-tiny" data-case-act="copy" data-case="${c.id}" title="Copy the replay request">Copy</button>`
-        : `<button class="btn btn-tiny" data-case-act="replay" data-case="${c.id}" title="Re-run the exact recorded request and diff it against the original">Replay</button>
+        : `${replayBtn}
            <button class="btn btn-tiny" data-case-act="json" data-case="${c.id}" title="Show the recorded case file">JSON</button>
            <button class="btn btn-tiny" data-case-act="copy" data-case="${c.id}" title="Copy the replay request">Copy</button>
            <button class="btn btn-tiny" data-case-act="delete" data-case="${c.id}" title="Delete this journey">&#10005;</button>`
@@ -1174,6 +1180,100 @@ function wireIRTool() {
   })
 }
 
+/* --------------------------------------------------------- oracle / shadow */
+
+function renderOracleTool() {
+  const box = $('#cloneOracle')
+  if (!box) return
+  if (!cloneState.detail) {
+    box.innerHTML = emptyProjectNote('oracle capture')
+    return
+  }
+  const p = cloneState.detail
+  const oracleCases = (p.cases || []).filter((c) => c.provider === 'oracle_native_scenario')
+  box.innerHTML = `
+    <div class="clone-empty-note">Run the real target with a described input, then replay the same input against a clone
+    (or the original again as a determinism self-check). Only observable outputs are compared: exit code, stdout,
+    stderr, files and output shape.</div>
+    <div class="clone-capture-form">
+      <label>Target<input id="oracleTarget" value="${escapeHtml(p.target?.path || '')}" placeholder="path to executable" /></label>
+      <label>Arguments<input id="oracleArgv" placeholder="e.g. --input sample.png --verbose" /></label>
+      <label>Stdin<input id="oracleStdin" placeholder="optional stdin text" /></label>
+      <label>Timeout (ms)<input id="oracleTimeout" type="number" min="100" value="20000" /></label>
+      <button class="btn btn-tiny" id="oracleRecord" ${cloneState.oracleBusy ? 'disabled' : ''}>
+        ${cloneState.oracleBusy ? 'Running...' : 'Record oracle'}
+      </button>
+    </div>
+    <div class="clone-section-head"><span>Oracle cases (${oracleCases.length})</span></div>
+    <div class="clone-control-list">${oracleCases.length ? oracleCases.slice().reverse().map((c) => {
+      const changed = (c.parity?.dims || []).filter((d) => d.status === 'changed').map((d) => escapeHtml(d.name)).join(', ')
+      return `<div class="clone-control">
+        <span class="clone-control-type">${c.parity ? escapeHtml(c.parity.status) : 'unchecked'}</span>
+        <span class="clone-control-name">${escapeHtml(c.title || c.id)}</span>
+        <span class="clone-control-parent">${c.id}${changed ? ' · ' + changed : ''}</span>
+        <span class="clone-control-actions">
+          <button class="btn btn-tiny" data-oracle-act="self" data-case="${c.id}" title="Re-run the original to check determinism">Self-check</button>
+          <button class="btn btn-tiny" data-oracle-act="shadow" data-case="${c.id}" title="Replay against the clone">Shadow</button>
+          <button class="btn btn-tiny" data-oracle-act="raw" data-case="${c.id}" title="Show the raw capture">Raw</button>
+        </span>
+      </div>`
+    }).join('') : '<div class="clone-empty-note">No oracle cases yet. Record one above.</div>'}</div>
+    <div class="clone-capture-form">
+      <label>Shadow executable<input id="oracleShadow" placeholder="path to clone executable (for Shadow)" /></label>
+    </div>`
+  wireOracleTool()
+}
+
+function wireOracleTool() {
+  const busy = async (fn) => {
+    if (!cloneState.current || cloneState.oracleBusy) return
+    cloneState.oracleBusy = true
+    renderOracleTool()
+    try {
+      const r = await fn()
+      if (!r?.ok && r !== true) throw new Error(r?.error || 'oracle operation failed')
+      cloneState.oracleBusy = false
+      await openClone(true)
+      renderOracleTool()
+      toast('Oracle: ' + (r?.parity?.status || r?.case?.id || 'done'))
+    } catch (e) {
+      cloneState.oracleBusy = false
+      renderOracleTool()
+      toast('Oracle: ' + e.message)
+    }
+  }
+  $('#oracleRecord')?.addEventListener('click', () => {
+    // Capture before busy() re-renders and destroys the form.
+    const payload = {
+      slug: cloneState.current,
+      target: $('#oracleTarget')?.value?.trim() || null,
+      argv: $('#oracleArgv')?.value?.trim() || '',
+      stdin: $('#oracleStdin')?.value || '',
+      timeoutMs: Number($('#oracleTimeout')?.value) || 20000,
+    }
+    busy(() => api.oracleRecord(payload))
+  })
+  for (const btn of document.querySelectorAll('#cloneOracle [data-oracle-act]')) {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.case
+      const act = btn.dataset.oracleAct
+      if (act === 'self') {
+        busy(() => api.oracleShadow({ slug: cloneState.current, caseId: id, selfCheck: true }))
+      } else if (act === 'shadow') {
+        const shadowPath = $('#oracleShadow')?.value?.trim()
+        if (!shadowPath) { toast('Oracle: enter a shadow executable path'); return }
+        busy(() => api.oracleShadow({ slug: cloneState.current, caseId: id, shadowPath }))
+      } else if (act === 'raw') {
+        busy(async () => {
+          const r = await api.oracleGet({ slug: cloneState.current, caseId: id })
+          copyText(JSON.stringify(r?.raw || {}, null, 2))
+          return true
+        })
+      }
+    })
+  }
+}
+
 function renderCloneDetail() {
   renderCloneProjectDetail()
   renderRecorderDetail()
@@ -1187,6 +1287,7 @@ function renderCloneDetail() {
   renderFormatsTool()
   renderProtocolTool()
   renderIRTool()
+  renderOracleTool()
   renderClonePickers()
 }
 
@@ -1467,7 +1568,7 @@ function wireCloneUi() {
     if (card) openClone(card.dataset.slug)
   })
   $$('.tab').forEach((tab) => {
-    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts', 'explore', 'formats', 'protocol', 'ir'].includes(tab.dataset.tab)) {
+    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts', 'explore', 'formats', 'protocol', 'ir', 'oracle'].includes(tab.dataset.tab)) {
       tab.addEventListener('click', () => loadClone())
     }
   })

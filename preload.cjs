@@ -45,6 +45,10 @@ contextBridge.exposeInMainWorld('rea', {
   irCompile: (payload) => invoke('ir:compile', payload),
   irGet: (payload) => invoke('ir:get', payload),
   irValidate: (payload) => invoke('ir:validate', payload),
+  oracleRecord: (payload) => invoke('oracle:record', payload),
+  oracleShadow: (payload) => invoke('oracle:shadow', payload),
+  oracleList: (payload) => invoke('oracle:list', payload),
+  oracleGet: (payload) => invoke('oracle:get', payload),
 
   /* IDA (GUI companion + optional Home/Pro MCP registration) */
   idaStatus: () => invoke('ida:status'),

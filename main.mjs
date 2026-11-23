@@ -14,6 +14,7 @@ import * as cloneExplore from './cloneExplore.mjs'
 import * as cloneFormats from './cloneFormats.mjs'
 import * as cloneProtocol from './cloneProtocol.mjs'
 import * as cloneIR from './cloneIR.mjs'
+import * as cloneOracle from './cloneOracle.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const HOME = process.env.USERPROFILE || ''
@@ -1100,6 +1101,24 @@ function registerIpc() {
   ipcMain.handle('ir:validate', cloneGuard(async ({ slug } = {}) =>
     cloneIR.validateIR(settings.workspace, slug),
   ))
+
+  /* ------------------------------------------------------- oracle / shadow */
+
+  ipcMain.handle('oracle:record', cloneGuard(async ({ slug, ...opts } = {}) =>
+    cloneOracle.recordOracle(settings.workspace, slug, opts),
+  ))
+
+  ipcMain.handle('oracle:shadow', cloneGuard(async ({ slug, caseId, ...opts } = {}) =>
+    cloneOracle.runShadow(settings.workspace, slug, caseId, opts),
+  ))
+
+  ipcMain.handle('oracle:list', cloneGuard(async ({ slug } = {}) =>
+    cloneOracle.oracleReport(settings.workspace, slug),
+  ))
+
+  ipcMain.handle('oracle:get', cloneGuard(async ({ slug, caseId } = {}) => ({
+    raw: cloneOracle.readOracleRaw(settings.workspace, slug, caseId),
+  })))
 }
 
 /* -------------------------------------------------------------------- boot */
