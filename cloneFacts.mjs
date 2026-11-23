@@ -181,9 +181,18 @@ function collectStructuredFacts(facts, paths, project) {
   if (ui?.controls) {
     for (const control of ui.controls) {
       const name = control.name || control.id || control.label || 'control'
+      const b = control.bounds || {}
+      const identity = [
+        control.screen || 'root',
+        name,
+        control.type || 'unknown',
+        control.automationId || '',
+        control.className || '',
+        [b.x, b.y, b.width, b.height].map((n) => Number(n) || 0).join(','),
+      ].join('|')
       push(facts, {
         kind: 'ui',
-        claim: `ui:${control.screen || 'root'}:${name}`,
+        claim: `ui:${identity}`,
         value: { label: control.label || name, type: control.type || 'unknown', enabled: control.enabled ?? null },
         sources: ['ui-map'],
         evidence: ui.evidence ? [ui.evidence] : [],
