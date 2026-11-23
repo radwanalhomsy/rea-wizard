@@ -16,6 +16,10 @@ const cloneState = {
   armed: false,
   seenCalls: new Set(),
   artifacts: [],
+  fidelity: null,
+  facts: [],
+  scoreBusy: false,
+  factsBusy: false,
   language: 'typescript',
   generating: null, // 'spec' | 'scaffold' while a run is in flight
 }
@@ -132,11 +136,18 @@ function renderCloneList() {
 
 async function openClone(slug, keepScroll = false) {
   try {
-    const [res, arts] = await Promise.all([api.cloneGet({ slug }), api.cloneArtifacts({ slug })])
+    const [res, arts, score, facts] = await Promise.all([
+      api.cloneGet({ slug }),
+      api.cloneArtifacts({ slug }),
+      api.fidelityGet({ slug }),
+      api.factsList({ slug }),
+    ])
     if (!res?.ok || !res.project) throw new Error(res?.error || 'project not found')
     cloneState.current = slug
     cloneState.detail = res.project
     cloneState.artifacts = arts?.ok ? arts.artifacts || [] : []
+    cloneState.fidelity = score?.ok ? score.score : null
+    cloneState.facts = facts?.ok ? facts.facts || [] : []
     renderCloneList()
     renderCloneDetail(keepScroll)
   } catch (e) {
@@ -577,11 +588,158 @@ function wireSpecDetail(p) {
   )
 }
 
+/* --------------------------------------------------------------- fidelity */
+
+function renderScoreDetail() {
+  const box = $('#cloneScore')
+  if (!box) return
+  if (!cloneState.detail) {
+    box.innerHTML = emptyProjectNote('fidelity scorecard')
+    return
+  }
+  const s = cloneState.fidelity
+  if (!s) {
+    box.innerHTML = `
+      <div class="clone-empty-note">Nothing measured yet. The scorecard uses the project's target,
+      evidence, journeys, UI map, artifact diffs and protocol captures as denominators.
+      Unmeasured dimensions score zero — never "ok".</div>
+      <button class="btn btn-tiny" id="cloneScoreCompute" ${cloneState.scoreBusy ? 'disabled' : ''}>
+        ${cloneState.scoreBusy ? 'Computing...' : 'Compute fidelity'}
+      </button>`
+    wireScoreDetail()
+    return
+  }
+  const pct = (n) => (n * 100).toFixed(1) + '%'
+  const report = (cloneState.artifacts || []).find((a) => /reports[\\/]fidelity\.md$/i.test(a.path))
+  box.innerHTML = `
+    <div class="clone-fidelity-top">
+      <div class="clone-fidelity-num">${pct(s.score)}</div>
+      <div class="clone-fidelity-meta">
+        <div><b>${escapeHtml(s.tier.id)}</b> ${escapeHtml(s.tier.label)}</div>
+        <div style="color:var(--text-faint)">measured ${pct(s.measuredWeight)} of rubric · ${s.blockers.length} blockers</div>
+      </div>
+      <button class="btn btn-tiny" id="cloneScoreCompute" ${cloneState.scoreBusy ? 'disabled' : ''}>
+        ${cloneState.scoreBusy ? '...' : 'Recompute'}
+      </button>
+    </div>
+    <div class="clone-fidelity-bar"><span style="width:${(s.score * 100).toFixed(1)}%"></span></div>
+    <div class="clone-section-head"><span>Dimensions</span>
+      ${report ? `<button class="btn btn-tiny" data-artifact="${escapeHtml(report.path)}">Open report</button>` : ''}
+    </div>
+    <div class="clone-fidelity-dims">${s.dimensions.map((d) => `
+      <div class="clone-fidelity-dim">
+        <div class="clone-fidelity-dim-head">
+          <span>${escapeHtml(d.label)}</span>
+          <span class="${d.measured ? '' : 'clone-dim-off'}">${d.measured ? pct(d.score) : 'unmeasured'}</span>
+        </div>
+        <div class="clone-fidelity-dim-bar"><span style="width:${(d.score * 100).toFixed(1)}%"></span></div>
+        <div class="clone-fidelity-dim-sub">${escapeHtml(d.detail)} · weight ${pct(d.weight)} · ${d.blockers.length} blockers</div>
+      </div>`).join('')}
+    </div>
+    <div class="clone-section-head"><span>Biggest gains</span></div>
+    <div class="clone-gains">${s.improvements.length
+      ? s.improvements.map((i) => `<div class="clone-gain"><b>+${pct(i.gain)}</b><span>${escapeHtml(i.label)} — ${escapeHtml(i.action)}</span></div>`).join('')
+      : '<div class="clone-empty-note">No ranked gaps.</div>'}</div>`
+  wireScoreDetail()
+}
+
+function wireScoreDetail() {
+  $('#cloneScoreCompute')?.addEventListener('click', async () => {
+    if (!cloneState.current || cloneState.scoreBusy) return
+    cloneState.scoreBusy = true
+    renderScoreDetail()
+    try {
+      const r = await api.fidelityCompute({ slug: cloneState.current })
+      if (!r?.ok) throw new Error(r?.error || 'fidelity failed')
+      cloneState.fidelity = r.score
+      cloneState.scoreBusy = false
+      await loadClone(true)
+      renderScoreDetail()
+    } catch (e) {
+      toast('Fidelity: ' + e.message)
+      cloneState.scoreBusy = false
+      renderScoreDetail()
+    }
+  })
+  $$('#cloneScore [data-artifact]').forEach((btn) =>
+    btn.addEventListener('click', () => openArtifact(btn.dataset.artifact)),
+  )
+}
+
+/* ------------------------------------------------------------------ facts */
+
+function renderFactsDetail() {
+  const box = $('#cloneFacts')
+  if (!box) return
+  if (!cloneState.detail) {
+    box.innerHTML = emptyProjectNote('fact ledger')
+    return
+  }
+  const facts = cloneState.facts || []
+  const promoted = facts.filter((f) => f.promoted).length
+  const conflicts = facts.filter((f) => f.conflict).length
+  box.innerHTML = `
+    <div class="clone-empty-note">Every claim names the evidence or case that produced it. A claim seen from
+    two independent sources becomes a rule; conflicting values open a blocking unknown.</div>
+    <div class="clone-deliverable-actions">
+      <button class="btn btn-tiny" id="cloneFactsExtract" ${cloneState.factsBusy ? 'disabled' : ''}>
+        ${cloneState.factsBusy ? 'Extracting...' : 'Extract facts'}
+      </button>
+      <span style="font-size:10px;color:var(--text-faint)">${facts.length} facts · ${promoted} rules · ${conflicts} conflicts</span>
+    </div>
+    <div class="clone-section-head"><span>Ledger</span><input id="cloneFactsFilter" class="clone-lang" placeholder="Filter claims" style="width:120px" /></div>
+    <div class="clone-facts-list">${facts.length ? facts.map((f) => `
+      <div class="clone-fact${f.conflict ? ' conflict' : ''}${f.promoted ? ' promoted' : ''}" data-claim="${escapeHtml(f.claim)}">
+        <div class="clone-fact-head"><span class="clone-fact-id">${escapeHtml(f.id)}</span>
+          <span class="clone-fact-kind">${escapeHtml(f.kind)}</span>
+          <span class="clone-fact-conf">${f.confidence}${f.promoted ? ' rule' : ''}${f.conflict ? ' conflict' : ''}</span></div>
+        <div class="clone-fact-claim">${escapeHtml(f.claim)}</div>
+        <div class="clone-fact-value">${escapeHtml(shortText(f.value))}</div>
+        <div class="clone-fact-src">${escapeHtml([...f.sources, ...f.evidence, ...f.cases].join(' · ') || 'no citations')}</div>
+      </div>`).join('') : '<div class="clone-empty-note">No facts yet. Record evidence, journeys or a UI map, then extract.</div>'}</div>`
+  wireFactsDetail()
+}
+
+function shortText(value) {
+  if (value === null || value === undefined) return ''
+  const text = typeof value === 'string' ? value : JSON.stringify(value)
+  return text.length > 180 ? text.slice(0, 177) + '…' : text
+}
+
+function wireFactsDetail() {
+  $('#cloneFactsExtract')?.addEventListener('click', async () => {
+    if (!cloneState.current || cloneState.factsBusy) return
+    cloneState.factsBusy = true
+    renderFactsDetail()
+    try {
+      const r = await api.factsExtract({ slug: cloneState.current })
+      if (!r?.ok) throw new Error(r?.error || 'facts extraction failed')
+      cloneState.facts = r.facts || []
+      if (r.conflicts) toast(`${r.conflicts} conflicting claims opened as unknowns`)
+      cloneState.factsBusy = false
+      await loadClone(true)
+      renderFactsDetail()
+    } catch (e) {
+      toast('Facts: ' + e.message)
+      cloneState.factsBusy = false
+      renderFactsDetail()
+    }
+  })
+  $('#cloneFactsFilter')?.addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase()
+    $$('#cloneFacts .clone-fact').forEach((el) => {
+      el.hidden = q ? !el.dataset.claim.toLowerCase().includes(q) : false
+    })
+  })
+}
+
 function renderCloneDetail() {
   renderCloneProjectDetail()
   renderRecorderDetail()
   renderParityDetail()
   renderSpecDetail()
+  renderScoreDetail()
+  renderFactsDetail()
   renderClonePickers()
 }
 
@@ -862,7 +1020,7 @@ function wireCloneUi() {
     if (card) openClone(card.dataset.slug)
   })
   $$('.tab').forEach((tab) => {
-    if (['clone', 'recorder', 'parity', 'spec'].includes(tab.dataset.tab)) {
+    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts'].includes(tab.dataset.tab)) {
       tab.addEventListener('click', () => loadClone())
     }
   })

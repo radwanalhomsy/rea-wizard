@@ -20,6 +20,12 @@ contextBridge.exposeInMainWorld('rea', {
   openExternal: (url) => invoke('shell:openExternal', url),
   saveTranscript: (payload) => invoke('transcript:save', payload),
 
+  /* Clone facts + fidelity */
+  factsExtract: (payload) => invoke('facts:extract', payload),
+  factsList: (payload) => invoke('facts:list', payload),
+  fidelityCompute: (payload) => invoke('fidelity:compute', payload),
+  fidelityGet: (payload) => invoke('fidelity:get', payload),
+
   /* IDA (GUI companion + optional Home/Pro MCP registration) */
   idaStatus: () => invoke('ida:status'),
   idaOpen: (payload) => invoke('ida:open', payload),

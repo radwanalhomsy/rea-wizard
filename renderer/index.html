@@ -85,6 +85,16 @@
                 <span class="task-body"><span class="task-title">Spec compiler</span>
                   <span class="task-sub">Compile specs and scaffold a TypeScript or Python clone</span></span>
               </button>
+              <button class="task-card" data-clone-tool="score">
+                <span class="task-ico">FS</span>
+                <span class="task-body"><span class="task-title">Fidelity score</span>
+                  <span class="task-sub">Measure what is cloned, by dimension, with real denominators</span></span>
+              </button>
+              <button class="task-card" data-clone-tool="facts">
+                <span class="task-ico">FC</span>
+                <span class="task-body"><span class="task-title">Fact ledger</span>
+                  <span class="task-sub">Citable semantic facts, confidence and conflict quorum</span></span>
+              </button>
             </div>
           </div>
 
@@ -143,6 +153,8 @@
           <button class="tab" data-tab="recorder" role="tab" title="Record replayable user journeys">Recorder</button>
           <button class="tab" data-tab="parity" role="tab" title="Replay journeys and diff the results">Parity</button>
           <button class="tab" data-tab="spec" role="tab" title="Compile specs and scaffold a clone">Spec</button>
+          <button class="tab" data-tab="score" role="tab" title="Measure clone fidelity by dimension">Score</button>
+          <button class="tab" data-tab="facts" role="tab" title="Citable semantic fact ledger">Facts</button>
           <button class="tab" data-tab="evidence" role="tab">Evidence</button>
           <button class="tab" data-tab="providers" role="tab">Providers</button>
           <button class="tab" data-tab="guidance" role="tab">Guidance</button>
@@ -258,6 +270,22 @@
             <select class="clone-project-pick" data-pick="spec" title="Clone project"></select>
           </div>
           <div id="cloneSpec" class="clone-detail"></div>
+        </div>
+
+        <div class="tab-panel" data-panel="score">
+          <div class="panel-head">
+            <span>Fidelity scorecard</span>
+            <select class="clone-project-pick" data-pick="score" title="Clone project"></select>
+          </div>
+          <div id="cloneScore" class="clone-detail"></div>
+        </div>
+
+        <div class="tab-panel" data-panel="facts">
+          <div class="panel-head">
+            <span>Semantic facts</span>
+            <select class="clone-project-pick" data-pick="facts" title="Clone project"></select>
+          </div>
+          <div id="cloneFacts" class="clone-detail"></div>
         </div>
       </aside>
     </main>

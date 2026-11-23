@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url'
 import { createOpencodeClient } from '@opencode-ai/sdk/client'
 import * as cloneStore from './cloneStore.mjs'
 import * as cloneSpec from './cloneSpec.mjs'
+import * as cloneFacts from './cloneFacts.mjs'
+import * as cloneFidelity from './cloneFidelity.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const HOME = process.env.USERPROFILE || ''
@@ -987,6 +989,23 @@ function registerIpc() {
     shell.showItemInFolder(abs)
     return { path: abs }
   }))
+  /* ---------------------------------------------------- facts + fidelity */
+
+  ipcMain.handle('facts:extract', cloneGuard(async ({ slug } = {}) =>
+    cloneFacts.extractFacts(settings.workspace, slug),
+  ))
+
+  ipcMain.handle('facts:list', cloneGuard(async ({ slug } = {}) => ({
+    facts: cloneFacts.listFacts(settings.workspace, slug),
+  })))
+
+  ipcMain.handle('fidelity:compute', cloneGuard(async ({ slug } = {}) => ({
+    score: cloneFidelity.computeFidelity(settings.workspace, slug),
+  })))
+
+  ipcMain.handle('fidelity:get', cloneGuard(async ({ slug } = {}) => ({
+    score: cloneFidelity.readFidelity(settings.workspace, slug),
+  })))
 }
 
 /* -------------------------------------------------------------------- boot */
