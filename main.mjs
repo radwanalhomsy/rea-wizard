@@ -9,6 +9,7 @@ import * as cloneStore from './cloneStore.mjs'
 import * as cloneSpec from './cloneSpec.mjs'
 import * as cloneFacts from './cloneFacts.mjs'
 import * as cloneFidelity from './cloneFidelity.mjs'
+import * as cloneCapture from './cloneCapture.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const HOME = process.env.USERPROFILE || ''
@@ -1006,6 +1007,39 @@ function registerIpc() {
   ipcMain.handle('fidelity:get', cloneGuard(async ({ slug } = {}) => ({
     score: cloneFidelity.readFidelity(settings.workspace, slug),
   })))
+
+  /* ------------------------------------------------------- capture tools */
+
+  ipcMain.handle('uimap:capture', cloneGuard(async ({ slug, ...opts } = {}) =>
+    cloneCapture.captureUiMap(settings.workspace, slug, opts),
+  ))
+
+  ipcMain.handle('artifacts:snapshot', cloneGuard(async ({ slug, ...opts } = {}) =>
+    cloneCapture.takeSnapshot(settings.workspace, slug, opts),
+  ))
+
+  ipcMain.handle('artifacts:diff', cloneGuard(async ({ slug, before, after } = {}) => {
+    const a = cloneCapture.readSnapshot(settings.workspace, slug, before)
+    const b = cloneCapture.readSnapshot(settings.workspace, slug, after)
+    const diff = cloneCapture.diffSnapshots(a, b)
+    return { diff, applied: cloneCapture.applyArtifactDiff(settings.workspace, slug, diff, { beforeFile: before, afterFile: after }) }
+  }))
+
+  ipcMain.handle('artifacts:capture', cloneGuard(async ({ slug, ...opts } = {}) =>
+    cloneCapture.captureArtifacts(settings.workspace, slug, opts),
+  ))
+
+  ipcMain.handle('uimap:get', cloneGuard(async ({ slug } = {}) => {
+    const dir = cloneStore.projectPaths(settings.workspace, slug).spec
+    const file = path.join(dir, 'ui-map.json')
+    return { map: fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null }
+  }))
+
+  ipcMain.handle('artifacts:get', cloneGuard(async ({ slug } = {}) => {
+    const dir = cloneStore.projectPaths(settings.workspace, slug).spec
+    const file = path.join(dir, 'persistence.json')
+    return { diff: fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : null }
+  }))
 }
 
 /* -------------------------------------------------------------------- boot */

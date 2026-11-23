@@ -18,8 +18,12 @@ const cloneState = {
   artifacts: [],
   fidelity: null,
   facts: [],
+  uiMap: null,
+  persistence: null,
   scoreBusy: false,
   factsBusy: false,
+  uiBusy: false,
+  artifactsBusy: false,
   language: 'typescript',
   generating: null, // 'spec' | 'scaffold' while a run is in flight
 }
@@ -136,11 +140,13 @@ function renderCloneList() {
 
 async function openClone(slug, keepScroll = false) {
   try {
-    const [res, arts, score, facts] = await Promise.all([
+    const [res, arts, score, facts, uiMap, persistence] = await Promise.all([
       api.cloneGet({ slug }),
       api.cloneArtifacts({ slug }),
       api.fidelityGet({ slug }),
       api.factsList({ slug }),
+      api.uimapGet({ slug }),
+      api.artifactsGet({ slug }),
     ])
     if (!res?.ok || !res.project) throw new Error(res?.error || 'project not found')
     cloneState.current = slug
@@ -148,6 +154,8 @@ async function openClone(slug, keepScroll = false) {
     cloneState.artifacts = arts?.ok ? arts.artifacts || [] : []
     cloneState.fidelity = score?.ok ? score.score : null
     cloneState.facts = facts?.ok ? facts.facts || [] : []
+    cloneState.uiMap = uiMap?.ok ? uiMap.map : null
+    cloneState.persistence = persistence?.ok ? persistence.diff : null
     renderCloneList()
     renderCloneDetail(keepScroll)
   } catch (e) {
@@ -733,6 +741,133 @@ function wireFactsDetail() {
   })
 }
 
+/* --------------------------------------------------------------- UI map */
+
+function renderUiMapTool() {
+  const box = $('#cloneUiMap')
+  if (!box) return
+  if (!cloneState.detail) {
+    box.innerHTML = emptyProjectNote('UI map')
+    return
+  }
+  const p = cloneState.detail
+  const map = cloneState.uiMap
+  const controls = map?.controls || []
+  box.innerHTML = `
+    <div class="clone-empty-note">Enumerates the Windows accessibility tree of a target window. Attach to a
+    running PID or window title, or launch the clone target. The result gives the scorecard a real UI denominator.</div>
+    <div class="clone-capture-form">
+      <label>Target<input id="uimapTarget" value="${escapeHtml(p.target?.path || '')}" placeholder="path to executable" /></label>
+      <label>PID<input id="uimapPid" type="number" min="0" value="" placeholder="running process" /></label>
+      <label>Window title<input id="uimapTitle" value="" placeholder="partial title" /></label>
+      <label>Wait (s)<input id="uimapSeconds" type="number" min="1" max="30" value="5" /></label>
+      <label class="clone-check"><input id="uimapClose" type="checkbox" /> Close after capture</label>
+      <button class="btn btn-tiny" id="uimapCapture" ${cloneState.uiBusy ? 'disabled' : ''}>
+        ${cloneState.uiBusy ? 'Capturing...' : 'Capture UI map'}
+      </button>
+    </div>
+    ${map ? `
+      <div class="clone-capture-summary">${escapeHtml(map.title || 'window')} · ${controls.length} controls · ${escapeHtml(map.source || '')}</div>
+      <div class="clone-section-head"><span>Controls</span></div>
+      <div class="clone-control-list">${controls.length ? controls.slice(0, 400).map((c) => `
+        <div class="clone-control"><span class="clone-control-type">${escapeHtml(c.type || '')}</span>
+          <span class="clone-control-name">${escapeHtml(c.label || c.name || '')}</span>
+          <span class="clone-control-parent">${escapeHtml(c.parent || '')}</span></div>`).join('')
+        : '<div class="clone-empty-note">No controls were exposed by this window.</div>'}</div>`
+      : '<div class="clone-empty-note">No UI map captured for this project yet.</div>'}`
+  wireUiMapTool()
+}
+
+function wireUiMapTool() {
+  $('#uimapCapture')?.addEventListener('click', async () => {
+    if (!cloneState.current || cloneState.uiBusy) return
+    cloneState.uiBusy = true
+    renderUiMapTool()
+    try {
+      const r = await api.uimapCapture({
+        slug: cloneState.current,
+        target: $('#uimapTarget')?.value?.trim() || null,
+        pid: Number($('#uimapPid')?.value) || 0,
+        windowTitle: $('#uimapTitle')?.value?.trim() || '',
+        seconds: Number($('#uimapSeconds')?.value) || 5,
+        closeAfter: Boolean($('#uimapClose')?.checked),
+      })
+      if (!r?.ok) throw new Error(r?.error || 'UI map capture failed')
+      cloneState.uiMap = (await api.uimapGet({ slug: cloneState.current })).map
+      cloneState.uiBusy = false
+      await loadClone(true)
+      renderUiMapTool()
+      toast(`UI map: ${r.controls} controls`)
+    } catch (e) {
+      cloneState.uiBusy = false
+      renderUiMapTool()
+      toast('UI map: ' + e.message)
+    }
+  })
+}
+
+/* ------------------------------------------------------------- artifacts */
+
+function renderArtifactsTool() {
+  const box = $('#cloneArtifactsTool')
+  if (!box) return
+  if (!cloneState.detail) {
+    box.innerHTML = emptyProjectNote('artifact diff')
+    return
+  }
+  const p = cloneState.detail
+  const diff = cloneState.persistence
+  const artifacts = diff?.artifacts || []
+  const c = diff?.counts || { files: 0, registry: 0, processes: 0 }
+  box.innerHTML = `
+    <div class="clone-empty-note">Snapshot the machine, run the target, snapshot again, and diff. Changed files,
+    registry keys and processes become citable evidence and a persistence model for the spec.</div>
+    <div class="clone-capture-form">
+      <label>Target<input id="artTarget" value="${escapeHtml(p.target?.path || '')}" placeholder="path to executable" /></label>
+      <label>Wait (s)<input id="artSeconds" type="number" min="1" max="60" value="6" /></label>
+      <label class="clone-check"><input id="artClose" type="checkbox" checked /> Close after capture</label>
+      <button class="btn btn-tiny" id="artCapture" ${cloneState.artifactsBusy ? 'disabled' : ''}>
+        ${cloneState.artifactsBusy ? 'Capturing...' : 'Run & diff'}
+      </button>
+    </div>
+    ${diff ? `
+      <div class="clone-capture-summary">${c.files} files · ${c.registry} registry · ${c.processes} processes</div>
+      <div class="clone-section-head"><span>Changes</span></div>
+      <div class="clone-control-list">${artifacts.length ? artifacts.slice(0, 400).map((a) => `
+        <div class="clone-control"><span class="clone-control-type">${escapeHtml(a.kind || '')}</span>
+          <span class="clone-control-name">${escapeHtml(a.operation || '')}</span>
+          <span class="clone-control-parent">${escapeHtml(a.path || '')}</span></div>`).join('')
+        : '<div class="clone-empty-note">No changes observed. Try a longer wait or a target that writes to disk.</div>'}</div>`
+      : '<div class="clone-empty-note">No artifact diff captured for this project yet.</div>'}`
+  wireArtifactsTool()
+}
+
+function wireArtifactsTool() {
+  $('#artCapture')?.addEventListener('click', async () => {
+    if (!cloneState.current || cloneState.artifactsBusy) return
+    cloneState.artifactsBusy = true
+    renderArtifactsTool()
+    try {
+      const r = await api.artifactsCapture({
+        slug: cloneState.current,
+        target: $('#artTarget')?.value?.trim(),
+        seconds: Number($('#artSeconds')?.value) || 6,
+        closeAfter: Boolean($('#artClose')?.checked),
+      })
+      if (!r?.ok) throw new Error(r?.error || 'Artifact capture failed')
+      cloneState.persistence = (await api.artifactsGet({ slug: cloneState.current })).diff
+      cloneState.artifactsBusy = false
+      await loadClone(true)
+      renderArtifactsTool()
+      toast(`Artifacts: ${r.artifacts} changes`)
+    } catch (e) {
+      cloneState.artifactsBusy = false
+      renderArtifactsTool()
+      toast('Artifacts: ' + e.message)
+    }
+  })
+}
+
 function renderCloneDetail() {
   renderCloneProjectDetail()
   renderRecorderDetail()
@@ -740,6 +875,8 @@ function renderCloneDetail() {
   renderSpecDetail()
   renderScoreDetail()
   renderFactsDetail()
+  renderUiMapTool()
+  renderArtifactsTool()
   renderClonePickers()
 }
 
@@ -1020,7 +1157,7 @@ function wireCloneUi() {
     if (card) openClone(card.dataset.slug)
   })
   $$('.tab').forEach((tab) => {
-    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts'].includes(tab.dataset.tab)) {
+    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts'].includes(tab.dataset.tab)) {
       tab.addEventListener('click', () => loadClone())
     }
   })

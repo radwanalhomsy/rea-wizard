@@ -933,6 +933,30 @@ code, pre, textarea, input, select { font-family: inherit; }
 .clone-fact-value { font-size: 10px; color: var(--text-faint); word-break: break-all; }
 .clone-fact-src { font-size: 9px; color: var(--text-faint); }
 
+/* Capture tools (UI map + artifacts) */
+.clone-capture-form {
+  display: grid; grid-template-columns: 1fr auto; gap: 5px 7px; align-items: end;
+  border: 1px solid var(--line-soft); border-radius: 6px; background: var(--bg-3);
+  padding: 7px; margin-bottom: 8px;
+}
+.clone-capture-form label { display: flex; flex-direction: column; gap: 3px; font-size: 9.5px; color: var(--text-faint); }
+.clone-capture-form label:first-child { grid-column: 1 / -1; }
+.clone-capture-form input:not([type="checkbox"]) {
+  height: 26px; border: 1px solid var(--line); border-radius: 5px;
+  background: var(--bg-4); color: var(--text); font-size: 11px; padding: 0 7px; font-family: var(--mono);
+}
+.clone-capture-form .clone-check { flex-direction: row; align-items: center; gap: 5px; }
+.clone-capture-form > button { height: 26px; }
+.clone-capture-summary { font-size: 10.5px; color: var(--text-dim); margin-bottom: 5px; }
+.clone-control-list { display: flex; flex-direction: column; gap: 2px; max-height: 360px; overflow: auto; }
+.clone-control {
+  display: grid; grid-template-columns: 78px 1fr 1fr; gap: 6px; align-items: center;
+  padding: 3px 5px; border-bottom: 1px solid var(--line-soft); font-size: 10px;
+}
+.clone-control-type { font-family: var(--mono); font-size: 9px; color: var(--accent, #4aa3ff); }
+.clone-control-name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clone-control-parent { color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 
 
 

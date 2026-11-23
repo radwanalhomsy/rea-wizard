@@ -95,6 +95,16 @@
                 <span class="task-body"><span class="task-title">Fact ledger</span>
                   <span class="task-sub">Citable semantic facts, confidence and conflict quorum</span></span>
               </button>
+              <button class="task-card" data-clone-tool="uimap">
+                <span class="task-ico">UI</span>
+                <span class="task-body"><span class="task-title">UI map</span>
+                  <span class="task-sub">Enumerate controls from a target window's accessibility tree</span></span>
+              </button>
+              <button class="task-card" data-clone-tool="artifacts">
+                <span class="task-ico">AF</span>
+                <span class="task-body"><span class="task-title">Artifact diff</span>
+                  <span class="task-sub">Files, registry and processes changed by running the target</span></span>
+              </button>
             </div>
           </div>
 
@@ -155,6 +165,8 @@
           <button class="tab" data-tab="spec" role="tab" title="Compile specs and scaffold a clone">Spec</button>
           <button class="tab" data-tab="score" role="tab" title="Measure clone fidelity by dimension">Score</button>
           <button class="tab" data-tab="facts" role="tab" title="Citable semantic fact ledger">Facts</button>
+          <button class="tab" data-tab="uimap" role="tab" title="Accessibility-tree UI inventory">UI Map</button>
+          <button class="tab" data-tab="artifacts" role="tab" title="Filesystem, registry and process diff">Artifacts</button>
           <button class="tab" data-tab="evidence" role="tab">Evidence</button>
           <button class="tab" data-tab="providers" role="tab">Providers</button>
           <button class="tab" data-tab="guidance" role="tab">Guidance</button>
@@ -286,6 +298,22 @@
             <select class="clone-project-pick" data-pick="facts" title="Clone project"></select>
           </div>
           <div id="cloneFacts" class="clone-detail"></div>
+        </div>
+
+        <div class="tab-panel" data-panel="uimap">
+          <div class="panel-head">
+            <span>UI inventory</span>
+            <select class="clone-project-pick" data-pick="uimap" title="Clone project"></select>
+          </div>
+          <div id="cloneUiMap" class="clone-detail"></div>
+        </div>
+
+        <div class="tab-panel" data-panel="artifacts">
+          <div class="panel-head">
+            <span>Artifact diff</span>
+            <select class="clone-project-pick" data-pick="artifacts" title="Clone project"></select>
+          </div>
+          <div id="cloneArtifactsTool" class="clone-detail"></div>
         </div>
       </aside>
     </main>

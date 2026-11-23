@@ -26,6 +26,14 @@ contextBridge.exposeInMainWorld('rea', {
   fidelityCompute: (payload) => invoke('fidelity:compute', payload),
   fidelityGet: (payload) => invoke('fidelity:get', payload),
 
+  /* Clone capture tools */
+  uimapCapture: (payload) => invoke('uimap:capture', payload),
+  artifactsSnapshot: (payload) => invoke('artifacts:snapshot', payload),
+  artifactsDiff: (payload) => invoke('artifacts:diff', payload),
+  artifactsCapture: (payload) => invoke('artifacts:capture', payload),
+  uimapGet: (payload) => invoke('uimap:get', payload),
+  artifactsGet: (payload) => invoke('artifacts:get', payload),
+
   /* IDA (GUI companion + optional Home/Pro MCP registration) */
   idaStatus: () => invoke('ida:status'),
   idaOpen: (payload) => invoke('ida:open', payload),
