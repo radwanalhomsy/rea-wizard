@@ -37,7 +37,7 @@ The app does **not** install or configure any of these; it uses what
 ## Install (Windows MSI)
 
 ```powershell
-msiexec /i "D:\REA\rea-wizard\release\REA-Studio-1.2.2-x64.msi"
+msiexec /i "D:\REA\rea-wizard\release\REA-Studio-1.2.3-x64.msi"
 ```
 
 The wizard offers *per-user* (default, no admin prompt) or *per-machine*
@@ -453,9 +453,10 @@ rea-wizard/
 
 Prebuilt Windows binaries are on the
 [Releases page](https://github.com/radwanalhomsy/rea-wizard/releases).
-The current release is **1.2.2**, with both an installer
-(`REA-Studio-1.2.2-x64.msi`) and a portable build
-(`REA-Studio-1.2.2-x64.exe`).
+The current release is **1.2.3**, with both an installer
+(`REA-Studio-1.2.3-x64.msi`) and a portable build
+(`REA-Studio-1.2.3-x64.exe`). Version 1.2.3 adds the reconstruction toolkit
+(Clone IR, Oracle/shadow, Repair, Gap planner, Recipe store and Fingerprint/drift).
 
 ## License
 
