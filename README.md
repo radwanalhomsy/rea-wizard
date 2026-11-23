@@ -189,13 +189,31 @@ to confirm). Deleting the current session starts a clean chat.
 
 ## Clone projects
 
-The clone workspace has a tab and a left-rail card for each tool: **Clone**
-(projects, stages, unknowns, evidence), **Recorder**, **Parity**, **Spec**,
-**Score**, **Facts**, **UI Map**, **Artifacts**, **Explore**, **Formats**,
-**Protocol**, **Clone IR**, **Oracle**, **Repair**, **Gaps**, **Recipes** and
-**Fingerprint**. It exists because REA's Windows Ghidra path has no program
-checkpoint: every new process re-imports and re-analyses the target, so
-anything learned only in chat is lost on restart.
+The clone workspace has a tab and a left-rail card for each tool: **Auto**,
+**Clone** (projects, stages, unknowns, evidence), **Recorder**, **Parity**,
+**Spec**, **Score**, **Facts**, **UI Map**, **Artifacts**, **Explore**,
+**Formats**, **Protocol**, **Clone IR**, **Oracle**, **Repair**, **Gaps**,
+**Recipes** and **Fingerprint**. It exists because REA's Windows Ghidra path
+has no program checkpoint: every new process re-imports and re-analyses the
+target, so anything learned only in chat is lost on restart.
+
+### Auto clone
+
+**Auto clone** is the one-click path: choose an executable, then REA Studio
+runs the measured steps in dependency order and creates a new project:
+
+```
+create + hash → explore → UI map → artifacts → protocol → formats → Oracle
+→ self-check → repair (only if proven) → verify → fingerprint → drift
+→ facts → Clone IR → fidelity → stage gates → spec → scaffold → gaps
+```
+
+Every GUI/process launch is bounded and closed afterwards. Each step gets its
+own status in `spec/auto-clone.json` and `reports/auto-clone.md`. A headless
+target may report `unavailable` for the UI map; an unproven Oracle becomes a
+blocking unknown instead of a fake repair; provenance stays active until a human
+reviews license and redistribution. Automation status is not clone fidelity —
+the separate scorecard still reports unmeasured dimensions as zero.
 
 A project is a directory under `<workspace>/.rea-clone/<slug>/`:
 
@@ -453,10 +471,12 @@ rea-wizard/
 
 Prebuilt Windows binaries are on the
 [Releases page](https://github.com/radwanalhomsy/rea-wizard/releases).
-The current release is **1.2.3**, with both an installer
-(`REA-Studio-1.2.3-x64.msi`) and a portable build
-(`REA-Studio-1.2.3-x64.exe`). Version 1.2.3 adds the reconstruction toolkit
-(Clone IR, Oracle/shadow, Repair, Gap planner, Recipe store and Fingerprint/drift).
+The current release is **1.2.4**, with both an installer
+(`REA-Studio-1.2.4-x64.msi`) and a portable build
+(`REA-Studio-1.2.4-x64.exe`). Version 1.2.4 adds one-click **Auto clone**, which
+runs the measured reconstruction toolkit (Explore, UI map, Artifacts, Protocol,
+Formats, Oracle/shadow, Repair, Fingerprint/drift, Clone IR, Score, Spec,
+Scaffold and Gaps) in dependency order with per-step honesty.
 
 ## License
 

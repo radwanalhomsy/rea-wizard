@@ -19,6 +19,7 @@ import * as cloneRepair from './cloneRepair.mjs'
 import * as cloneGaps from './cloneGaps.mjs'
 import * as cloneRecipes from './cloneRecipes.mjs'
 import * as cloneFingerprint from './cloneFingerprint.mjs'
+import * as cloneAuto from './cloneAuto.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const HOME = process.env.USERPROFILE || ''
@@ -1210,6 +1211,18 @@ function registerIpc() {
 
   ipcMain.handle('fingerprint:get', cloneGuard(async ({ slug } = {}) =>
     cloneFingerprint.fingerprintGet(settings.workspace, slug),
+  ))
+
+  /* ------------------------------------------------------------- auto clone */
+
+  ipcMain.handle('auto:run', cloneGuard(async (options = {}) =>
+    cloneAuto.runAutoClone(settings.workspace, options, (payload) => {
+      if (win && !win.isDestroyed()) win.webContents.send('auto:progress', payload)
+    }),
+  ))
+
+  ipcMain.handle('auto:get', cloneGuard(async ({ slug = null } = {}) =>
+    cloneAuto.readAuto(settings.workspace, { slug }),
   ))
 }
 

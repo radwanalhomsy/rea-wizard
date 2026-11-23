@@ -65,6 +65,11 @@
           <div class="rail-group">
             <div class="rail-group-head"><span>Clone toolkit</span></div>
             <div id="cloneTools" class="task-list">
+              <button class="task-card" data-clone-tool="auto">
+                <span class="task-ico">AC</span>
+                <span class="task-body"><span class="task-title">Auto clone</span>
+                  <span class="task-sub">Choose an exe and run every measured clone step in order</span></span>
+              </button>
               <button class="task-card" data-clone-tool="clone">
                 <span class="task-ico">▣</span>
                 <span class="task-body"><span class="task-title">Clone project</span>
@@ -204,6 +209,7 @@
       <aside class="inspector">
         <div class="tabs" role="tablist">
           <button class="tab active" data-tab="activity" role="tab">Activity</button>
+          <button class="tab" data-tab="auto" role="tab" title="Choose an exe and run the measured clone pipeline">Auto</button>
           <button class="tab" data-tab="clone" role="tab" title="Clone projects, stages and unknowns">Clone</button>
           <button class="tab" data-tab="recorder" role="tab" title="Record replayable user journeys">Recorder</button>
           <button class="tab" data-tab="parity" role="tab" title="Replay journeys and diff the results">Parity</button>
@@ -296,6 +302,13 @@
             <button id="runDoctor" class="btn btn-tiny">Run</button>
           </div>
           <pre id="doctorOut" class="doctor-out">Not run yet.</pre>
+        </div>
+
+        <div class="tab-panel" data-panel="auto">
+          <div class="panel-head">
+            <span>Auto clone</span>
+          </div>
+          <div id="cloneAuto" class="clone-detail"></div>
         </div>
 
         <div class="tab-panel" data-panel="clone">

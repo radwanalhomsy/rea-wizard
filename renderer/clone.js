@@ -45,6 +45,10 @@ const cloneState = {
   artifactsBusy: false,
   language: 'typescript',
   generating: null, // 'spec' | 'scaffold' while a run is in flight
+  autoTarget: null,
+  autoBusy: false,
+  autoReport: null,
+  autoProgress: new Map(),
 }
 
 const RECORDABLE = /^(capture_|observe_web_session$)/
@@ -1913,6 +1917,165 @@ function guideJourney(kind) {
   $('#cloneNewName')?.focus()
 }
 
+/* -------------------------------------------------------------- auto clone */
+
+function renderAutoProgress() {
+  const box = $('#autoProgress')
+  if (!box) return
+  const rows = [...cloneState.autoProgress.values()].map((p) =>
+    `<div class="auto-progress-row ${escapeHtml(p.status || '')}">
+       <span class="auto-step-title">${escapeHtml(p.title || p.id || '')}</span>
+       <span class="auto-status ${escapeHtml(p.status || '')}">${escapeHtml(p.status || '')}</span>
+       <span class="auto-step-detail">${escapeHtml(p.detail || '')}</span>
+     </div>`,
+  ).join('')
+  box.innerHTML = rows || '<div class="clone-empty-note">No steps have run yet.</div>'
+}
+
+function autoReportHtml(report) {
+  const p = report.project || {}
+  const s = report.summary || {}
+  const f = s.fidelity || {}
+  const g = s.gaps || {}
+  const steps = (report.steps || []).map((st, i) =>
+    `<div class="auto-step">
+       <span class="auto-step-num">${i + 1}</span>
+       <span>${escapeHtml(st.title)}</span>
+       <span class="auto-status ${escapeHtml(st.status)}">${escapeHtml(st.status)}</span>
+       <span class="auto-step-detail">${escapeHtml(st.detail || '')}</span>
+     </div>`,
+  ).join('')
+  return `<div class="auto-report">
+    <div class="clone-section-head">
+      <span>Last run</span>
+      ${p.slug ? '<button class="btn btn-tiny" id="autoOpenProject">Open project</button>' : ''}
+    </div>
+    <div class="auto-summary">
+      <span>status <b>${escapeHtml(s.status || 'unknown')}</b></span>
+      <span>project <b>${escapeHtml(p.slug || '—')}</b></span>
+      <span>fidelity <b>${f.score === undefined ? '—' : (Number(f.score) * 100).toFixed(1) + '%'}</b></span>
+      <span>tier <b>${escapeHtml(f.tier || '—')}</b></span>
+      <span>gaps <b>${g.total === undefined ? '—' : g.total + ' / ' + g.blocking + ' blocking'}</b></span>
+    </div>
+    <div class="auto-steps">${steps}</div>
+  </div>`
+}
+
+function renderAuto() {
+  const root = $('#cloneAuto')
+  if (!root) return
+  const target = cloneState.autoTarget || ''
+  const report = cloneState.autoReport
+  root.innerHTML = `
+    <div class="clone-empty-note">
+      Auto Clone runs the measured pipeline in dependency order: inventory, bounded GUI/process captures,
+      Oracle and self-check, repair only when determinism is proven, then IR, spec, scaffold, parity and gaps.
+      A step that cannot observe the target is reported as unavailable; it is never counted as success.
+    </div>
+    <div class="auto-fields">
+      <div>
+        <div class="auto-field-label">Executable</div>
+        <div class="auto-row">
+          <input id="autoTargetPath" class="auto-input" readonly value="${escapeHtml(target)}" placeholder="No executable chosen" />
+          <button class="btn btn-tiny" id="autoPickTarget">Choose exe…</button>
+        </div>
+      </div>
+      <div>
+        <div class="auto-field-label">Project name (optional)</div>
+        <input id="autoName" class="auto-input" placeholder="Defaults to the executable name" />
+      </div>
+      <div class="auto-options">
+        <div>
+          <div class="auto-field-label">GUI capture seconds</div>
+          <input id="autoSeconds" class="auto-input" type="number" min="1" max="30" value="5" />
+        </div>
+        <div>
+          <div class="auto-field-label">Oracle timeout (ms)</div>
+          <input id="autoTimeout" class="auto-input" type="number" min="1000" max="120000" step="1000" value="20000" />
+        </div>
+      </div>
+    </div>
+    <div class="clone-detail-head">
+      <button class="btn btn-tiny" id="autoRun" ${cloneState.autoBusy ? 'disabled' : ''}>${cloneState.autoBusy ? 'Running…' : 'Run auto clone'}</button>
+      <span class="clone-card-sub">${cloneState.autoBusy ? 'Bounded launches — keep the app open' : 'Creates a new project each run'}</span>
+    </div>
+    <div id="autoProgress" class="auto-progress"></div>
+    ${report ? autoReportHtml(report) : ''}
+  `
+  renderAutoProgress()
+}
+
+function updateAutoProgress(payload) {
+  if (!payload) return
+  if (payload.type === 'start') {
+    cloneState.autoProgress = new Map()
+    renderAutoProgress()
+    return
+  }
+  if (payload.type === 'step') {
+    cloneState.autoProgress.set(payload.id, {
+      id: payload.id,
+      title: payload.title || payload.id,
+      status: payload.phase === 'start' ? 'running' : payload.status,
+      detail: payload.phase === 'start' ? '…' : payload.detail || '',
+    })
+    renderAutoProgress()
+    return
+  }
+  if (payload.type === 'done') {
+    const button = $('#autoRun')
+    if (button) {
+      button.disabled = false
+      button.textContent = 'Run auto clone'
+    }
+  }
+}
+
+async function refreshAuto() {
+  try {
+    const res = await api.autoGet({})
+    if (res?.ok && res.report) cloneState.autoReport = res.report
+  } catch { /* older app build without auto:get */ }
+  renderAuto()
+}
+
+async function runAutoCloneUi() {
+  if (cloneState.autoBusy) return
+  if (!cloneState.autoTarget) {
+    toast('Choose an executable first')
+    return
+  }
+  const name = $('#autoName')?.value?.trim() || null
+  const seconds = Number($('#autoSeconds')?.value) || 5
+  const timeoutMs = Number($('#autoTimeout')?.value) || 20000
+  cloneState.autoBusy = true
+  cloneState.autoReport = null
+  cloneState.autoProgress = new Map()
+  renderAuto()
+  try {
+    const res = await api.autoRun({
+      targetPath: cloneState.autoTarget,
+      name,
+      seconds,
+      protocolSeconds: Math.max(8, seconds),
+      timeoutMs,
+    })
+    if (!res?.ok) throw new Error(res?.error || 'auto:run failed')
+    cloneState.autoReport = res
+    toast('Auto clone ' + (res.summary?.status || 'finished'))
+    await loadClone(true)
+    if (res.project?.slug) {
+      cloneState.current = res.project.slug
+      await openClone(res.project.slug, true)
+    }
+  } catch (e) {
+    toast('Auto clone failed: ' + e.message)
+  } finally {
+    cloneState.autoBusy = false
+    renderAuto()
+  }
+}
+
 /* -------------------------------------------------------------------- wire */
 
 function wireCloneUi() {
@@ -1931,7 +2094,7 @@ function wireCloneUi() {
     if (card) openClone(card.dataset.slug)
   })
   $$('.tab').forEach((tab) => {
-    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts', 'explore', 'formats', 'protocol', 'ir', 'oracle', 'repair', 'gaps', 'recipes', 'fingerprint'].includes(tab.dataset.tab)) {
+    if (['auto', 'clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts', 'explore', 'formats', 'protocol', 'ir', 'oracle', 'repair', 'gaps', 'recipes', 'fingerprint'].includes(tab.dataset.tab)) {
       tab.addEventListener('click', () => loadClone())
     }
   })
@@ -1947,6 +2110,41 @@ function wireCloneUi() {
       loadClone()
     }),
   )
+  $('#cloneAuto')?.addEventListener('click', async (e) => {
+    if (e.target.closest('#autoPickTarget')) {
+      const file = await api.pickFile({
+        title: 'Select an executable to clone',
+        filters: [
+          { name: 'Executables', extensions: ['exe', 'com', 'msi'] },
+          { name: 'All files', extensions: ['*'] },
+        ],
+      })
+      if (!file) return
+      cloneState.autoTarget = file
+      const pathInput = $('#autoTargetPath')
+      if (pathInput) pathInput.value = file
+      const nameInput = $('#autoName')
+      if (nameInput && !nameInput.value.trim()) {
+        nameInput.value = file.split(/[\\/]/).pop().replace(/\.[^.]+$/, '')
+      }
+      return
+    }
+    if (e.target.closest('#autoRun')) {
+      await runAutoCloneUi()
+      return
+    }
+    if (e.target.closest('#autoOpenProject')) {
+      const slug = cloneState.autoReport?.project?.slug
+      if (slug) {
+        cloneState.current = slug
+        await openClone(slug)
+        activateTab('clone')
+      }
+    }
+  })
+  try {
+    api.onAutoProgress?.(updateAutoProgress)
+  } catch { }
   try {
     api.onEvent(handleCloneEvent)
   } catch { }
@@ -1965,4 +2163,5 @@ window.cloneRecordEvidence = function cloneRecordEvidence(ids, source, raw) {
 }
 
 wireCloneUi()
+refreshAuto()
 loadClone()

@@ -70,6 +70,15 @@ contextBridge.exposeInMainWorld('rea', {
   fingerprintStatus: (payload) => invoke('fingerprint:status', payload),
   fingerprintGet: (payload) => invoke('fingerprint:get', payload),
 
+  /* Auto Clone: one-click measured pipeline */
+  autoRun: (payload) => invoke('auto:run', payload),
+  autoGet: (payload) => invoke('auto:get', payload),
+  onAutoProgress: (cb) => {
+    const listener = (_event, payload) => cb(payload)
+    ipcRenderer.on('auto:progress', listener)
+    return () => ipcRenderer.removeListener('auto:progress', listener)
+  },
+
   /* IDA (GUI companion + optional Home/Pro MCP registration) */
   idaStatus: () => invoke('ida:status'),
   idaOpen: (payload) => invoke('ida:open', payload),
