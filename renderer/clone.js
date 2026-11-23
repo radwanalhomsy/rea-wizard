@@ -22,8 +22,10 @@ const cloneState = {
   persistence: null,
   inventory: null,
   formats: [],
+  protocol: null,
   exploreBusy: false,
   formatsBusy: false,
+  protocolBusy: false,
   scoreBusy: false,
   factsBusy: false,
   uiBusy: false,
@@ -144,7 +146,7 @@ function renderCloneList() {
 
 async function openClone(slug, keepScroll = false) {
   try {
-    const [res, arts, score, facts, uiMap, persistence, inventory, formats] = await Promise.all([
+    const [res, arts, score, facts, uiMap, persistence, inventory, formats, protocol] = await Promise.all([
       api.cloneGet({ slug }),
       api.cloneArtifacts({ slug }),
       api.fidelityGet({ slug }),
@@ -153,6 +155,7 @@ async function openClone(slug, keepScroll = false) {
       api.artifactsGet({ slug }),
       api.exploreGet({ slug }),
       api.formatsList({ slug }),
+      api.protocolGet({ slug }),
     ])
     if (!res?.ok || !res.project) throw new Error(res?.error || 'project not found')
     cloneState.current = slug
@@ -164,6 +167,7 @@ async function openClone(slug, keepScroll = false) {
     cloneState.persistence = persistence?.ok ? persistence.diff : null
     cloneState.inventory = inventory?.ok ? inventory.inventory : null
     cloneState.formats = formats?.ok ? formats.formats || [] : []
+    cloneState.protocol = protocol?.ok ? protocol.protocol : null
     renderCloneList()
     renderCloneDetail(keepScroll)
   } catch (e) {
@@ -1013,6 +1017,88 @@ function wireFormatsTool() {
   })
 }
 
+/* ------------------------------------------------------------- protocol */
+
+function renderProtocolTool() {
+  const box = $('#cloneProtocol')
+  if (!box) return
+  if (!cloneState.detail) {
+    box.innerHTML = emptyProjectNote('protocol capture')
+    return
+  }
+  const p = cloneState.detail
+  const proto = cloneState.protocol
+  const endpoints = proto?.endpoints || []
+  box.innerHTML = `
+    <div class="clone-empty-note">Discover network endpoints while the target runs. netstat works for any TCP
+    program; the loopback proxy logs HTTP clients that honour proxy settings; HAR imports fold in traffic captured elsewhere.</div>
+    <div class="clone-capture-form">
+      <label>Target<input id="protoTarget" value="${escapeHtml(p.target?.path || '')}" placeholder="path to executable" /></label>
+      <label>PID<input id="protoPid" type="number" min="0" value="" placeholder="running process" /></label>
+      <label>Seconds<input id="protoSeconds" type="number" min="1" max="120" value="8" /></label>
+      <button class="btn btn-tiny" id="protoNetstat" ${cloneState.protocolBusy ? 'disabled' : ''}>
+        ${cloneState.protocolBusy ? 'Watching...' : 'Watch endpoints'}
+      </button>
+    </div>
+    <div class="clone-capture-form">
+      <label>Proxy port<input id="protoPort" type="number" min="1" max="65535" value="8899" /></label>
+      <button class="btn btn-tiny" id="protoProxy" ${cloneState.protocolBusy ? 'disabled' : ''}>Run proxy</button>
+    </div>
+    <div class="clone-capture-form">
+      <label>HAR file<input id="protoHar" placeholder="absolute path to .har" /></label>
+      <button class="btn btn-tiny" id="protoHarGo" ${cloneState.protocolBusy ? 'disabled' : ''}>Import HAR</button>
+    </div>
+    ${proto ? `
+      <div class="clone-capture-summary">${endpoints.length} endpoint(s) · ${(proto.sources || []).join(', ')}</div>
+      <div class="clone-control-list">${endpoints.length ? endpoints.slice(0, 300).map((e) => `
+        <div class="clone-control"><span class="clone-control-type">${escapeHtml(e.method || e.protocol || 'tcp')}</span>
+          <span class="clone-control-name">${escapeHtml(`${e.host || ''}${e.port ? ':' + e.port : ''}${e.path || ''}`)}</span>
+          <span class="clone-control-parent">${escapeHtml(String(e.status ?? e.state ?? ''))}</span></div>`).join('')
+        : '<div class="clone-empty-note">No endpoints observed.</div>'}</div>
+      <div class="clone-section-head"><span>Limitations</span></div>
+      <div class="clone-empty-note">${(proto.limitations || []).map((l) => escapeHtml(l)).join('<br>') || 'None recorded.'}</div>`
+      : '<div class="clone-empty-note">No protocol capture yet.</div>'}`
+  wireProtocolTool()
+}
+
+function wireProtocolTool() {
+  const run = async (fn) => {
+    if (!cloneState.current || cloneState.protocolBusy) return
+    cloneState.protocolBusy = true
+    renderProtocolTool()
+    try {
+      const r = await fn()
+      if (!r?.ok) throw new Error(r?.error || 'protocol capture failed')
+      cloneState.protocol = (await api.protocolGet({ slug: cloneState.current })).protocol
+      cloneState.protocolBusy = false
+      await loadClone(true)
+      renderProtocolTool()
+      toast(`Protocol: ${r.endpoints ?? 0} endpoint(s)`)
+    } catch (e) {
+      cloneState.protocolBusy = false
+      renderProtocolTool()
+      toast('Protocol: ' + e.message)
+    }
+  }
+  $('#protoNetstat')?.addEventListener('click', () => run(() => api.protocolNetstat({
+    slug: cloneState.current,
+    target: $('#protoTarget')?.value?.trim() || null,
+    pid: Number($('#protoPid')?.value) || 0,
+    seconds: Number($('#protoSeconds')?.value) || 8,
+  })))
+  $('#protoProxy')?.addEventListener('click', () => run(() => api.protocolProxy({
+    slug: cloneState.current,
+    target: $('#protoTarget')?.value?.trim() || null,
+    port: Number($('#protoPort')?.value) || 8899,
+    seconds: Number($('#protoSeconds')?.value) || 8,
+  })))
+  $('#protoHarGo')?.addEventListener('click', () => {
+    const filePath = $('#protoHar')?.value?.trim()
+    if (!filePath) { toast('Protocol: enter a HAR path'); return }
+    run(() => api.protocolHar({ slug: cloneState.current, path: filePath }))
+  })
+}
+
 function renderCloneDetail() {
   renderCloneProjectDetail()
   renderRecorderDetail()
@@ -1024,6 +1110,7 @@ function renderCloneDetail() {
   renderArtifactsTool()
   renderExploreTool()
   renderFormatsTool()
+  renderProtocolTool()
   renderClonePickers()
 }
 
@@ -1304,7 +1391,7 @@ function wireCloneUi() {
     if (card) openClone(card.dataset.slug)
   })
   $$('.tab').forEach((tab) => {
-    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts', 'explore', 'formats'].includes(tab.dataset.tab)) {
+    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts', 'explore', 'formats', 'protocol'].includes(tab.dataset.tab)) {
       tab.addEventListener('click', () => loadClone())
     }
   })

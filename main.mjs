@@ -12,6 +12,7 @@ import * as cloneFidelity from './cloneFidelity.mjs'
 import * as cloneCapture from './cloneCapture.mjs'
 import * as cloneExplore from './cloneExplore.mjs'
 import * as cloneFormats from './cloneFormats.mjs'
+import * as cloneProtocol from './cloneProtocol.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const HOME = process.env.USERPROFILE || ''
@@ -1065,6 +1066,24 @@ function registerIpc() {
 
   ipcMain.handle('formats:list', cloneGuard(async ({ slug } = {}) => ({
     formats: cloneFormats.listFormats(settings.workspace, slug),
+  })))
+
+  /* ------------------------------------------------------------ protocol */
+
+  ipcMain.handle('protocol:netstat', cloneGuard(async ({ slug, ...opts } = {}) =>
+    cloneProtocol.captureNetstat(settings.workspace, slug, opts),
+  ))
+
+  ipcMain.handle('protocol:proxy', cloneGuard(async ({ slug, ...opts } = {}) =>
+    cloneProtocol.captureProxy(settings.workspace, slug, opts),
+  ))
+
+  ipcMain.handle('protocol:har', cloneGuard(async ({ slug, path: filePath } = {}) =>
+    cloneProtocol.importHar(settings.workspace, slug, filePath),
+  ))
+
+  ipcMain.handle('protocol:get', cloneGuard(async ({ slug } = {}) => ({
+    protocol: cloneProtocol.readProtocol(settings.workspace, slug),
   })))
 }
 

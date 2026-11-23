@@ -38,6 +38,10 @@ contextBridge.exposeInMainWorld('rea', {
   formatsFromArtifacts: (payload) => invoke('formats:fromArtifacts', payload),
   formatsInfer: (payload) => invoke('formats:infer', payload),
   formatsList: (payload) => invoke('formats:list', payload),
+  protocolNetstat: (payload) => invoke('protocol:netstat', payload),
+  protocolProxy: (payload) => invoke('protocol:proxy', payload),
+  protocolHar: (payload) => invoke('protocol:har', payload),
+  protocolGet: (payload) => invoke('protocol:get', payload),
 
   /* IDA (GUI companion + optional Home/Pro MCP registration) */
   idaStatus: () => invoke('ida:status'),
