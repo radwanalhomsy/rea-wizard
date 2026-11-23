@@ -189,13 +189,13 @@ to confirm). Deleting the current session starts a clean chat.
 
 ## Clone projects
 
-The clone workspace is split across four sidebar tabs: **Clone** (projects,
-stages, unknowns, evidence), **Recorder** (replayable journeys), **Parity**
-(replay diffs), and **Spec** (compiled specs and scaffolds). The same four
-tools also appear in the left rail under **Clone toolkit**. It exists
-because REA's Windows Ghidra path has no program checkpoint: every new process
-re-imports and re-analyses the target, so anything learned only in chat is lost
-on restart.
+The clone workspace has a tab and a left-rail card for each tool: **Clone**
+(projects, stages, unknowns, evidence), **Recorder**, **Parity**, **Spec**,
+**Score**, **Facts**, **UI Map**, **Artifacts**, **Explore**, **Formats**,
+**Protocol**, **Clone IR**, **Oracle**, **Repair**, **Gaps**, **Recipes** and
+**Fingerprint**. It exists because REA's Windows Ghidra path has no program
+checkpoint: every new process re-imports and re-analyses the target, so
+anything learned only in chat is lost on restart.
 
 A project is a directory under `<workspace>/.rea-clone/<slug>/`:
 
@@ -257,6 +257,43 @@ the case that defines it. It is a skeleton to fill in, not a working clone.
 
 The artifact list under **Spec** shows every generated file; click one
 to reveal it in the file manager.
+
+### Reconstruction toolkit
+
+These tools turn observations into a bounded, measurable clone. Each one writes
+a deterministic report to `spec/` and `reports/`; none of them claims semantic
+understanding of the target.
+
+- **Score** applies a 10/20/30/15/15/10 rubric (inventory, interface, behavior,
+  state, data, protocol). Unmeasured dimensions score zero. Tiers L0–L4 describe
+  how much is covered; nothing claims arbitrary "100% cloning".
+- **Facts** builds a ledger of claims with evidence and case citations. A claim
+  seen from two independent sources is promoted to a rule; conflicting values
+  create a blocking unknown.
+- **UI Map / Artifacts** capture the accessibility tree and bounded filesystem,
+  registry and process snapshots before and after a run.
+- **Explore** inventories the target and parses PE metadata offline; **Formats**
+  infers binary/text layouts; **Protocol** records loopback traffic, listening
+  TCP endpoints and HAR imports.
+- **Clone IR** compiles all observations into one citable reconstruction
+  contract. Uncited nodes are reported, never silently trusted.
+- **Oracle / shadow** runs the real target with a fully described input and
+  diffs a clone (or the target itself, as a determinism self-check) on exit
+  code, stdout, stderr, files and output shape. Statuses are `match`, `changed`,
+  `error` or `unavailable`.
+- **Repair** turns only *self-check-proven* observations into a transcript replay
+  runner. It reproduces one recorded input exactly, writes a fixture per case,
+  and re-verifies parity. Unproven cases become blocking unknowns instead of
+  fake fixes.
+- **Gaps** ranks every measured shortfall — blocking unknowns, parity failures,
+  unmeasured fidelity, uncited IR nodes and TODO stubs — and names the tool that
+  can close it. Only re-measuring closes a gap.
+- **Recipes** saves evidence-backed procedures at workspace level in
+  `<workspace>/.rea-clone/recipes.json`. Applying one writes a `pending` plan;
+  it never executes code and never asserts success.
+- **Fingerprint / drift** digests measured behavior, then re-runs the original
+  target with the same input and reports per-dimension changes. Detected drift
+  becomes a non-blocking unknown for the Gap Planner to rank.
 
 ### Limitations
 

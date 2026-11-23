@@ -65,6 +65,10 @@ contextBridge.exposeInMainWorld('rea', {
   recipesDelete: (payload) => invoke('recipes:delete', payload),
   recipesExport: (payload) => invoke('recipes:export', payload),
   recipesImport: (payload) => invoke('recipes:import', payload),
+  fingerprintBuild: (payload) => invoke('fingerprint:build', payload),
+  fingerprintDrift: (payload) => invoke('fingerprint:drift', payload),
+  fingerprintStatus: (payload) => invoke('fingerprint:status', payload),
+  fingerprintGet: (payload) => invoke('fingerprint:get', payload),
 
   /* IDA (GUI companion + optional Home/Pro MCP registration) */
   idaStatus: () => invoke('ida:status'),

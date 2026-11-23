@@ -434,6 +434,50 @@ export function oracleReport(workspace, slug) {
 }
 
 export function readOracleRaw(workspace, slug, caseId) {
+  if (!/^case_[A-Za-z0-9_-]+$/.test(String(caseId))) return null
   const file = path.join(projectPaths(workspace, slug).cases, `${caseId}.oracle.json`)
   try { return JSON.parse(fs.readFileSync(file, 'utf8')) } catch { return null }
+}
+
+/**
+ * Re-run a recorded oracle case with its exact original input and return a
+ * fresh observation. Unlike runShadow this does NOT create a case or a parity
+ * record — it exists so a fingerprint can be re-measured for drift detection.
+ * The target executable is the thing being measured, not a clone.
+ */
+export async function recaptureOracle(workspace, slug, caseId) {
+  const project = getProject(workspace, slug)
+  if (!project) throw new Error(`No clone project "${slug}"`)
+  const raw = readOracleRaw(workspace, slug, caseId)
+  if (!raw?.input) throw new Error(`No oracle capture for case ${caseId}`)
+
+  const input = raw.input
+  if (!input.target || !fs.existsSync(input.target)) {
+    return {
+      ok: false, status: 'unavailable',
+      error: 'Target executable no longer exists on this host',
+      observation: null, fileContents: [],
+      run: { ok: false, error: 'target missing', timedOut: false, exit_code: null },
+    }
+  }
+
+  const paths = projectPaths(workspace, slug)
+  const stamp = crypto.createHash('sha256')
+    .update(`${caseId}|${Date.now()}|${Math.random()}`).digest('hex').slice(0, 10)
+  const sandbox = ensureSandbox(paths, `drift-${caseId}-${stamp}`, input.files || [])
+  const before = takeSnapshot(workspace, slug, { label: 'drift-before', roots: [sandbox], registryKeys: [] })
+  const run = await runProcess(input.target, {
+    argv: input.argv || [], stdin: input.stdin || '', cwd: sandbox,
+    env: input.env || {}, timeoutMs: input.timeoutMs || DEFAULT_TIMEOUT_MS,
+  })
+  const after = takeSnapshot(workspace, slug, { label: 'drift-after', roots: [sandbox], registryKeys: [] })
+  const fileDiff = diffSnapshots(before.snapshot, after.snapshot)
+  return {
+    ok: Boolean(run.ok),
+    status: run.ok ? 'ok' : 'error',
+    error: run.error || null,
+    observation: makeObservation(run, fileDiff, sandbox),
+    fileContents: captureFileContents(fileDiff, sandbox),
+    run: { ok: Boolean(run.ok), error: run.error || null, timedOut: Boolean(run.timedOut), exit_code: run.exit_code },
+  }
 }

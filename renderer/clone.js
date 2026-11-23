@@ -34,6 +34,8 @@ const cloneState = {
   gapsBusy: false,
   recipes: null,
   recipesBusy: false,
+  fingerprint: null,
+  fingerprintBusy: false,
   exploreBusy: false,
   formatsBusy: false,
   protocolBusy: false,
@@ -157,7 +159,7 @@ function renderCloneList() {
 
 async function openClone(slug, keepScroll = false) {
   try {
-    const [res, arts, score, facts, uiMap, persistence, inventory, formats, protocol, ir, irValidation, oracle, repair, gaps, recipes] = await Promise.all([
+    const [res, arts, score, facts, uiMap, persistence, inventory, formats, protocol, ir, irValidation, oracle, repair, gaps, recipes, fingerprint] = await Promise.all([
       api.cloneGet({ slug }),
       api.cloneArtifacts({ slug }),
       api.fidelityGet({ slug }),
@@ -173,6 +175,7 @@ async function openClone(slug, keepScroll = false) {
       api.repairGet({ slug }),
       api.gapsGet({ slug }),
       api.recipesGet({ slug }),
+      api.fingerprintGet({ slug }),
     ])
     if (!res?.ok || !res.project) throw new Error(res?.error || 'project not found')
     cloneState.current = slug
@@ -191,6 +194,7 @@ async function openClone(slug, keepScroll = false) {
     cloneState.repair = repair?.ok ? repair : null
     cloneState.gaps = gaps?.ok ? gaps : null
     cloneState.recipes = recipes?.ok ? recipes : null
+    cloneState.fingerprint = fingerprint?.ok ? fingerprint : null
     renderCloneList()
     renderCloneDetail(keepScroll)
   } catch (e) {
@@ -1553,6 +1557,82 @@ function wireRecipesTool() {
   }
 }
 
+/* ------------------------------------------------ fingerprint / drift detector */
+
+function renderFingerprintTool() {
+  const box = $('#cloneFingerprint')
+  if (!box) return
+  if (!cloneState.detail) {
+    box.innerHTML = emptyProjectNote('behavior fingerprinting')
+    return
+  }
+  const data = cloneState.fingerprint || {}
+  const fp = data.fingerprint || null
+  const drift = data.drift || null
+  const cases = drift?.cases || fp?.cases || []
+  const tail = (drift?.target
+    ? `<div class="clone-mini-note">Target: ${escapeHtml(drift.target.status)} · ${escapeHtml(drift.target.sha256?.slice(0, 12) || 'no hash')}</div>`
+    : '') + (fp
+      ? `<div class="clone-mini-note">Fingerprint source: ${escapeHtml(fp.honesty || '')}</div>`
+      : '')
+  box.innerHTML = `
+    <div class="clone-empty-note">A fingerprint digests behaviour that was actually measured — exit codes, output,
+    steps and file effects. Drift detection re-runs the original target with the same input and reports each changed
+    dimension as match, changed, error or unavailable. It never repairs anything silently.</div>
+    <div class="clone-actions-row">
+      <button class="btn btn-tiny" id="fpBuild" ${cloneState.fingerprintBusy ? 'disabled' : ''}>
+        ${cloneState.fingerprintBusy ? 'Working...' : 'Build fingerprint'}
+      </button>
+      <button class="btn btn-tiny" id="fpDrift" ${cloneState.fingerprintBusy ? 'disabled' : ''}>
+        Check drift
+      </button>
+      <button class="btn btn-tiny" id="fpCopy">Copy JSON</button>
+    </div>
+    <div class="clone-inv-grid">
+      <div><strong>Fingerprint</strong><span>${fp ? escapeHtml(fp.digest?.slice(0, 12) || '—') : '—'}</span></div>
+      <div><strong>Cases</strong><span>${fp?.summary?.cases ?? 0}</span></div>
+      <div><strong>Steps</strong><span>${fp?.summary?.steps ?? 0}</span></div>
+      <div><strong>Drift</strong><span>${drift ? escapeHtml(drift.status) : 'unchecked'}</span></div>
+      <div><strong>Changed</strong><span>${drift?.summary?.changed ?? 0}</span></div>
+      <div><strong>Errors</strong><span>${drift?.summary?.error ?? 0}</span></div>
+    </div>
+    <div class="clone-section-head"><span>Cases (${cases.length})</span></div>
+    <div class="clone-control-list">${cases.length ? cases.map((c) => `
+      <div class="clone-control">
+        <span class="clone-control-type">${escapeHtml(c.status || 'measured')}</span>
+        <span class="clone-control-name">${escapeHtml(c.title || c.case)}</span>
+        <span class="clone-control-parent">${escapeHtml(c.case)}${c.expectedDigest ? ' · ' + escapeHtml(c.expectedDigest.slice(0, 10)) : ''}${c.detail ? ' · ' + escapeHtml(c.detail) : ''}</span>
+      </div>`).join('') : '<div class="clone-empty-note">No fingerprint yet. Record Oracle cases, then build one.</div>'}</div>
+    ${tail}`
+  wireFingerprintTool()
+}
+
+function wireFingerprintTool() {
+  const busy = async (fn) => {
+    if (!cloneState.current || cloneState.fingerprintBusy) return
+    cloneState.fingerprintBusy = true
+    renderFingerprintTool()
+    try {
+      const r = await fn()
+      if (!r?.ok && r !== true) throw new Error(r?.error || 'fingerprint operation failed')
+      cloneState.fingerprintBusy = false
+      await openClone(cloneState.current, true)
+      renderFingerprintTool()
+      toast('Fingerprint: ' + (r?.status || r?.fingerprint?.digest?.slice(0, 12) || 'done'))
+    } catch (e) {
+      cloneState.fingerprintBusy = false
+      renderFingerprintTool()
+      toast('Fingerprint: ' + e.message)
+    }
+  }
+  $('#fpBuild')?.addEventListener('click', () => busy(() => api.fingerprintBuild({ slug: cloneState.current })))
+  $('#fpDrift')?.addEventListener('click', () => busy(() => api.fingerprintDrift({ slug: cloneState.current })))
+  $('#fpCopy')?.addEventListener('click', () => {
+    const d = cloneState.fingerprint || {}
+    copyText(JSON.stringify({ fingerprint: d.fingerprint, drift: d.drift }, null, 2))
+  })
+}
+
 function renderCloneDetail() {
   renderCloneProjectDetail()
   renderRecorderDetail()
@@ -1570,6 +1650,7 @@ function renderCloneDetail() {
   renderRepairTool()
   renderGapsTool()
   renderRecipesTool()
+  renderFingerprintTool()
   renderClonePickers()
 }
 
@@ -1850,7 +1931,7 @@ function wireCloneUi() {
     if (card) openClone(card.dataset.slug)
   })
   $$('.tab').forEach((tab) => {
-    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts', 'explore', 'formats', 'protocol', 'ir', 'oracle', 'repair', 'gaps', 'recipes'].includes(tab.dataset.tab)) {
+    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts', 'explore', 'formats', 'protocol', 'ir', 'oracle', 'repair', 'gaps', 'recipes', 'fingerprint'].includes(tab.dataset.tab)) {
       tab.addEventListener('click', () => loadClone())
     }
   })

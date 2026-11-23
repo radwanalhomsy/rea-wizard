@@ -18,6 +18,7 @@ import * as cloneOracle from './cloneOracle.mjs'
 import * as cloneRepair from './cloneRepair.mjs'
 import * as cloneGaps from './cloneGaps.mjs'
 import * as cloneRecipes from './cloneRecipes.mjs'
+import * as cloneFingerprint from './cloneFingerprint.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const HOME = process.env.USERPROFILE || ''
@@ -1191,6 +1192,24 @@ function registerIpc() {
 
   ipcMain.handle('recipes:import', cloneGuard(async ({ text, mode } = {}) =>
     cloneRecipes.importRecipes(settings.workspace, { text, mode }),
+  ))
+
+  /* ------------------------------------------- behavior fingerprint / drift */
+
+  ipcMain.handle('fingerprint:build', cloneGuard(async ({ slug } = {}) =>
+    cloneFingerprint.buildFingerprint(settings.workspace, slug),
+  ))
+
+  ipcMain.handle('fingerprint:drift', cloneGuard(async ({ slug } = {}) =>
+    cloneFingerprint.checkDrift(settings.workspace, slug),
+  ))
+
+  ipcMain.handle('fingerprint:status', cloneGuard(async ({ slug } = {}) =>
+    cloneFingerprint.fingerprintStatus(settings.workspace, slug),
+  ))
+
+  ipcMain.handle('fingerprint:get', cloneGuard(async ({ slug } = {}) =>
+    cloneFingerprint.fingerprintGet(settings.workspace, slug),
   ))
 }
 
