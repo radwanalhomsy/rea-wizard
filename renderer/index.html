@@ -130,6 +130,11 @@
                 <span class="task-body"><span class="task-title">Oracle / shadow</span>
                   <span class="task-sub">Run the real target and diff a clone against the same input</span></span>
               </button>
+              <button class="task-card" data-clone-tool="repair">
+                <span class="task-ico">RX</span>
+                <span class="task-body"><span class="task-title">Repair</span>
+                  <span class="task-sub">Turn measured parity gaps into verified transcript fixes</span></span>
+              </button>
             </div>
           </div>
 
@@ -197,6 +202,7 @@
           <button class="tab" data-tab="protocol" role="tab" title="Observed network endpoints">Protocol</button>
           <button class="tab" data-tab="ir" role="tab" title="Clone intermediate representation">Clone IR</button>
           <button class="tab" data-tab="oracle" role="tab" title="Oracle and shadow runtime">Oracle</button>
+          <button class="tab" data-tab="repair" role="tab" title="Repair measured parity gaps">Repair</button>
           <button class="tab" data-tab="evidence" role="tab">Evidence</button>
           <button class="tab" data-tab="providers" role="tab">Providers</button>
           <button class="tab" data-tab="guidance" role="tab">Guidance</button>
@@ -384,6 +390,14 @@
             <select class="clone-project-pick" data-pick="oracle" title="Clone project"></select>
           </div>
           <div id="cloneOracle" class="clone-detail"></div>
+        </div>
+
+        <div class="tab-panel" data-panel="repair">
+          <div class="panel-head">
+            <span>Repair</span>
+            <select class="clone-project-pick" data-pick="repair" title="Clone project"></select>
+          </div>
+          <div id="cloneRepair" class="clone-detail"></div>
         </div>
       </aside>
     </main>

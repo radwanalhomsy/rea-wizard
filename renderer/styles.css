@@ -967,9 +967,11 @@ code, pre, textarea, input, select { font-family: inherit; }
 .clone-inv-grid code { color: var(--text); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
 .clone-inv-error { font-size: 10px; color: var(--warn); border: 1px solid var(--warn); border-radius: 5px; padding: 4px 6px; margin-bottom: 6px; }
 
-/* Oracle / shadow */
+/* Oracle / shadow + repair */
 .clone-control-actions { display: inline-flex; gap: 3px; flex: 0 0 auto; }
 .clone-control-actions .btn { padding: 1px 5px; font-size: 9px; }
+.clone-actions-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 4px 0; }
+.clone-mini-note { color: var(--text-faint); font-size: 9px; font-family: var(--mono); }
 
 /* Clone IR */
 .clone-ir-status { font-size: 11px; font-weight: 600; border-radius: 5px; padding: 5px 7px; margin-bottom: 6px; }

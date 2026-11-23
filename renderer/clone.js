@@ -28,6 +28,8 @@ const cloneState = {
   irBusy: false,
   oracle: null,
   oracleBusy: false,
+  repair: null,
+  repairBusy: false,
   exploreBusy: false,
   formatsBusy: false,
   protocolBusy: false,
@@ -151,7 +153,7 @@ function renderCloneList() {
 
 async function openClone(slug, keepScroll = false) {
   try {
-    const [res, arts, score, facts, uiMap, persistence, inventory, formats, protocol, ir, irValidation, oracle] = await Promise.all([
+    const [res, arts, score, facts, uiMap, persistence, inventory, formats, protocol, ir, irValidation, oracle, repair] = await Promise.all([
       api.cloneGet({ slug }),
       api.cloneArtifacts({ slug }),
       api.fidelityGet({ slug }),
@@ -164,6 +166,7 @@ async function openClone(slug, keepScroll = false) {
       api.irGet({ slug }),
       api.irValidate({ slug }),
       api.oracleList({ slug }),
+      api.repairGet({ slug }),
     ])
     if (!res?.ok || !res.project) throw new Error(res?.error || 'project not found')
     cloneState.current = slug
@@ -179,6 +182,7 @@ async function openClone(slug, keepScroll = false) {
     cloneState.ir = ir?.ok ? ir.ir : null
     cloneState.irValidation = irValidation?.ok ? irValidation : null
     cloneState.oracle = oracle?.ok ? oracle : null
+    cloneState.repair = repair?.ok ? repair : null
     renderCloneList()
     renderCloneDetail(keepScroll)
   } catch (e) {
@@ -1233,7 +1237,7 @@ function wireOracleTool() {
       const r = await fn()
       if (!r?.ok && r !== true) throw new Error(r?.error || 'oracle operation failed')
       cloneState.oracleBusy = false
-      await openClone(true)
+      await openClone(cloneState.current, true)
       renderOracleTool()
       toast('Oracle: ' + (r?.parity?.status || r?.case?.id || 'done'))
     } catch (e) {
@@ -1274,6 +1278,86 @@ function wireOracleTool() {
   }
 }
 
+/* ------------------------------------------------------------------ repair */
+
+function renderRepairTool() {
+  const box = $('#cloneRepair')
+  if (!box) return
+  if (!cloneState.detail) {
+    box.innerHTML = emptyProjectNote('repair')
+    return
+  }
+  const data = cloneState.repair || {}
+  const plan = data.plan || null
+  const summary = plan?.summary || { total: 0, planned: 0, verified: 0, blocked: 0 }
+  const cases = plan?.cases || []
+  box.innerHTML = `
+    <div class="clone-empty-note">Repairs are transcript replays of oracle observations already proven deterministic by a
+    self-check. They reproduce exit code, output and captured file effects for one exact input — not the target's
+    general logic. Unproven cases become blocking unknowns instead of fake fixes.</div>
+    <div class="clone-actions-row">
+      <button class="btn btn-tiny" id="repairAnalyze" ${cloneState.repairBusy ? 'disabled' : ''}>
+        ${cloneState.repairBusy ? 'Working...' : 'Analyze plan'}
+      </button>
+      <button class="btn btn-tiny" id="repairApply" ${cloneState.repairBusy ? 'disabled' : ''}>
+        Apply repairs
+      </button>
+      <span class="clone-mini-note">${data.runner ? 'Runner: ' + escapeHtml(data.runner) : 'No runner written yet'}</span>
+    </div>
+    <div class="clone-section-head"><span>Plan (${summary.total})</span></div>
+    <div class="clone-inv-grid">
+      <div><strong>Planned</strong><span>${summary.planned}</span></div>
+      <div><strong>Verified</strong><span>${summary.verified}</span></div>
+      <div><strong>Blocked</strong><span>${summary.blocked}</span></div>
+    </div>
+    <div class="clone-control-list">${cases.length ? cases.map((c) => `
+      <div class="clone-control">
+        <span class="clone-control-type">${escapeHtml(c.status)}</span>
+        <span class="clone-control-name">${escapeHtml(c.title || c.case)}</span>
+        <span class="clone-control-parent">${c.case} · ${c.deterministic ? 'determinism proven' : 'unproven'} · ${(c.repairs || []).length} repairs${c.blockers?.length ? ' · ' + escapeHtml(c.blockers.join(' ')) : ''}</span>
+        <span class="clone-control-actions">
+          <button class="btn btn-tiny" data-repair-act="verify" data-case="${c.case}" title="Replay the repair and diff it against the oracle">Verify</button>
+          <button class="btn btn-tiny" data-repair-act="json" data-case="${c.case}" title="Copy this case's repair plan">JSON</button>
+        </span>
+      </div>`).join('') : '<div class="clone-empty-note">No repair plan yet. Record an Oracle case and run a Shadow first.</div>'}</div>`
+  wireRepairTool()
+}
+
+function wireRepairTool() {
+  const busy = async (fn) => {
+    if (!cloneState.current || cloneState.repairBusy) return
+    cloneState.repairBusy = true
+    renderRepairTool()
+    try {
+      const r = await fn()
+      if (!r?.ok && r !== true) throw new Error(r?.error || 'repair operation failed')
+      // A replay updates parity; refresh the plan so verified state is visible.
+      if (r?.parity) await api.repairAnalyze({ slug: cloneState.current })
+      cloneState.repairBusy = false
+      await openClone(cloneState.current, true)
+      renderRepairTool()
+      toast('Repair: ' + (r?.parity?.status || r?.status || (r?.summary?.planned ?? 'done')))
+    } catch (e) {
+      cloneState.repairBusy = false
+      renderRepairTool()
+      toast('Repair: ' + e.message)
+    }
+  }
+  $('#repairAnalyze')?.addEventListener('click', () => busy(() => api.repairAnalyze({ slug: cloneState.current })))
+  $('#repairApply')?.addEventListener('click', () => busy(() => api.repairApply({ slug: cloneState.current })))
+  for (const btn of document.querySelectorAll('#cloneRepair [data-repair-act]')) {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.case
+      if (btn.dataset.repairAct === 'verify') {
+        busy(() => api.oracleShadow({ slug: cloneState.current, caseId: id, repairCase: true }))
+      } else {
+        const c = (cloneState.repair?.plan?.cases || []).find((x) => x.case === id)
+        copyText(JSON.stringify(c || {}, null, 2))
+      }
+    })
+  }
+}
+
 function renderCloneDetail() {
   renderCloneProjectDetail()
   renderRecorderDetail()
@@ -1288,6 +1372,7 @@ function renderCloneDetail() {
   renderProtocolTool()
   renderIRTool()
   renderOracleTool()
+  renderRepairTool()
   renderClonePickers()
 }
 
@@ -1568,7 +1653,7 @@ function wireCloneUi() {
     if (card) openClone(card.dataset.slug)
   })
   $$('.tab').forEach((tab) => {
-    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts', 'explore', 'formats', 'protocol', 'ir', 'oracle'].includes(tab.dataset.tab)) {
+    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts', 'explore', 'formats', 'protocol', 'ir', 'oracle', 'repair'].includes(tab.dataset.tab)) {
       tab.addEventListener('click', () => loadClone())
     }
   })

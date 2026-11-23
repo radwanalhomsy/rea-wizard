@@ -15,6 +15,7 @@ import * as cloneFormats from './cloneFormats.mjs'
 import * as cloneProtocol from './cloneProtocol.mjs'
 import * as cloneIR from './cloneIR.mjs'
 import * as cloneOracle from './cloneOracle.mjs'
+import * as cloneRepair from './cloneRepair.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const HOME = process.env.USERPROFILE || ''
@@ -1119,6 +1120,24 @@ function registerIpc() {
   ipcMain.handle('oracle:get', cloneGuard(async ({ slug, caseId } = {}) => ({
     raw: cloneOracle.readOracleRaw(settings.workspace, slug, caseId),
   })))
+
+  /* --------------------------------------------------------------- repair */
+
+  ipcMain.handle('repair:analyze', cloneGuard(async ({ slug } = {}) =>
+    cloneRepair.analyzeRepairs(settings.workspace, slug),
+  ))
+
+  ipcMain.handle('repair:apply', cloneGuard(async ({ slug, caseIds } = {}) =>
+    cloneRepair.applyRepairs(settings.workspace, slug, { caseIds }),
+  ))
+
+  ipcMain.handle('repair:status', cloneGuard(async ({ slug } = {}) =>
+    cloneRepair.repairStatus(settings.workspace, slug),
+  ))
+
+  ipcMain.handle('repair:get', cloneGuard(async ({ slug } = {}) =>
+    cloneRepair.repairGet(settings.workspace, slug),
+  ))
 }
 
 /* -------------------------------------------------------------------- boot */

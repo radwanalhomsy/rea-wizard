@@ -49,6 +49,10 @@ contextBridge.exposeInMainWorld('rea', {
   oracleShadow: (payload) => invoke('oracle:shadow', payload),
   oracleList: (payload) => invoke('oracle:list', payload),
   oracleGet: (payload) => invoke('oracle:get', payload),
+  repairAnalyze: (payload) => invoke('repair:analyze', payload),
+  repairApply: (payload) => invoke('repair:apply', payload),
+  repairStatus: (payload) => invoke('repair:status', payload),
+  repairGet: (payload) => invoke('repair:get', payload),
 
   /* IDA (GUI companion + optional Home/Pro MCP registration) */
   idaStatus: () => invoke('ida:status'),

@@ -124,9 +124,40 @@ function fileFacts(diff, baseDir) {
     .map((a) => ({
       path: relativeFile(a.path, baseDir),
       operation: a.operation || 'write',
-      size: a.size ?? null,
+      size: a.size ?? a.after?.size ?? a.before?.size ?? null,
     }))
     .sort((a, b) => `${a.path}|${a.operation}`.localeCompare(`${b.path}|${b.operation}`))
+}
+
+/**
+ * Snapshot the bytes behind each changed file so a repair can reproduce the
+ * side effect without re-running the original binary. Large and unreadable
+ * files are skipped and reported by the parity dimensions instead of being
+ * silently invented.
+ */
+function captureFileContents(diff, baseDir, cap = 1024 * 1024) {
+  const root = path.resolve(baseDir)
+  const out = []
+  for (const a of diff?.artifacts || []) {
+    if (a.kind !== 'file') continue
+    const abs = String(a.path || '')
+    if (!path.isAbsolute(abs)) continue
+    const resolved = path.resolve(abs)
+    if (resolved !== root && !resolved.startsWith(root + path.sep)) continue
+    const rel = relativeFile(abs, baseDir)
+    const operation = String(a.operation || 'write')
+    if (operation === 'deleted') {
+      out.push({ path: rel, operation: 'deleted', size: null, encoding: null, content: null })
+      continue
+    }
+    try {
+      const stat = fs.statSync(resolved)
+      if (!stat.isFile() || stat.size > cap) continue
+      const buf = fs.readFileSync(resolved)
+      out.push({ path: rel, operation, size: buf.length, encoding: 'base64', content: buf.toString('base64') })
+    } catch { /* file vanished or is unreadable */ }
+  }
+  return out.sort((a, b) => `${a.path}|${a.operation}`.localeCompare(`${b.path}|${b.operation}`))
 }
 
 function stepsFromStdout(stdout) {
@@ -235,6 +266,7 @@ export async function recordOracle(workspace, slug, options = {}) {
   const after = takeSnapshot(workspace, slug, { label: 'oracle-after', roots: [sandbox], registryKeys: [] })
   const fileDiff = diffSnapshots(before.snapshot, after.snapshot)
   const observation = makeObservation(run, fileDiff, sandbox)
+  const fileContents = captureFileContents(fileDiff, sandbox)
 
   const rec = recordCase(workspace, slug, {
     tool: 'oracle_native_scenario',
@@ -245,7 +277,9 @@ export async function recordOracle(workspace, slug, options = {}) {
   })
 
   const rawFile = path.join(paths.cases, `${rec.id}.oracle.json`)
-  fs.writeFileSync(rawFile, JSON.stringify({ schema: 1, input: { ...input, sandbox }, run, fileDiff, observation }, null, 2) + '\n', 'utf8')
+  fs.writeFileSync(rawFile, JSON.stringify({
+    schema: 2, input: { ...input, sandbox }, run, fileDiff, observation, fileContents,
+  }, null, 2) + '\n', 'utf8')
 
   const evId = `ev_oracle_${crypto.createHash('sha256').update(JSON.stringify({ target: input.target, argv: input.argv, observation })).digest('hex').slice(0, 12)}`
   addEvidence(workspace, slug, {
@@ -284,15 +318,34 @@ export async function runShadow(workspace, slug, caseId, options = {}) {
   const input = oracleRaw.input || {}
 
   const selfCheck = Boolean(options.selfCheck)
-  const shadowExe = selfCheck ? input.target : (options.shadowPath || project.clone?.entry || null)
-  if (!shadowExe) throw new Error('No shadow executable. Provide shadowPath or use selfCheck.')
+  const repairCase = Boolean(options.repairCase)
+  const runner = path.join(paths.clone, 'repair-runner.mjs')
+  const fixture = path.join(paths.clone, 'fixtures', `${caseId}.json`)
+
+  let shadowExe
+  let shadowArgs = input.argv || []
+  let shadowEnv = input.env || {}
+  let shadowLabel
+  if (repairCase) {
+    if (!fs.existsSync(runner)) throw new Error('No repair runner. Apply repairs first.')
+    if (!fs.existsSync(fixture)) throw new Error(`No repair fixture for case ${caseId}`)
+    shadowExe = process.execPath
+    shadowArgs = [runner, caseId]
+    // Electron's execPath is electron.exe; this flag makes it execute as Node.
+    shadowEnv = { ...shadowEnv, ELECTRON_RUN_AS_NODE: '1' }
+    shadowLabel = `repair runner (${caseId})`
+  } else {
+    shadowExe = selfCheck ? input.target : (options.shadowPath || project.clone?.entry || null)
+    if (!shadowExe) throw new Error('No shadow executable. Provide shadowPath, a repairCase, or use selfCheck.')
+    shadowLabel = path.basename(shadowExe)
+  }
   if (!fs.existsSync(shadowExe)) throw new Error('Shadow executable does not exist')
 
-  const key = `shadow-${String(caseId).replace(/[^a-z0-9_-]/gi, '')}-${crypto.createHash('sha256').update(String(shadowExe) + String(Date.now())).digest('hex').slice(0, 8)}`
+  const key = `shadow-${String(caseId).replace(/[^a-z0-9_-]/gi, '')}-${crypto.createHash('sha256').update(String(shadowExe) + String(shadowLabel) + String(Date.now())).digest('hex').slice(0, 8)}`
   const sandbox = ensureSandbox(paths, key, input.files || [])
   const before = takeSnapshot(workspace, slug, { label: 'shadow-before', roots: [sandbox], registryKeys: [] })
   const run = await runProcess(shadowExe, {
-    argv: input.argv || [], stdin: input.stdin || '', cwd: sandbox, env: input.env || {},
+    argv: shadowArgs, stdin: input.stdin || '', cwd: sandbox, env: shadowEnv,
     timeoutMs: input.timeoutMs || DEFAULT_TIMEOUT_MS,
   })
   const after = takeSnapshot(workspace, slug, { label: 'shadow-after', roots: [sandbox], registryKeys: [] })
@@ -303,9 +356,11 @@ export async function runShadow(workspace, slug, caseId, options = {}) {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-')
   const shadowFile = path.join(paths.cases, `${caseId}.shadow-${stamp}.json`)
   fs.writeFileSync(shadowFile, JSON.stringify({
-    schema: 1,
+    schema: 2,
     shadowPath: shadowExe,
+    shadowLabel,
     selfCheck,
+    repairCase,
     run,
     fileDiff,
     observation,
@@ -314,20 +369,24 @@ export async function runShadow(workspace, slug, caseId, options = {}) {
 
   const parity = setCaseParity(workspace, slug, caseId, {
     status: !run.ok ? 'error' : diff.status,
-    note: selfCheck ? `Oracle self-check: ${diff.note}` : `Shadow (${path.basename(shadowExe)}): ${diff.note}`,
+    note: selfCheck ? `Oracle self-check: ${diff.note}`
+      : repairCase ? `Repair (${caseId}): ${diff.note}`
+        : `Shadow (${shadowLabel}): ${diff.note}`,
     dims: diff.dims,
     shadowPath: shadowExe,
+    shadowLabel,
     selfCheck,
+    repairCase,
     shadowFile: path.relative(paths.dir, shadowFile).replace(/\\/g, '/'),
     stderr: run.stderr.slice(0, 1000),
   })
 
-  const evId = `ev_shadow_${crypto.createHash('sha256').update(String(caseId) + shadowExe + stable(diff)).digest('hex').slice(0, 12)}`
+  const evId = `ev_shadow_${crypto.createHash('sha256').update(String(caseId) + shadowExe + shadowLabel + stable(diff)).digest('hex').slice(0, 12)}`
   addEvidence(workspace, slug, {
     id: evId,
-    source: selfCheck ? 'oracle-selfcheck' : 'shadow',
+    source: selfCheck ? 'oracle-selfcheck' : repairCase ? 'repair' : 'shadow',
     stage: 'parity',
-    note: `${selfCheck ? 'Self-check' : 'Shadow'} ${path.basename(shadowExe)}: ${diff.status}`,
+    note: `${selfCheck ? 'Self-check' : repairCase ? 'Repair' : 'Shadow'} ${shadowLabel}: ${diff.status}`,
     file: path.relative(paths.dir, shadowFile).replace(/\\/g, '/'),
   })
 
