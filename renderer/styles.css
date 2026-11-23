@@ -967,6 +967,13 @@ code, pre, textarea, input, select { font-family: inherit; }
 .clone-inv-grid code { color: var(--text); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
 .clone-inv-error { font-size: 10px; color: var(--warn); border: 1px solid var(--warn); border-radius: 5px; padding: 4px 6px; margin-bottom: 6px; }
 
+/* Clone IR */
+.clone-ir-status { font-size: 11px; font-weight: 600; border-radius: 5px; padding: 5px 7px; margin-bottom: 6px; }
+.clone-ir-status.ready { color: var(--ok); background: rgba(80, 200, 120, .1); border: 1px solid var(--ok); }
+.clone-ir-status.not-ready { color: var(--warn); background: rgba(220, 160, 60, .1); border: 1px solid var(--warn); }
+.clone-ir-error, .clone-ir-warn { font-size: 10px; line-height: 1.4; padding: 3px 6px; margin-bottom: 3px; border-left: 2px solid var(--err); color: var(--text-faint); }
+.clone-ir-warn { border-left-color: var(--warn); }
+
 
 
 

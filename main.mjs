@@ -13,6 +13,7 @@ import * as cloneCapture from './cloneCapture.mjs'
 import * as cloneExplore from './cloneExplore.mjs'
 import * as cloneFormats from './cloneFormats.mjs'
 import * as cloneProtocol from './cloneProtocol.mjs'
+import * as cloneIR from './cloneIR.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const HOME = process.env.USERPROFILE || ''
@@ -1085,6 +1086,20 @@ function registerIpc() {
   ipcMain.handle('protocol:get', cloneGuard(async ({ slug } = {}) => ({
     protocol: cloneProtocol.readProtocol(settings.workspace, slug),
   })))
+
+  /* ------------------------------------------------------------- clone IR */
+
+  ipcMain.handle('ir:compile', cloneGuard(async ({ slug } = {}) => ({
+    ir: cloneIR.compileIR(settings.workspace, slug),
+  })))
+
+  ipcMain.handle('ir:get', cloneGuard(async ({ slug } = {}) => ({
+    ir: cloneIR.readIR(settings.workspace, slug),
+  })))
+
+  ipcMain.handle('ir:validate', cloneGuard(async ({ slug } = {}) =>
+    cloneIR.validateIR(settings.workspace, slug),
+  ))
 }
 
 /* -------------------------------------------------------------------- boot */

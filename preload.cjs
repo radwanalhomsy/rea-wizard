@@ -42,6 +42,9 @@ contextBridge.exposeInMainWorld('rea', {
   protocolProxy: (payload) => invoke('protocol:proxy', payload),
   protocolHar: (payload) => invoke('protocol:har', payload),
   protocolGet: (payload) => invoke('protocol:get', payload),
+  irCompile: (payload) => invoke('ir:compile', payload),
+  irGet: (payload) => invoke('ir:get', payload),
+  irValidate: (payload) => invoke('ir:validate', payload),
 
   /* IDA (GUI companion + optional Home/Pro MCP registration) */
   idaStatus: () => invoke('ida:status'),

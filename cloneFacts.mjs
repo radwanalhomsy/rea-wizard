@@ -135,7 +135,16 @@ function collectCaseFacts(facts, workspace, slug, record) {
   }
 }
 
-function collectStructuredFacts(facts, paths) {
+/** Link a structured fact to evidence records whose note mentions the same object. */
+function evidenceFor(project, needle) {
+  if (!needle) return []
+  const key = String(needle).toLowerCase()
+  return (project.evidence || [])
+    .filter((e) => String(e.note || '').toLowerCase().includes(key))
+    .map((e) => e.id)
+}
+
+function collectStructuredFacts(facts, paths, project) {
   const inventory = readJson(path.join(paths.spec, 'inventory.json'))
   if (inventory?.file) {
     push(facts, {
@@ -177,6 +186,7 @@ function collectStructuredFacts(facts, paths) {
         claim: `ui:${control.screen || 'root'}:${name}`,
         value: { label: control.label || name, type: control.type || 'unknown', enabled: control.enabled ?? null },
         sources: ['ui-map'],
+        evidence: ui.evidence ? [ui.evidence] : [],
         note: 'Control enumerated from the accessibility tree.',
       })
     }
@@ -191,6 +201,7 @@ function collectStructuredFacts(facts, paths) {
         claim: `data:${name}`,
         value: { kind: artifact.kind || 'file', operation: artifact.operation || 'write' },
         sources: artifact.sources || ['artifact-diff'],
+        evidence: evidenceFor(project, name),
         note: 'Filesystem or registry side effect of an action.',
       })
     }
@@ -205,6 +216,7 @@ function collectStructuredFacts(facts, paths) {
         claim: `protocol:${name}`,
         value: { status: endpoint.status ?? null, schema: endpoint.schema ?? null },
         sources: ['protocol-capture'],
+        evidence: evidenceFor(project, endpoint.path || endpoint.url || '/'),
         note: 'Loopback endpoint observed during a journey.',
       })
     }
@@ -223,6 +235,7 @@ function collectStructuredFacts(facts, paths) {
       claim: `format:${fmt.name || file}`,
       value: { magic: fmt.magic || null, fields: (fmt.fields || []).length },
       sources: ['format-infer'],
+      evidence: evidenceFor(project, fmt.name || file),
       note: 'Inferred binary format skeleton.',
     })
   }
@@ -334,7 +347,7 @@ export function extractFacts(workspace, slug) {
       note: 'A cited REA evidence record.',
     })
   }
-  collectStructuredFacts(facts, paths)
+  collectStructuredFacts(facts, paths, project)
 
   const merged = consolidate(facts, project, workspace, slug)
   const file = path.join(paths.spec, 'facts.jsonl')

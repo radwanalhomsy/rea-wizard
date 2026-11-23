@@ -23,6 +23,9 @@ const cloneState = {
   inventory: null,
   formats: [],
   protocol: null,
+  ir: null,
+  irValidation: null,
+  irBusy: false,
   exploreBusy: false,
   formatsBusy: false,
   protocolBusy: false,
@@ -146,7 +149,7 @@ function renderCloneList() {
 
 async function openClone(slug, keepScroll = false) {
   try {
-    const [res, arts, score, facts, uiMap, persistence, inventory, formats, protocol] = await Promise.all([
+    const [res, arts, score, facts, uiMap, persistence, inventory, formats, protocol, ir, irValidation] = await Promise.all([
       api.cloneGet({ slug }),
       api.cloneArtifacts({ slug }),
       api.fidelityGet({ slug }),
@@ -156,6 +159,8 @@ async function openClone(slug, keepScroll = false) {
       api.exploreGet({ slug }),
       api.formatsList({ slug }),
       api.protocolGet({ slug }),
+      api.irGet({ slug }),
+      api.irValidate({ slug }),
     ])
     if (!res?.ok || !res.project) throw new Error(res?.error || 'project not found')
     cloneState.current = slug
@@ -168,6 +173,8 @@ async function openClone(slug, keepScroll = false) {
     cloneState.inventory = inventory?.ok ? inventory.inventory : null
     cloneState.formats = formats?.ok ? formats.formats || [] : []
     cloneState.protocol = protocol?.ok ? protocol.protocol : null
+    cloneState.ir = ir?.ok ? ir.ir : null
+    cloneState.irValidation = irValidation?.ok ? irValidation : null
     renderCloneList()
     renderCloneDetail(keepScroll)
   } catch (e) {
@@ -1099,6 +1106,74 @@ function wireProtocolTool() {
   })
 }
 
+/* ----------------------------------------------------------------- IR */
+
+function renderIRTool() {
+  const box = $('#cloneIR')
+  if (!box) return
+  if (!cloneState.detail) {
+    box.innerHTML = emptyProjectNote('Clone IR')
+    return
+  }
+  const ir = cloneState.ir
+  const v = cloneState.irValidation
+  box.innerHTML = `
+    <div class="clone-empty-note">A single reconstruction contract compiled from every observation. Each node keeps
+    its evidence and case citations, so generated code and tests never claim more than what was actually seen.</div>
+    <div class="clone-deliverable-actions">
+      <button class="btn btn-tiny" id="irCompile" ${cloneState.irBusy ? 'disabled' : ''}>
+        ${cloneState.irBusy ? 'Compiling...' : 'Compile IR'}
+      </button>
+      ${ir ? `<span style="font-size:10px;color:var(--text-faint)">${ir.summary.cited}/${ir.summary.nodes} cited nodes</span>` : ''}
+    </div>
+    ${ir ? `
+      <div class="clone-inv-grid">
+        <div><span>Target</span><code>${escapeHtml((ir.target.sha256 || ir.target.path || '—').slice(0, 14))}</code></div>
+        <div><span>Controls</span><code>${ir.summary.controls}</code></div>
+        <div><span>Journeys</span><code>${ir.summary.journeys}</code></div>
+        <div><span>Actions</span><code>${ir.summary.actions}</code></div>
+        <div><span>Artifacts</span><code>${ir.summary.artifacts}</code></div>
+        <div><span>Formats</span><code>${ir.summary.formats}</code></div>
+        <div><span>Endpoints</span><code>${ir.summary.endpoints}</code></div>
+        <div><span>Cited</span><code>${ir.summary.cited}/${ir.summary.nodes}</code></div>
+      </div>
+      <div class="clone-section-head"><span>Reconstruction readiness</span></div>
+      <div class="clone-ir-status ${v?.readyForScaffold ? 'ready' : 'not-ready'}">
+        ${v?.readyForScaffold ? 'Ready to scaffold' : 'Not ready to scaffold'}
+      </div>
+      ${(v?.errors || []).map((e) => `<div class="clone-ir-error">${escapeHtml(e)}</div>`).join('')}
+      ${(v?.warnings || []).map((w) => `<div class="clone-ir-warn">${escapeHtml(w)}</div>`).join('')}
+      <div class="clone-section-head"><span>Open unknowns</span></div>
+      <div class="clone-control-list">${ir.unknowns.length
+        ? ir.unknowns.map((u) => `<div class="clone-control"><span class="clone-control-type">${u.blocking ? 'BLOCK' : 'open'}</span>
+          <span class="clone-control-name">${escapeHtml(u.question)}</span><span class="clone-control-parent">${escapeHtml(u.stage || '')}</span></div>`).join('')
+        : '<div class="clone-empty-note">No open unknowns.</div>'}</div>`
+      : '<div class="clone-empty-note">No IR compiled yet. Click <b>Compile IR</b>.</div>'}`
+  wireIRTool()
+}
+
+function wireIRTool() {
+  $('#irCompile')?.addEventListener('click', async () => {
+    if (!cloneState.current || cloneState.irBusy) return
+    cloneState.irBusy = true
+    renderIRTool()
+    try {
+      const r = await api.irCompile({ slug: cloneState.current })
+      if (!r?.ok) throw new Error(r?.error || 'IR compile failed')
+      cloneState.ir = r.ir
+      cloneState.irValidation = await api.irValidate({ slug: cloneState.current })
+      cloneState.irBusy = false
+      await loadClone(true)
+      renderIRTool()
+      toast(`IR: ${r.ir.summary.nodes} nodes compiled`)
+    } catch (e) {
+      cloneState.irBusy = false
+      renderIRTool()
+      toast('Clone IR: ' + e.message)
+    }
+  })
+}
+
 function renderCloneDetail() {
   renderCloneProjectDetail()
   renderRecorderDetail()
@@ -1111,6 +1186,7 @@ function renderCloneDetail() {
   renderExploreTool()
   renderFormatsTool()
   renderProtocolTool()
+  renderIRTool()
   renderClonePickers()
 }
 
@@ -1391,7 +1467,7 @@ function wireCloneUi() {
     if (card) openClone(card.dataset.slug)
   })
   $$('.tab').forEach((tab) => {
-    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts', 'explore', 'formats', 'protocol'].includes(tab.dataset.tab)) {
+    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts', 'explore', 'formats', 'protocol', 'ir'].includes(tab.dataset.tab)) {
       tab.addEventListener('click', () => loadClone())
     }
   })

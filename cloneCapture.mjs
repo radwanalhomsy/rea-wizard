@@ -369,6 +369,7 @@ export async function captureUiMap(workspace, slug, options = {}) {
       bounds: { x: c.x || 0, y: c.y || 0, width: c.width || 0, height: c.height || 0 },
       parent: c.parent || '',
     }))
+    const evId = `ev_ui_${crypto.createHash('sha256').update(JSON.stringify(controls)).digest('hex').slice(0, 12)}`
     const map = {
       schema: 1,
       at: new Date().toISOString(),
@@ -376,10 +377,18 @@ export async function captureUiMap(workspace, slug, options = {}) {
       processId: data.processId || usePid || null,
       source: child ? 'launched-target' : usePid ? 'pid' : 'window-title',
       controls,
+      evidence: evId,
     }
     fs.mkdirSync(paths.spec, { recursive: true })
     fs.writeFileSync(path.join(paths.spec, 'ui-map.json'), JSON.stringify(map, null, 2) + '\n', 'utf8')
-    return { title: map.title, processId: map.processId, controls: controls.length, source: map.source, file: 'spec/ui-map.json' }
+    addEvidence(workspace, slug, {
+      id: evId,
+      source: 'uimap',
+      stage: 'behavior',
+      note: `UI map: ${controls.length} controls from ${map.title || map.source || 'window'}`,
+      file: 'spec/ui-map.json',
+    })
+    return { title: map.title, processId: map.processId, controls: controls.length, source: map.source, evidence: evId, file: 'spec/ui-map.json' }
   } finally {
     try { fs.rmSync(script, { force: true }) } catch { }
     try { fs.rmSync(output, { force: true }) } catch { }
