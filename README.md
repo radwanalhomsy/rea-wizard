@@ -471,9 +471,11 @@ rea-wizard/
 
 Prebuilt Windows binaries are on the
 [Releases page](https://github.com/radwanalhomsy/rea-wizard/releases).
-The current release is **1.2.4**, with both an installer
-(`REA-Studio-1.2.4-x64.msi`) and a portable build
-(`REA-Studio-1.2.4-x64.exe`). Version 1.2.4 adds one-click **Auto clone**, which
+The current release is **1.2.5**, with both an installer
+(`REA-Studio-1.2.5-x64.msi`) and a portable build
+(`REA-Studio-1.2.5-x64.exe`). Version 1.2.5 fixes live-window UI capture for
+complex accessibility trees such as IDA by using a bounded UI Automation walker
+with a raw-view fallback. Version 1.2.4 added one-click **Auto clone**, which
 runs the measured reconstruction toolkit (Explore, UI map, Artifacts, Protocol,
 Formats, Oracle/shadow, Repair, Fingerprint/drift, Clone IR, Score, Spec,
 Scaffold and Gaps) in dependency order with per-step honesty.

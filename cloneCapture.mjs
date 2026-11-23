@@ -289,27 +289,74 @@ if (-not $win -and $Title) {
   }
 }
 if (-not $win) { throw 'No matching window was found' }
-$walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
-$nodes = $win.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition)
-$controls = @()
-foreach ($e in $nodes) {
-  if ($controls.Count -ge $Max) { break }
-  $r = $e.Current.BoundingRectangle
-  $p = $walker.GetParent($e)
-  $controls += [pscustomobject]@{
-    name = $e.Current.Name
-    automationId = $e.Current.AutomationId
-    className = $e.Current.ClassName
-    controlType = $e.Current.ControlType.ProgrammaticName
-    enabled = [bool]$e.Current.IsEnabled
-    offscreen = [bool]$e.Current.IsOffscreen
-    x = [int]$r.X
-    y = [int]$r.Y
-    width = [int]$r.Width
-    height = [int]$r.Height
-    parent = if ($p) { $p.Current.Name } else { '' }
+$controls = New-Object 'System.Collections.Generic.List[object]'
+$failures = @()
+foreach ($walkerName in @('ControlViewWalker', 'RawViewWalker')) {
+  try {
+    $walker = if ($walkerName -eq 'ControlViewWalker') {
+      [System.Windows.Automation.TreeWalker]::ControlViewWalker
+    } else {
+      [System.Windows.Automation.TreeWalker]::RawViewWalker
+    }
+    $controls = New-Object 'System.Collections.Generic.List[object]'
+    $visited = New-Object 'System.Collections.Generic.HashSet[string]'
+    $stack = New-Object 'System.Collections.Generic.Stack[object]'
+    $enqueue = {
+      param($element)
+      if (-not $element -or $controls.Count -ge $Max) { return }
+      try {
+        $child = $walker.GetFirstChild($element)
+        $guard = 0
+        while ($child -and $guard -lt 10000 -and $controls.Count -lt $Max) {
+          $guard++
+          $stack.Push($child)
+          try { $child = $walker.GetNextSibling($child) } catch { break }
+        }
+      } catch { }
+    }
+    & $enqueue $win
+    while ($stack.Count -gt 0 -and $controls.Count -lt $Max) {
+      $e = $stack.Pop()
+      try {
+        $c = $e.Current
+        $r = $c.BoundingRectangle
+        $key = '{0}|{1}|{2}|{3}|{4}|{5}|{6}|{7}|{8}' -f @(
+          $c.NativeWindowHandle, $c.AutomationId, $c.ClassName, $c.Name,
+          $c.ControlType.ProgrammaticName, [int]$r.X, [int]$r.Y,
+          [int]$r.Width, [int]$r.Height
+        )
+        if ($visited.Add($key)) {
+          $parent = $null
+          try { $parent = $walker.GetParent($e) } catch { }
+          $parentName = ''
+          if ($parent) {
+            try { $parentName = [string]$parent.Current.Name } catch { }
+          }
+          $controls.Add([pscustomobject]@{
+            name = [string]$c.Name
+            automationId = [string]$c.AutomationId
+            className = [string]$c.ClassName
+            controlType = [string]$c.ControlType.ProgrammaticName
+            enabled = [bool]$c.IsEnabled
+            offscreen = [bool]$c.IsOffscreen
+            x = [int]$r.X
+            y = [int]$r.Y
+            width = [int]$r.Width
+            height = [int]$r.Height
+            parent = $parentName
+          })
+          & $enqueue $e
+        }
+      } catch {
+        $failures += ($walkerName + ': ' + $_.Exception.Message)
+      }
+    }
+    if ($controls.Count -gt 0) { break }
+  } catch {
+    $failures += ($walkerName + ': ' + $_.Exception.Message)
   }
 }
+if ($controls.Count -eq 0 -and $failures.Count -gt 0) { throw ($failures -join '; ') }
 $result = [pscustomobject]@{
   title = $win.Current.Name
   processId = $win.Current.ProcessId
