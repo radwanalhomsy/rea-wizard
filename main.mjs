@@ -17,6 +17,7 @@ import * as cloneIR from './cloneIR.mjs'
 import * as cloneOracle from './cloneOracle.mjs'
 import * as cloneRepair from './cloneRepair.mjs'
 import * as cloneGaps from './cloneGaps.mjs'
+import * as cloneRecipes from './cloneRecipes.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const HOME = process.env.USERPROFILE || ''
@@ -1156,6 +1157,40 @@ function registerIpc() {
 
   ipcMain.handle('gaps:get', cloneGuard(async ({ slug } = {}) =>
     cloneGaps.gapGet(settings.workspace, slug),
+  ))
+
+  /* ---------------------------------------------------------- recipe store */
+
+  ipcMain.handle('recipes:list', cloneGuard(async () =>
+    cloneRecipes.listRecipes(settings.workspace),
+  ))
+
+  ipcMain.handle('recipes:save', cloneGuard(async ({ slug, ...opts } = {}) =>
+    cloneRecipes.saveRecipe(settings.workspace, slug, opts),
+  ))
+
+  ipcMain.handle('recipes:get', cloneGuard(async ({ slug } = {}) =>
+    cloneRecipes.recipeGet(settings.workspace, slug),
+  ))
+
+  ipcMain.handle('recipes:one', cloneGuard(async ({ id } = {}) =>
+    cloneRecipes.getRecipe(settings.workspace, id),
+  ))
+
+  ipcMain.handle('recipes:apply', cloneGuard(async ({ slug, id } = {}) =>
+    cloneRecipes.applyRecipe(settings.workspace, slug, id),
+  ))
+
+  ipcMain.handle('recipes:delete', cloneGuard(async ({ id } = {}) =>
+    cloneRecipes.deleteRecipe(settings.workspace, id),
+  ))
+
+  ipcMain.handle('recipes:export', cloneGuard(async () =>
+    cloneRecipes.exportRecipes(settings.workspace),
+  ))
+
+  ipcMain.handle('recipes:import', cloneGuard(async ({ text, mode } = {}) =>
+    cloneRecipes.importRecipes(settings.workspace, { text, mode }),
   ))
 }
 

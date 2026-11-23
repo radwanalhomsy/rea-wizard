@@ -32,6 +32,8 @@ const cloneState = {
   repairBusy: false,
   gaps: null,
   gapsBusy: false,
+  recipes: null,
+  recipesBusy: false,
   exploreBusy: false,
   formatsBusy: false,
   protocolBusy: false,
@@ -155,7 +157,7 @@ function renderCloneList() {
 
 async function openClone(slug, keepScroll = false) {
   try {
-    const [res, arts, score, facts, uiMap, persistence, inventory, formats, protocol, ir, irValidation, oracle, repair, gaps] = await Promise.all([
+    const [res, arts, score, facts, uiMap, persistence, inventory, formats, protocol, ir, irValidation, oracle, repair, gaps, recipes] = await Promise.all([
       api.cloneGet({ slug }),
       api.cloneArtifacts({ slug }),
       api.fidelityGet({ slug }),
@@ -170,6 +172,7 @@ async function openClone(slug, keepScroll = false) {
       api.oracleList({ slug }),
       api.repairGet({ slug }),
       api.gapsGet({ slug }),
+      api.recipesGet({ slug }),
     ])
     if (!res?.ok || !res.project) throw new Error(res?.error || 'project not found')
     cloneState.current = slug
@@ -187,6 +190,7 @@ async function openClone(slug, keepScroll = false) {
     cloneState.oracle = oracle?.ok ? oracle : null
     cloneState.repair = repair?.ok ? repair : null
     cloneState.gaps = gaps?.ok ? gaps : null
+    cloneState.recipes = recipes?.ok ? recipes : null
     renderCloneList()
     renderCloneDetail(keepScroll)
   } catch (e) {
@@ -1443,6 +1447,112 @@ function wireGapsTool() {
   }
 }
 
+/* ------------------------------------------------------------- recipe store */
+
+function renderRecipesTool() {
+  const box = $('#cloneRecipes')
+  if (!box) return
+  if (!cloneState.detail) {
+    box.innerHTML = emptyProjectNote('recipes')
+    return
+  }
+  const data = cloneState.recipes || {}
+  const recipes = data.recipes || []
+  const plan = data.plan || null
+  const status = data.status || {}
+  box.innerHTML = `
+    <div class="clone-empty-note">A recipe records which tools, cases and evidence closed a measured gap. Applying one
+    writes a pending plan on the target project — it never executes code and never claims the clone is done.</div>
+    <div class="clone-capture-form">
+      <label>Recipe name<input id="recipeName" placeholder="e.g. Deterministic console transcript replay" /></label>
+      <label>Description<input id="recipeDesc" placeholder="What this procedure achieves" /></label>
+      <label>Tags<input id="recipeTags" placeholder="console, transcript, parity" /></label>
+      <button class="btn btn-tiny" id="recipeSave" ${cloneState.recipesBusy ? 'disabled' : ''}>
+        ${cloneState.recipesBusy ? 'Working...' : 'Save from this project'}
+      </button>
+    </div>
+    <div class="clone-actions-row">
+      <button class="btn btn-tiny" id="recipeExport">Export JSON</button>
+      <button class="btn btn-tiny" id="recipeImport">Import JSON</button>
+      <span class="clone-mini-note">${status.applied ? `Plan ${escapeHtml(status.recipe || '')} · ${status.pending}/${status.steps} pending` : 'No recipe applied to this project'}</span>
+    </div>
+    <textarea id="recipeImportText" class="clone-import-text" rows="3" placeholder="Paste exported recipe JSON here, then click Import JSON"></textarea>
+    <div class="clone-section-head"><span>Saved recipes (${recipes.length})</span></div>
+    <div class="clone-control-list">${recipes.length ? recipes.map((r) => `
+      <div class="clone-control">
+        <span class="clone-control-type">${escapeHtml(r.tier || 'no tier')}</span>
+        <span class="clone-control-name">${escapeHtml(r.name)}</span>
+        <span class="clone-control-parent">${escapeHtml((r.tools || []).join(' → ') || 'no tools')} · ${r.cases || 0} cases · ${r.evidence || 0} evidence</span>
+        <span class="clone-control-actions">
+          <button class="btn btn-tiny" data-recipe-act="apply" data-id="${escapeHtml(r.id)}" title="Apply this recipe as a pending plan">Apply</button>
+          <button class="btn btn-tiny" data-recipe-act="copy" data-id="${escapeHtml(r.id)}" title="Copy recipe JSON">JSON</button>
+          <button class="btn btn-tiny" data-recipe-act="delete" data-id="${escapeHtml(r.id)}" title="Delete this recipe">&#10005;</button>
+        </span>
+      </div>`).join('') : '<div class="clone-empty-note">No recipes saved yet.</div>'}</div>
+    ${plan ? `<div class="clone-section-head"><span>Applied plan (${(plan.steps || []).length} steps)</span></div>
+    <div class="clone-control-list">${(plan.steps || []).map((s) => `
+      <div class="clone-control">
+        <span class="clone-control-type">${escapeHtml(s.status)}</span>
+        <span class="clone-control-name">${s.index}. ${escapeHtml(s.tool)}</span>
+        <span class="clone-control-parent">${escapeHtml(s.action)} · ${escapeHtml(s.verify)}</span>
+      </div>`).join('')}</div>` : ''}`
+  wireRecipesTool()
+}
+
+function wireRecipesTool() {
+  const busy = async (fn) => {
+    if (!cloneState.current || cloneState.recipesBusy) return
+    const name = $('#recipeName')?.value?.trim()
+    const description = $('#recipeDesc')?.value?.trim()
+    const tags = $('#recipeTags')?.value?.trim()
+    cloneState.recipesBusy = true
+    renderRecipesTool()
+    try {
+      const r = await fn({ name, description, tags })
+      if (!r?.ok && r !== true) throw new Error(r?.error || 'recipe operation failed')
+      cloneState.recipesBusy = false
+      await openClone(cloneState.current, true)
+      renderRecipesTool()
+      toast('Recipes: ' + (r?.recipe?.name || r?.status?.recipe || 'done'))
+    } catch (e) {
+      cloneState.recipesBusy = false
+      renderRecipesTool()
+      toast('Recipes: ' + e.message)
+    }
+  }
+  $('#recipeSave')?.addEventListener('click', () => busy((fields) => api.recipesSave({
+    slug: cloneState.current,
+    name: fields.name || undefined,
+    description: fields.description,
+    tags: fields.tags ? fields.tags.split(/[,\s]+/).filter(Boolean) : [],
+  })))
+  $('#recipeExport')?.addEventListener('click', async () => {
+    const r = await api.recipesExport()
+    copyText(r?.text || '')
+  })
+  $('#recipeImport')?.addEventListener('click', async () => {
+    const text = $('#recipeImportText')?.value || ''
+    if (!text.trim()) { toast('Recipes: paste JSON first'); return }
+    const r = await api.recipesImport({ text })
+    toast(r?.ok ? `Recipes: imported ${r.imported}` : 'Recipes: ' + (r?.error || 'import failed'))
+    if (r?.ok) await openClone(cloneState.current, true)
+  })
+  for (const btn of document.querySelectorAll('#cloneRecipes [data-recipe-act]')) {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id
+      const act = btn.dataset.recipeAct
+      if (act === 'apply') {
+        busy(() => api.recipesApply({ slug: cloneState.current, id }))
+      } else if (act === 'delete') {
+        busy(() => api.recipesDelete({ id }))
+      } else {
+        const r = cloneState.recipes?.recipes?.find((x) => x.id === id)
+        copyText(JSON.stringify(r || {}, null, 2))
+      }
+    })
+  }
+}
+
 function renderCloneDetail() {
   renderCloneProjectDetail()
   renderRecorderDetail()
@@ -1459,6 +1569,7 @@ function renderCloneDetail() {
   renderOracleTool()
   renderRepairTool()
   renderGapsTool()
+  renderRecipesTool()
   renderClonePickers()
 }
 
@@ -1739,7 +1850,7 @@ function wireCloneUi() {
     if (card) openClone(card.dataset.slug)
   })
   $$('.tab').forEach((tab) => {
-    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts', 'explore', 'formats', 'protocol', 'ir', 'oracle', 'repair', 'gaps'].includes(tab.dataset.tab)) {
+    if (['clone', 'recorder', 'parity', 'spec', 'score', 'facts', 'uimap', 'artifacts', 'explore', 'formats', 'protocol', 'ir', 'oracle', 'repair', 'gaps', 'recipes'].includes(tab.dataset.tab)) {
       tab.addEventListener('click', () => loadClone())
     }
   })

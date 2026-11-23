@@ -57,6 +57,14 @@ contextBridge.exposeInMainWorld('rea', {
   gapsNext: (payload) => invoke('gaps:next', payload),
   gapsStatus: (payload) => invoke('gaps:status', payload),
   gapsGet: (payload) => invoke('gaps:get', payload),
+  recipesList: (payload) => invoke('recipes:list', payload),
+  recipesSave: (payload) => invoke('recipes:save', payload),
+  recipesGet: (payload) => invoke('recipes:get', payload),
+  recipesGetOne: (payload) => invoke('recipes:one', payload),
+  recipesApply: (payload) => invoke('recipes:apply', payload),
+  recipesDelete: (payload) => invoke('recipes:delete', payload),
+  recipesExport: (payload) => invoke('recipes:export', payload),
+  recipesImport: (payload) => invoke('recipes:import', payload),
 
   /* IDA (GUI companion + optional Home/Pro MCP registration) */
   idaStatus: () => invoke('ida:status'),

@@ -972,6 +972,7 @@ code, pre, textarea, input, select { font-family: inherit; }
 .clone-control-actions .btn { padding: 1px 5px; font-size: 9px; }
 .clone-actions-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 4px 0; }
 .clone-mini-note { color: var(--text-faint); font-size: 9px; font-family: var(--mono); }
+.clone-import-text { width: 100%; box-sizing: border-box; margin: 3px 0 5px; padding: 5px 6px; background: #0b0e14; color: var(--text); border: 1px solid var(--border); border-radius: 4px; font-family: var(--mono); font-size: 9px; resize: vertical; }
 
 /* Clone IR */
 .clone-ir-status { font-size: 11px; font-weight: 600; border-radius: 5px; padding: 5px 7px; margin-bottom: 6px; }
