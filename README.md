@@ -471,9 +471,13 @@ rea-wizard/
 
 Prebuilt Windows binaries are on the
 [Releases page](https://github.com/radwanalhomsy/rea-wizard/releases).
-The current release is **1.2.9**, with both an installer
-(`REA-Studio-1.2.9-x64.msi`) and a portable build
-(`REA-Studio-1.2.9-x64.exe`). Version 1.2.9 captures real UIA state snapshots
+The current release is **1.3.0**, with both an installer
+(`REA-Studio-1.3.0-x64.msi`) and a portable build
+(`REA-Studio-1.3.0-x64.exe`). Version 1.3.0 shows the app version in the window
+title and header, adds native right-click **Cut / Copy / Paste / Select all**
+in the prompt and agent transcript, and renders full agent questions with
+answer options, custom answers and reject controls instead of a generic
+“Question — running” card. Version 1.2.9 captures real UIA state snapshots
 for every interactive control and scores the **state / action model** dimension
 from action models, state snapshots and before/after transitions instead of a
 handful of journey action facts. Version 1.2.8 adds an evidence-driven **per-element

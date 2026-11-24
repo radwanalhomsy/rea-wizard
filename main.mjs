@@ -1,10 +1,11 @@
-import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, shell, Menu } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import net from 'node:net'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { createOpencodeClient } from '@opencode-ai/sdk/client'
+import { createOpencodeClient as createOpencodeClientV2 } from '@opencode-ai/sdk/v2/client'
 import * as cloneStore from './cloneStore.mjs'
 import * as cloneSpec from './cloneSpec.mjs'
 import * as cloneFacts from './cloneFacts.mjs'
@@ -33,6 +34,7 @@ const DEFAULT_PORT = 4096
 
 let win = null
 let client = null
+let questionClient = null
 let settings = { workspace: 'D:\\REA', model: null, agent: null, recent: [], port: DEFAULT_PORT }
 let server = { phase: 'idle', url: null, reused: false, error: null, version: null, pid: null, port: null }
 let serverProc = null
@@ -313,6 +315,12 @@ function makeClient() {
     directory: settings.workspace,
     throwOnError: false,
   })
+  // The v1 client is used for the established session/permission routes.
+  // The v2 client is needed for the question reply/reject routes.
+  questionClient = createOpencodeClientV2({
+    baseUrl: server.url,
+    directory: settings.workspace,
+  })
 }
 
 async function subscribeEvents() {
@@ -519,6 +527,7 @@ function buildParts(text, files) {
 
 function registerIpc() {
   ipcMain.handle('app:state', () => ({
+    appVersion: app.getVersion(),
     server: { ...server },
     workspace: settings.workspace,
     model: settings.model,
@@ -768,6 +777,44 @@ function registerIpc() {
     })
     if (res?.error) return { ok: false, error: JSON.stringify(res.error) }
     return { ok: true }
+  })
+
+  ipcMain.handle('oc:questionList', async () => {
+    if (!questionClient) return { ok: false, error: 'No client' }
+    try {
+      const res = await questionClient.question.list()
+      if (res?.error) return { ok: false, error: JSON.stringify(res.error) }
+      return { ok: true, questions: Array.isArray(res.data) ? res.data : [] }
+    } catch (e) {
+      return { ok: false, error: String(e?.message || e) }
+    }
+  })
+
+  ipcMain.handle('oc:questionReply', async (_e, { requestID, answers } = {}) => {
+    if (!questionClient) return { ok: false, error: 'No client' }
+    if (!requestID) return { ok: false, error: 'Missing request ID' }
+    if (!Array.isArray(answers) || !answers.every((a) => Array.isArray(a))) {
+      return { ok: false, error: 'Answers must be an array of answer arrays' }
+    }
+    try {
+      const res = await questionClient.question.reply({ requestID, answers })
+      if (res?.error) return { ok: false, error: JSON.stringify(res.error) }
+      return { ok: true }
+    } catch (e) {
+      return { ok: false, error: String(e?.message || e) }
+    }
+  })
+
+  ipcMain.handle('oc:questionReject', async (_e, { requestID } = {}) => {
+    if (!questionClient) return { ok: false, error: 'No client' }
+    if (!requestID) return { ok: false, error: 'Missing request ID' }
+    try {
+      const res = await questionClient.question.reject({ requestID })
+      if (res?.error) return { ok: false, error: JSON.stringify(res.error) }
+      return { ok: true }
+    } catch (e) {
+      return { ok: false, error: String(e?.message || e) }
+    }
   })
 
   ipcMain.handle('transcript:save', async (_e, { text, name } = {}) => {
@@ -1258,13 +1305,14 @@ function registerIpc() {
 /* -------------------------------------------------------------------- boot */
 
 function createWindow() {
+  const appTitle = `REA Studio ${app.getVersion()}`
   win = new BrowserWindow({
     width: 1440,
     height: 920,
     minWidth: 1080,
     minHeight: 680,
     backgroundColor: '#0d1017',
-    title: 'REA Studio',
+    title: appTitle,
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -1274,6 +1322,36 @@ function createWindow() {
     },
   })
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'))
+
+  // Native editing menu for the prompt textareas and text selected in the agent
+  // transcript. Electron does not show one by default for a frameless editor UI.
+  win.webContents.on('context-menu', (_event, params) => {
+    const flags = params.editFlags || {}
+    const editable = !!params.isEditable || !!flags.canCut || !!flags.canPaste
+    const items = []
+
+    if (editable) {
+      items.push(
+        { label: 'Cut', role: 'cut', enabled: !!flags.canCut },
+        { label: 'Copy', role: 'copy', enabled: !!flags.canCopy },
+        { label: 'Paste', role: 'paste', enabled: !!flags.canPaste },
+        { type: 'separator' },
+      )
+    } else if (params.selectionText) {
+      items.push({ label: 'Copy', role: 'copy' })
+    }
+
+    if (editable || flags.canSelectAll) {
+      if (items.length && items[items.length - 1].type !== 'separator') {
+        items.push({ type: 'separator' })
+      }
+      items.push({ label: 'Select all', role: 'selectAll', enabled: !!flags.canSelectAll })
+    }
+
+    if (!items.length) return
+    Menu.buildFromTemplate(items).popup({ window: win })
+  })
+
   win.on('closed', () => { win = null })
 }
 

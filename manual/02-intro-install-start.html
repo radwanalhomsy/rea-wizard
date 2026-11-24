@@ -170,9 +170,9 @@
   <table>
     <thead><tr><th style="width:20%">Region</th><th>What it contains</th></tr></thead>
     <tbody>
-      <tr><td>Header</td><td>Brand, workspace chip, model and agent selectors, server status, and the buttons <strong>REA</strong>, <strong>Sessions</strong>, <strong>Health</strong>, <strong>Save</strong>, <strong>New session</strong>.</td></tr>
+      <tr><td>Header</td><td>Brand and app version badge, workspace chip, model and agent selectors, server status, and the buttons <strong>REA</strong>, <strong>Sessions</strong>, <strong>Health</strong>, <strong>Save</strong>, <strong>New session</strong>.</td></tr>
       <tr><td>Left rail</td><td>Task cards: six REA guided workflows, ten quick tasks and fourteen domain cards. A reload button refreshes the workflows from REA.</td></tr>
-      <tr><td>Center</td><td>The transcript (messages, tool cards, permission prompts) and the composer at the bottom.</td></tr>
+      <tr><td>Center</td><td>The transcript (messages, tool cards, permission and question cards) and the composer at the bottom.</td></tr>
       <tr><td>Right inspector</td><td>Five tabs: Activity, Evidence, Providers, Guidance, Health.</td></tr>
       <tr><td>Modals</td><td>Wizard, Sessions, REA console, MCP tools browser.</td></tr>
     </tbody>
@@ -200,6 +200,7 @@
     <li><strong>Tool cards</strong> show the tool name, a status (running / completed / error), the title REA reported, and an expandable output. Completed cards stay collapsed to keep the transcript readable.</li>
     <li><strong>Evidence chips</strong> are <code>ev_…</code> identifiers with the full 64-character SHA-256 suffix. Click one to copy it.</li>
     <li><strong>Permission prompts</strong> appear inline when the agent asks to run a command or write a file. Choose allow or deny; the choice is sent back to the agent.</li>
+    <li><strong>Agent questions</strong> appear as full cards above the composer with every question, option description and custom-answer field. The composer hint changes to show how many answers are waiting.</li>
   </ul>
 
   <h2>3.4 Permissions</h2>
@@ -213,4 +214,15 @@
     </tbody>
   </table>
   <p>Answered cards remain visible with the response, so the transcript records what was approved.</p>
+
+  <h2>3.5 Agent questions</h2>
+  <p>When the agent needs a decision, REA Studio shows the complete question request instead of a generic “Question — running” tool card. Each card lists the question text, the header supplied by the agent, every option with its description, and a free-text custom answer when the request allows one. Multiple-choice questions use checkboxes; single-choice questions use radio buttons.</p>
+  <table>
+    <thead><tr><th style="width:22%">Button</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Answer</strong></td><td>Sends one answer array per question, in order. Selected option labels and any custom text are sent back to the agent, which continues the turn.</td></tr>
+      <tr><td><strong>Reject</strong></td><td>Tells the agent you declined the question. The agent adapts or stops.</td></tr>
+    </tbody>
+  </table>
+  <p>Answered and rejected cards stay visible with their status and answers. Pending questions are reloaded when you open a session, so a question is not lost if the window is restarted.</p>
 </section>

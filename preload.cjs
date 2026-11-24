@@ -132,6 +132,9 @@ contextBridge.exposeInMainWorld('rea', {
   deleteSession: (payload) => invoke('oc:deleteSession', payload),
   renameSession: (payload) => invoke('oc:renameSession', payload),
   permission: (payload) => invoke('oc:permission', payload),
+  questionList: () => invoke('oc:questionList'),
+  questionReply: (payload) => invoke('oc:questionReply', payload),
+  questionReject: (payload) => invoke('oc:questionReject', payload),
 
   /* streams */
   onEvent: (cb) => {

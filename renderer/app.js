@@ -313,6 +313,7 @@ const WORKFLOW_META = {
 /* ------------------------------------------------------------------ state */
 
 const state = {
+  appVersion: null,
   workspace: 'D:\\REA',
   sessionID: null,
   sessionTitle: null,
@@ -322,6 +323,7 @@ const state = {
   messages: new Map(), // messageID -> { info, parts: Map }
   order: [],
   permissions: new Map(),
+  questions: new Map(), // requestID -> question request
   evidence: new Map(),
   activity: new Map(),
   targets: new Map(),
@@ -619,7 +621,7 @@ function scrollToBottom() {
 }
 
 function updateEmpty() {
-  const has = state.order.length > 0 || state.permissions.size > 0
+  const has = state.order.length > 0 || state.permissions.size > 0 || state.questions.size > 0
   $('#emptyState').hidden = has
 }
 
@@ -680,10 +682,24 @@ function renderTool(part) {
   const st = part.state || {}
   const status = st.status || 'pending'
   const title = st.title || (st.input ? Object.values(st.input).filter((v) => typeof v === 'string')[0] : '') || ''
-  const open = state.openTools.has(part.id)
+  const open = part.tool === 'question' || state.openTools.has(part.id)
 
   let bodyHtml = ''
-  if (st.input && Object.keys(st.input).length) {
+  if (part.tool === 'question') {
+    const qs = Array.isArray(st.input?.questions) ? st.input.questions : Array.isArray(st.input) ? st.input : []
+    if (qs.length) {
+      bodyHtml += '<div class="tool-label">question</div>'
+      for (const q of qs) {
+        bodyHtml += `<div class="question-text">${escapeHtml(q?.question || q?.header || '')}</div>`
+        const labels = Array.isArray(q?.options) ? q.options.map((o) => o?.label).filter(Boolean) : []
+        if (labels.length) bodyHtml += `<div class="question-answers">Options: ${escapeHtml(labels.join(', '))}</div>`
+      }
+    }
+    if (status === 'running') {
+      bodyHtml += '<div class="question-answers">Waiting for your answer in the question card below.</div>'
+    }
+  }
+  if (st.input && Object.keys(st.input).length && part.tool !== 'question') {
     bodyHtml += `<div class="tool-label">input</div><pre>${escapeHtml(JSON.stringify(st.input, null, 2))}</pre>`
   }
   if (status === 'completed' && st.output) {
@@ -739,6 +755,137 @@ function renderPermissions() {
       renderPermissions()
     })
   })
+  updateEmpty()
+}
+
+/* --------------------------------------------------------------- questions */
+
+function renderQuestions() {
+  const area = $('#questionArea')
+  const items = Array.from(state.questions.values())
+
+  area.innerHTML = items.map((q) => {
+    const head = '<div class="question-head"><span class="question-head-icon">?</span>' +
+      '<span class="question-head-label">Agent question</span></div>'
+    const answered = q.answered || !!q.answers
+    const rejected = !!q.rejected
+    const answeredText = Array.isArray(q.answers)
+      ? q.answers.map((a) => Array.isArray(a) ? a.join(', ') : String(a)).filter(Boolean).join(' · ')
+      : ''
+
+    if (answered || rejected) {
+      return `<div class="question-card" data-qid="${escapeHtml(q.id)}">` + head +
+        (q.header ? `<div class="question-header">${escapeHtml(q.header)}</div>` : '') +
+        `<div class="question-text">${escapeHtml(q.question || (Array.isArray(q.questions) ? q.questions.map((x) => x?.question || '').join('\n') : ''))}</div>` +
+        (rejected
+          ? '<div class="question-done">Rejected — the agent was told you declined.</div>'
+          : `<div class="question-done">Answered</div>${answeredText ? `<div class="question-answers">${escapeHtml(answeredText)}</div>` : ''}`) +
+        `</div>`
+    }
+
+    const blocks = (Array.isArray(q.questions) ? q.questions : []).map((qq, i) => {
+      const multiple = !!qq.multiple
+      const options = Array.isArray(qq.options) ? qq.options : []
+      const optionHtml = options.map((opt) => {
+        const label = String(opt?.label ?? '')
+        const desc = opt?.description ? `<span class="question-option-desc">${escapeHtml(opt.description)}</span>` : ''
+        return `<label class="question-option">` +
+          `<input type="${multiple ? 'checkbox' : 'radio'}" name="q-${escapeHtml(q.id)}-${i}" data-answer value="${escapeHtml(label)}">` +
+          `<span class="question-option-text"><span class="question-option-title">${escapeHtml(label)}</span>${desc}</span>` +
+          `</label>`
+      }).join('')
+
+      const customHtml = qq.custom
+        ? `<label class="question-custom"><input type="checkbox" data-custom-toggle> Custom answer</label>` +
+          `<input type="text" class="question-custom-input" data-custom-input placeholder="Type your own answer" disabled>`
+        : ''
+
+      return `<div class="question-item" data-qindex="${i}">` +
+        `<div class="question-label">Question ${i + 1}${qq.header ? ' · ' + escapeHtml(qq.header) : ''}</div>` +
+        `<div class="question-text">${escapeHtml(qq.question || '')}</div>` +
+        (optionHtml ? `<div class="question-options">${optionHtml}</div>` : '') +
+        customHtml +
+        `</div>`
+    }).join('')
+
+    return `<div class="question-card" data-qid="${escapeHtml(q.id)}">` + head +
+      `<div class="question-text">${escapeHtml(q.instruction || 'Answer the questions below to continue.')}</div>` +
+      blocks +
+      `<div class="question-actions">` +
+      `<button class="btn btn-primary" data-act="answer">Answer</button>` +
+      `<button class="btn btn-ghost" data-act="reject">Reject</button>` +
+      `</div></div>`
+  }).join('')
+
+  area.querySelectorAll('.question-card[data-qid]').forEach((card) => {
+    card.querySelectorAll('.question-item').forEach((item) => {
+      const customToggle = item.querySelector('[data-custom-toggle]')
+      const customInput = item.querySelector('[data-custom-input]')
+
+      customToggle?.addEventListener('change', () => {
+        if (!customInput) return
+        customInput.disabled = !customToggle.checked
+        if (!customToggle.checked) customInput.value = ''
+        else customInput.focus()
+      })
+
+      item.querySelectorAll('input[data-answer]').forEach((input) => {
+        input.addEventListener('change', () => {
+          if (input.type === 'radio' && input.checked && customToggle?.checked) {
+            customToggle.checked = false
+            if (customInput) { customInput.disabled = true; customInput.value = '' }
+          }
+        })
+      })
+    })
+
+    const answerBtn = card.querySelector('[data-act="answer"]')
+    answerBtn?.addEventListener('click', async () => {
+      const q = state.questions.get(card.dataset.qid)
+      if (!q) return
+      const answers = Array.from(card.querySelectorAll('.question-item')).map((item) => {
+        const values = Array.from(item.querySelectorAll('input[data-answer]:checked')).map((input) => input.value)
+        const toggle = item.querySelector('[data-custom-toggle]')
+        const input = item.querySelector('[data-custom-input]')
+        if (toggle?.checked) {
+          const custom = String(input?.value || '').trim()
+          if (custom) values.push(custom)
+        }
+        return values
+      })
+      if (!answers.some((a) => a.length)) {
+        toast('Choose at least one answer, or type a custom answer.')
+        return
+      }
+      answerBtn.disabled = true
+      const res = await api.questionReply({ requestID: q.id, answers })
+      if (!res?.ok) {
+        answerBtn.disabled = false
+        toast('Question reply failed: ' + (res?.error || 'unknown error'))
+        return
+      }
+      q.answers = answers
+      q.answered = true
+      renderQuestions()
+    })
+
+    const rejectBtn = card.querySelector('[data-act="reject"]')
+    rejectBtn?.addEventListener('click', async () => {
+      const q = state.questions.get(card.dataset.qid)
+      if (!q) return
+      rejectBtn.disabled = true
+      const res = await api.questionReject({ requestID: q.id })
+      if (!res?.ok) {
+        rejectBtn.disabled = false
+        toast('Question reject failed: ' + (res?.error || 'unknown error'))
+        return
+      }
+      q.rejected = true
+      renderQuestions()
+    })
+  })
+
+  refreshComposerHint()
   updateEmpty()
 }
 
@@ -804,16 +951,45 @@ function handleEvent(raw) {
       el?.remove()
       break
     }
-    case 'permission.updated': {
+    case 'permission.updated':
+    case 'permission.asked': {
       if (state.sessionID && p.sessionID && p.sessionID !== state.sessionID) return
-      state.permissions.set(p.id, { ...p })
+      const id = p.id || p.permissionID
+      if (!id) break
+      const permission = p.permission || p.type || 'Tool call'
+      state.permissions.set(id, {
+        ...p,
+        id,
+        type: permission,
+        title: p.title || permission,
+        pattern: p.pattern || p.patterns || '',
+      })
       renderPermissions()
       if (state.nearBottom) scrollToBottom()
       break
     }
     case 'permission.replied': {
-      const perm = state.permissions.get(p.permissionID)
-      if (perm) { perm.response = p.response; renderPermissions() }
+      const id = p.requestID || p.permissionID
+      const perm = state.permissions.get(id)
+      if (perm) { perm.response = p.reply || p.response; renderPermissions() }
+      break
+    }
+    case 'question.asked': {
+      if (state.sessionID && p.sessionID && p.sessionID !== state.sessionID) return
+      if (!p.id) break
+      state.questions.set(p.id, { ...p, id: p.id })
+      renderQuestions()
+      if (state.nearBottom) scrollToBottom()
+      break
+    }
+    case 'question.replied': {
+      const q = state.questions.get(p.requestID)
+      if (q) { q.answers = p.answers; q.answered = true; renderQuestions() }
+      break
+    }
+    case 'question.rejected': {
+      const q = state.questions.get(p.requestID)
+      if (q) { q.rejected = true; renderQuestions() }
       break
     }
     case 'session.idle': {
@@ -854,11 +1030,22 @@ function appendBanner(text) {
 
 /* -------------------------------------------------------------------- ui */
 
+function refreshComposerHint() {
+  const hint = $('#composerHint')
+  if (!hint) return
+  if (state.questions.size) {
+    const n = state.questions.size
+    hint.textContent = `Agent is waiting for ${n} answer${n === 1 ? '' : 's'}…`
+  } else {
+    hint.textContent = state.running ? 'Agent is working…' : 'Ready'
+  }
+}
+
 function setRunning(running) {
   state.running = running
   $('#sendBtn').hidden = running
   $('#stopBtn').hidden = !running
-  $('#composerHint').textContent = running ? 'Agent is working…' : 'Ready'
+  refreshComposerHint()
   $('#input').disabled = false
 }
 
@@ -872,17 +1059,20 @@ function resetTranscript() {
   state.messages.clear()
   state.order = []
   state.permissions.clear()
+  state.questions.clear()
   state.evidence.clear()
   state.activity.clear()
   state.targets.clear()
   state.openTools.clear()
   $('#msgList').innerHTML = ''
   $('#permArea').innerHTML = ''
+  $('#questionArea').innerHTML = ''
   $('#activityList').innerHTML = ''
   renderEvidence()
   renderActivity()
   renderTargets()
   updateEmpty()
+  refreshComposerHint()
 }
 
 async function startTask(title, text) {
@@ -1439,12 +1629,27 @@ function renderSessions() {
   }).join('')
 }
 
+async function loadPendingQuestions(sessionID = state.sessionID) {
+  if (typeof api.questionList !== 'function') return
+  try {
+    const res = await api.questionList()
+    if (!res?.ok) return
+    for (const q of (Array.isArray(res.questions) ? res.questions : [])) {
+      if (!q?.id) continue
+      if (sessionID && q.sessionID && q.sessionID !== sessionID) continue
+      state.questions.set(q.id, { ...state.questions.get(q.id), ...q, id: q.id })
+    }
+    renderQuestions()
+  } catch { /* ignore */ }
+}
+
 async function loadSession(id, title) {
   const res = await api.messages({ sessionID: id })
   if (!res.ok) { toast('Could not load session: ' + res.error); return }
   resetTranscript()
   setSession(id, title)
   setRunning(false)
+  await loadPendingQuestions(id)
   const msgs = res.messages || []
   for (const m of msgs) {
     const info = m.info || m
@@ -2109,6 +2314,20 @@ function transcriptMarkdown() {
       }
     }
   }
+  const questions = Array.from(state.questions.values())
+  if (questions.length) {
+    lines.push('## Agent questions', '')
+    for (const q of questions) {
+      lines.push(`- Request: ${q.id || 'unknown'}`)
+      if (q.header) lines.push(`- Header: ${q.header}`)
+      const text = q.question || (Array.isArray(q.questions) ? q.questions.map((x) => x?.question || '').join('\n') : '')
+      if (text) lines.push(text, '')
+      if (q.rejected) lines.push('- Status: rejected')
+      else if (q.answered) lines.push(`- Answer: ${JSON.stringify(q.answers || [])}`)
+      else lines.push('- Status: waiting')
+      lines.push('')
+    }
+  }
   return lines.join('\n')
 }
 
@@ -2178,9 +2397,18 @@ async function init() {
 
   try {
     const st = await api.state()
+    state.appVersion = st.appVersion || null
     state.workspace = st.workspace || state.workspace
     state.model = st.model || null
     state.agent = st.agent || null
+    if (state.appVersion) {
+      document.title = `REA Studio ${state.appVersion}`
+      const badge = $('#appVersion')
+      if (badge) {
+        badge.textContent = 'v' + state.appVersion
+        badge.title = `REA Studio ${state.appVersion}`
+      }
+    }
     $('#workspaceLabel').textContent = shortPath(state.workspace, 48)
     $('#railWorkspace').textContent = shortPath(state.workspace, 34)
     onStatus(st.server || { phase: 'idle' })
@@ -2194,6 +2422,7 @@ async function init() {
   renderTargets()
   renderAttachChips()
   refreshHealth()
+  loadPendingQuestions()
   loadBootstrap()
   loadWorkflows()
 }
