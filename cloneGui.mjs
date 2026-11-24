@@ -146,6 +146,7 @@ function Add-Nodes($element, $surface, $parentPath, $depthLeft, $useRaw) {
           width = [int]$r.Width
           height = [int]$r.Height
           patterns = ($patterns -join ',')
+          state = Get-State $e
           depth = [int]$item.d
         }
         $nodes.Add($node)
@@ -217,11 +218,15 @@ function Get-Core($c) {
   return ('{0}|{1}|{2}|{3}|{4}|{5}|{6}|{7}' -f @([string]$c.Name, [string]$c.ControlType.ProgrammaticName.Replace('ControlType.', ''), [string]$c.AutomationId, [string]$c.ClassName, [int]$r.X, [int]$r.Y, [int]$r.Width, [int]$r.Height))
 }
 function Get-State($element) {
-  $state = [pscustomobject]@{ enabled = $false; offscreen = $false; toggle = ''; selected = ''; expand = ''; value = '' }
+  $state = [pscustomobject]@{ enabled = $false; offscreen = $false; focusable = $false; focused = $false; control = $false; content = $false; toggle = ''; selected = ''; expand = ''; value = ''; readOnly = '' }
   try {
     $c = $element.Current
     $state.enabled = [bool]$c.IsEnabled
     $state.offscreen = [bool]$c.IsOffscreen
+    $state.focusable = [bool]$c.IsKeyboardFocusable
+    $state.focused = [bool]$c.HasKeyboardFocus
+    $state.control = [bool]$c.IsControlElement
+    $state.content = [bool]$c.IsContentElement
   } catch { }
   $p = $null
   try {
@@ -241,6 +246,7 @@ function Get-State($element) {
   } catch { }
   try {
     if ($element.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$p)) {
+      $state.readOnly = [string]$p.Current.IsReadOnly
       $v = [string]$p.Current.Value
       $state.value = $v.Substring(0, [Math]::Min(200, $v.Length))
     }
@@ -517,6 +523,23 @@ function clamp(value, min, max, fallback) {
   return Math.max(min, Math.min(max, Math.floor(n)))
 }
 
+function normalizeState(state) {
+  if (!state || typeof state !== 'object') return null
+  return {
+    enabled: Boolean(state.enabled),
+    offscreen: Boolean(state.offscreen),
+    focusable: Boolean(state.focusable),
+    focused: Boolean(state.focused),
+    control: Boolean(state.control),
+    content: Boolean(state.content),
+    readOnly: String(state.readOnly || ''),
+    toggle: String(state.toggle || ''),
+    selected: String(state.selected || ''),
+    expand: String(state.expand || ''),
+    value: String(state.value || '').slice(0, 200),
+  }
+}
+
 function normalizeNode(node, index) {
   const bounds = node.bounds || {}
   const x = Number(node.x) || 0
@@ -549,6 +572,7 @@ function normalizeNode(node, index) {
     patterns: Array.isArray(node.patterns)
       ? node.patterns
       : String(node.patterns || '').split(',').map((p) => p.trim()).filter(Boolean),
+    state: normalizeState(node.state),
     depth: Number(node.depth) || 0,
   }
 }
@@ -648,6 +672,7 @@ function normalizeBehaviors(rawBehaviors, nodes, steps, evidence, caseId) {
       surface: node.surface,
       path: node.path,
       capabilities,
+      state: node.state || null,
       behavior: {
         kind,
         status,
@@ -955,6 +980,7 @@ function showInspector(n) {
       ? JSON.stringify({
           id: bh.id,
           capabilities: bh.capabilities,
+          state: bh.state,
           behavior: bh.behavior,
           replay: replayState.get(n.id) || null,
         }, null, 2)

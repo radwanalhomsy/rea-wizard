@@ -140,6 +140,11 @@ export function computeFidelity(workspace, slug) {
     guiManifest = JSON.parse(fs.readFileSync(path.join(paths.clone, 'gui', 'manifest.json'), 'utf8'))
   } catch { /* no generated GUI clone yet */ }
 
+  let guiBehavior = null
+  try {
+    guiBehavior = JSON.parse(fs.readFileSync(path.join(paths.spec, 'gui-behavior.json'), 'utf8'))
+  } catch { /* no recorded behavior model yet */ }
+
   const guiVerification = guiManifest?.verification
   const useGuiVerification = Boolean(
     guiVerification && guiVerification.totalNodes > 0 && guiVerification.completeness !== undefined,
@@ -192,15 +197,39 @@ export function computeFidelity(workspace, slug) {
 
   const actionFacts = facts.filter((f) => f.kind === 'case' && f.claim.startsWith('action:'))
   const actionKeys = new Set(actionFacts.map((f) => f.claim))
-  const stateTotal = new Set([...uiFacts.map((f) => f.claim), ...actionKeys]).size
-  const state = dimension(
-    'state',
-    actionKeys.size,
-    stateTotal,
-    uiFacts.length > 0 && actionKeys.size > 0,
-    `${actionKeys.size} distinct actions observed against ${uiFacts.length} enumerated controls`,
-    project,
-  )
+  const behaviorElements = Array.isArray(guiBehavior?.elements) ? guiBehavior.elements : []
+  const actionable = (e) => Array.isArray(e.capabilities) && e.capabilities.some((c) =>
+    ['invoke', 'value', 'toggle', 'select', 'expand'].includes(c))
+  const modeledElements = behaviorElements.filter((e) => actionable(e) && e.capabilities.length > 0 && e.behavior?.kind)
+  const snapshottedElements = modeledElements.filter((e) => {
+    const s = e.state
+    return Boolean(s && (s.enabled !== undefined || s.offscreen !== undefined ||
+      s.toggle || s.selected || s.expand || s.value))
+  })
+  const transitionedElements = modeledElements.filter((e) =>
+    ['verified', 'observed'].includes(e.behavior?.status) && e.behavior?.before && e.behavior?.after)
+  const stateCheckTotal = modeledElements.length * 3
+  const stateCheckCovered = modeledElements.length + snapshottedElements.length + transitionedElements.length
+  const state = modeledElements.length > 0
+    ? dimension(
+        'state',
+        stateCheckCovered,
+        stateCheckTotal,
+        true,
+        `${modeledElements.length} interactive controls with an action model, ` +
+          `${snapshottedElements.length} with a captured UIA state snapshot, ` +
+          `${transitionedElements.length} with a before/after state transition; ` +
+          `${actionKeys.size} case action facts also recorded`,
+        project,
+      )
+    : dimension(
+        'state',
+        actionKeys.size,
+        new Set([...uiFacts.map((f) => f.claim), ...actionKeys]).size,
+        uiFacts.length > 0 && actionKeys.size > 0,
+        `${actionKeys.size} distinct actions observed against ${uiFacts.length} enumerated controls`,
+        project,
+      )
 
   const dataFacts = facts.filter((f) => f.kind === 'artifacts' || f.claim.startsWith('data:'))
   const dataCovered = dataFacts.filter((f) => (f.evidence?.length || 0) > 0 || (f.cases?.length || 0) > 0 || f.promoted).length
@@ -238,7 +267,7 @@ export function computeFidelity(workspace, slug) {
     inventory: 'hash the target and capture REA evidence into the project',
     interface: 'capture a UI map so the control denominator exists, then exercise those controls',
     behavior: 'record end-to-end journeys and pass parity on each one',
-    state: 'record more distinct actions until the observed actions cover the UI map',
+    state: 'capture UIA state snapshots and before/after transitions for every interactive control',
     data: 'capture artifact diffs and cite them from journeys',
     protocol: 'capture loopback traffic and exercise each endpoint in a journey',
   }

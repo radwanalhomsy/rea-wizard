@@ -471,9 +471,12 @@ rea-wizard/
 
 Prebuilt Windows binaries are on the
 [Releases page](https://github.com/radwanalhomsy/rea-wizard/releases).
-The current release is **1.2.8**, with both an installer
-(`REA-Studio-1.2.8-x64.msi`) and a portable build
-(`REA-Studio-1.2.8-x64.exe`). Version 1.2.8 adds an evidence-driven **per-element
+The current release is **1.2.9**, with both an installer
+(`REA-Studio-1.2.9-x64.msi`) and a portable build
+(`REA-Studio-1.2.9-x64.exe`). Version 1.2.9 captures real UIA state snapshots
+for every interactive control and scores the **state / action model** dimension
+from action models, state snapshots and before/after transitions instead of a
+handful of journey action facts. Version 1.2.8 adds an evidence-driven **per-element
 behavior layer** to the GUI clone. Real UI Automation pattern capabilities and
 bounded executed actions are written to `spec/gui-behavior.json`; each generated
 element carries an honest `verified`, `observed`, `declared` or `static` status.
